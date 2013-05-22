@@ -19,8 +19,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * A special exception to the GNU GPL may be applied for a specific
- * case.  See the file EXCEPTION for full details.
+ * As additional permission under GNU GPL version 3 section 7, you may
+ * distribute non-source form of the Program without the copy of the
+ * GNU GPL normally required by section 4, provided you inform the
+ * receipents of GNU GPL, and you accompany the a URL through which
+ * recipients can access the Corresponding Source.
  *
  */
 
