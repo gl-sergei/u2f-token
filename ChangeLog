@@ -1,3 +1,12 @@
+2013-05-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_enable_intr, chx_disable_intr): Implement.
+	(chx_set_intr_prio): New.
+	(chx_handle_intr): Use list to register interrupt threads.
+	(chx_init): Set PendSV priority (as minimum: bigger).
+
+	* entry.c (vector_table): set chx_handle_intr for all interrupts.
+
 2013-05-21  Niibe Yutaka  <gniibe@fsij.org>
 
 	* Initial commit.

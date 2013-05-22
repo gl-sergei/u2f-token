@@ -77,8 +77,9 @@ void chopstx_cond_signal (chopstx_cond_t *cond);
 void chopstx_cond_broadcast (chopstx_cond_t *cond);
 
 typedef struct chx_intr {
-  struct chx_thread *t;
+  struct chx_intr *next;
   struct chx_spinlock lock;
+  struct chx_thread *t;
   uint8_t irq_num;
   uint8_t ready;
 } chopstix_intr_t;

@@ -100,6 +100,31 @@ struct chx_stack_regs {
 #define INITIAL_XPSR 0x01000000	/* T=1 */
 
 /*
+ * NVIC: Nested Vectored Interrupt Controller
+ */
+struct NVIC {
+  uint32_t ISER[8];
+  uint32_t unused1[24];
+  uint32_t ICER[8];
+  uint32_t unused2[24];
+  uint32_t ISPR[8];
+  uint32_t unused3[24];
+  uint32_t ICPR[8];
+  uint32_t unused4[24];
+  uint32_t IABR[8];
+  uint32_t unused5[56];
+  uint32_t IPR[60];
+};
+
+static struct NVIC *const NVICBase = (struct NVIC *const)0xE000E100;
+#define NVIC_ISER(n)	(NVICBase->ISER[n >> 5])
+#define NVIC_ICER(n)	(NVICBase->ICER[n >> 5])
+#define NVIC_ICPR(n)	(NVICBase->ICPR[n >> 5])
+#define NVIC_IPR(n)	(NVICBase->IPR[n >> 2])
+
+#define USB_LP_CAN1_RX0_IRQn	 20
+
+/*
  * SysTick registers.
  */
 static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
@@ -465,21 +490,51 @@ chx_timer_expired (void)
 static void
 chx_enable_intr (uint8_t irq_num)
 {
+  NVIC_ISER (irq_num) = 1 << (irq_num & 0x1f);
 }
 
 static void
 chx_disable_intr (uint8_t irq_num)
 {
+  NVIC_ICER (irq_num) = 1 << (irq_num & 0x1f);
 }
 
-void
-chx_handle_intr (chopstix_intr_t *intr)
+#define INTR_PRIO (11<<4)
+
+static void
+chx_set_intr_prio (uint8_t n)
 {
-  chx_disable_intr (intr->irq_num);
-  asm volatile ("cpsid   i" : : : "memory");
-  intr->ready++;
-  if (intr->t)
+  unsigned int sh = (n & 3) << 3;
+
+  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (INTR_PRIO << sh);
+}
+
+static chopstix_intr_t *intr_top;
+
+void
+chx_handle_intr (void)
+{
+  chopstix_intr_t *intr;
+  register uint32_t irq_num;
+
+  asm volatile ("cpsid	i\n\t"
+		"mrs	%0, IPSR\n\t"
+		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
+		: "=r" (irq_num) : /* no input */ : "memory");
+  chx_disable_intr (irq_num);
+  for (intr = intr_top; intr; intr = intr->next)
+    if (intr->irq_num == irq_num)
+      break;
+
+  if (intr == NULL)
+    {				/* Interrupt from unregistered source.  */
+      asm volatile ("cpsie   i" : : : "memory");
+      return;
+    }
+
+  if (intr->t && intr->t->v == THREAD_WAIT_INT)
     {
+      intr->ready++;
       chx_ready_enqueue (intr->t);
       chx_preempt ();
     }
@@ -494,11 +549,16 @@ chx_systick_init (void)
   *SYST_CSR = 7;
 }
 
+static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
+#define INTR_PRIO_PENDSV (15<<4)
+
 #define PRIO_DEFAULT 1
 
 void
 chx_init (struct chx_thread *tp)
 {
+  *SHPR3 = (INTR_PRIO_PENDSV << 16);
+
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
   q_timer.next = q_timer.prev = (struct chx_thread *)&q_timer;
@@ -784,14 +844,13 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 }
 
 
-#define MAX_INTR_NUM 16
-
-chopstix_intr_t *intr_table[MAX_INTR_NUM];
-
 void
 chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num)
 {
-  intr_table[irq_num] = intr;
+  chx_disable_intr (irq_num);
+  chx_set_intr_prio (irq_num);
+  intr->next = intr_top;
+  intr_top = intr;
   intr->irq_num = irq_num;
   intr->t = running;
   intr->ready = 0;
@@ -801,8 +860,8 @@ chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num)
 void
 chopstx_wait_intr (chopstix_intr_t *intr)
 {
-  chx_enable_intr (intr->irq_num);
   asm volatile ("cpsid   i" : : : "memory");
+  chx_enable_intr (intr->irq_num);
   while (intr->ready == 0)
     {
       intr->t = running;

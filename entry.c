@@ -314,6 +314,7 @@ extern uint8_t __main_stack_end__;
 extern void svc (void);
 extern void preempt (void);
 extern void chx_timer_expired (void);
+extern void chx_handle_intr (void);
 
 handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   (handler)&__main_stack_end__,
@@ -333,11 +334,25 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   preempt,			/* PendSV */
   chx_timer_expired,		/* SysTick */
   /* 0x40 */
-  none, none, none, none,  none, none, none, none,
+  chx_handle_intr /* WWDG */,   chx_handle_intr /* PVD */,
+  chx_handle_intr /* TAMPER */, chx_handle_intr /* RTC */,
+  chx_handle_intr /* FLASH */,  chx_handle_intr /* RCC */,
+  chx_handle_intr /* EXTI0 */,  chx_handle_intr /* EXTI1 */,
   /* 0x60 */
-  none, none, none, none,  none, none, none, none,
+  chx_handle_intr /* EXTI2 */,    chx_handle_intr /* EXTI3 */,
+  chx_handle_intr /* EXTI4 */,    chx_handle_intr /* DMA1 CH1 */,
+  chx_handle_intr /* DMA1 CH2 */, chx_handle_intr /* DMA1 CH3 */,
+  chx_handle_intr /* DMA1 CH4 */, chx_handle_intr /* DMA1 CH5 */,
   /* 0x80 */
-  none, none, none, none,
+  chx_handle_intr /* DMA1 CH6 */, chx_handle_intr /* DMA1 CH7 */,
+  chx_handle_intr /* ADC1_2 */, chx_handle_intr /* USB HP */,
   /* 0x90 */
-  none,
+  chx_handle_intr,		/* USB LP */
+  /* ... and more.  CAN, EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,
 };
