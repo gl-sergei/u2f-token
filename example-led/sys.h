@@ -20,13 +20,11 @@ set_led (int on)
   return (*func) (on);
 }
 
-#if 0
 static inline void
 flash_unlock (void)
 {
   (*vector[3]) ();
 }
-#endif
 
 static inline int
 flash_program_halfword (uint32_t addr, uint16_t data)

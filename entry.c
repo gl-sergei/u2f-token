@@ -28,15 +28,10 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "sys.h"
-
-static void __attribute__ ((used))
-flash_unlock (void)
-{
-  (*vector[3]) ();
-}
 
 #if 0
+#include "sys.h"
+
 static void __attribute__ ((used))
 clock_init (void)
 {

@@ -6,7 +6,6 @@
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
 static chopstx_cond_t cnd1;
-static chopstx_cond_t cnd_intr;
 
 static uint8_t u, v;
 static uint8_t m;		/* 0..100 */
@@ -51,43 +50,17 @@ blk (void *arg)
   return NULL;
 }
 
-#define INTR_REQ_0 0
-
-static void *
-intr (void *arg)
-{
-  (void)arg;
-  chopstix_intr_t interrupt;
-
-  chopstx_intr_register (&interrupt, INTR_REQ_0);
-
-  while (1)
-    {
-      chopstx_wait_intr (&interrupt);
-
-      /* process interrupt... */
-      chopstx_usleep (200*1000);
-    }
-
-  return NULL;
-}
-
 #define PRIO_PWM 3
 #define PRIO_BLK 2
-#define PRIO_INTR 2
 
 extern uint8_t __process1_stack_base__, __process1_stack_size__;
 extern uint8_t __process2_stack_base__, __process2_stack_size__;
-extern uint8_t __process3_stack_base__, __process3_stack_size__;
 
 const uint32_t __stackaddr_pwm = (uint32_t)&__process1_stack_base__;
 const size_t __stacksize_pwm = (size_t)&__process1_stack_size__;
 
 const uint32_t __stackaddr_blk = (uint32_t)&__process2_stack_base__;
 const size_t __stacksize_blk = (size_t)&__process2_stack_size__;
-
-const uint32_t __stackaddr_intr = (uint32_t)&__process3_stack_base__;
-const size_t __stacksize_intr = (size_t)&__process3_stack_size__;
 
 
 int
@@ -115,11 +88,6 @@ main (int argc, const char *argv[])
   chopstx_attr_setstack (&attr, __stackaddr_blk, __stacksize_blk);
 
   chopstx_create (&thd, &attr, blk, NULL);
-
-  chopstx_attr_setschedparam (&attr, PRIO_INTR);
-  chopstx_attr_setstack (&attr, __stackaddr_intr, __stacksize_intr);
-
-  chopstx_create (&thd, &attr, intr, NULL);
 
   chopstx_usleep (200*1000);
 
