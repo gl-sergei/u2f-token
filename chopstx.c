@@ -62,7 +62,7 @@ static struct chx_timer q_timer;
 /* XXX: q_exit; Queue for threads already exited. */
 
 /* Forward declaration(s). */
-static void chx_preempt (void);
+static void chx_request_preemption (void);
 
 
 /**************/
@@ -480,7 +480,7 @@ chx_timer_expired (void)
 	}
     }
 
-  chx_preempt ();
+  chx_request_preemption ();
   chx_UNLOCK (&q_timer.lock);
   asm volatile ("cpsie   i" : : : "memory");
 }
@@ -525,17 +525,11 @@ chx_handle_intr (void)
     if (intr->irq_num == irq_num)
       break;
 
-  if (intr == NULL)
-    {				/* Interrupt from unregistered source.  */
-      asm volatile ("cpsie   i" : : : "memory");
-      return;
-    }
-
-  if (intr->t && intr->t->v == THREAD_WAIT_INT)
+  if (intr && intr->t && intr->t->v == THREAD_WAIT_INT)
     {
       intr->ready++;
       chx_ready_enqueue (intr->t);
-      chx_preempt ();
+      chx_request_preemption ();
     }
   asm volatile ("cpsie   i" : : : "memory");
 }
@@ -571,7 +565,7 @@ chx_init (struct chx_thread *tp)
 
 
 static void
-chx_preempt (void)
+chx_request_preemption (void)
 {
   static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
 
@@ -846,13 +840,15 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 void
 chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num)
 {
+  intr->irq_num = irq_num;
+  intr->t = running;
+  intr->ready = 0;
+  asm volatile ("cpsid   i" : : : "memory");
   chx_disable_intr (irq_num);
   chx_set_intr_prio (irq_num);
   intr->next = intr_top;
   intr_top = intr;
-  intr->irq_num = irq_num;
-  intr->t = running;
-  intr->ready = 0;
+  asm volatile ("cpsie   i" : : : "memory");
 }
 
 

@@ -1,3 +1,10 @@
+2013-05-24  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_request_preemption): Rename from chx_preempt.
+
+	* entry.c: "sys.h" is only for to new sys 2.0, keeping
+	compatibility to 1.0, it is if-def out now.
+
 2013-05-22  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_enable_intr, chx_disable_intr): Implement.
