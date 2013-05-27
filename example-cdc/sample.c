@@ -63,7 +63,7 @@ usb_intr (void *arg)
   extern void usb_lld_init (uint8_t feature);
   extern void usb_interrupt_handler (void);
 
-  chopstix_intr_t interrupt;
+  chopstx_intr_t interrupt;
 
   (void)arg;
   asm volatile ("cpsid   i" : : : "memory");

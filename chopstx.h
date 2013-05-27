@@ -84,8 +84,11 @@ typedef struct chx_intr {
   struct chx_thread *t;
   uint8_t irq_num;
   uint8_t ready;
-} chopstix_intr_t;
+} chopstx_intr_t;
 
-void chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num);
+void chopstx_intr_register (chopstx_intr_t *intr, uint8_t irq_num);
 
-void chopstx_wait_intr (chopstix_intr_t *intr);
+void chopstx_wait_intr (chopstx_intr_t *intr);
+
+/* Library provides default as weak reference.  User can replace it.  */
+void chx_fatal (uint32_t err_code);

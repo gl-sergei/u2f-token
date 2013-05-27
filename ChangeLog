@@ -1,3 +1,7 @@
+2013-05-27  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_fatal, chopstx_exit, chopstx_join): New.
+
 2013-05-24  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_request_preemption): Rename from chx_preempt.

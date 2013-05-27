@@ -31,6 +31,14 @@
 #include <string.h>
 #include <chopstx.h>
 
+void __attribute__((weak))
+chx_fatal (uint32_t err_code)
+{
+  (void)err_code;
+  for (;;);
+}
+
+
 /* RUNNING: the current thread. */
 struct chx_thread *running;
 
@@ -59,7 +67,12 @@ struct chx_timer {
 /* threads waiting for timer.  */
 static struct chx_timer q_timer;
 
-/* XXX: q_exit; Queue for threads already exited. */
+/* Queue of threads which have been exited. */
+static struct chx_timer q_exit;
+
+/* Queue of threads which wait exit of some thread.  */
+static struct chx_timer q_waitexit;
+
 
 /* Forward declaration(s). */
 static void chx_request_preemption (void);
@@ -226,7 +239,7 @@ ll_prio_enqueue (struct chx_thread *tp0, void *head)
  */
 #define THREAD_WAIT_MTX 0x00000001
 #define THREAD_WAIT_CND 0x00000002
-#define THREAD_WAITTIME 0x00000003
+#define THREAD_WAIT_OBJ 0x00000003 /* Timer (24-bit), thread */
 
 #define THREAD_RUNNING  0x00000000
 #define THREAD_WAIT_INT	0x00000004
@@ -408,7 +421,7 @@ chx_set_timer (struct chx_thread *q, uint32_t ticks)
       *SYST_RVR = 0;
     }
   else
-    q->v = (ticks<<8)|THREAD_WAITTIME;
+    q->v = (ticks<<8)|THREAD_WAIT_OBJ;
 }
 
 static void
@@ -508,12 +521,12 @@ chx_set_intr_prio (uint8_t n)
   NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (INTR_PRIO << sh);
 }
 
-static chopstix_intr_t *intr_top;
+static chopstx_intr_t *intr_top;
 
 void
 chx_handle_intr (void)
 {
-  chopstix_intr_t *intr;
+  chopstx_intr_t *intr;
   register uint32_t irq_num;
 
   asm volatile ("cpsid	i\n\t"
@@ -838,7 +851,7 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 
 
 void
-chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num)
+chopstx_intr_register (chopstx_intr_t *intr, uint8_t irq_num)
 {
   intr->irq_num = irq_num;
   intr->t = running;
@@ -853,7 +866,7 @@ chopstx_intr_register (chopstix_intr_t *intr, uint8_t irq_num)
 
 
 void
-chopstx_wait_intr (chopstix_intr_t *intr)
+chopstx_wait_intr (chopstx_intr_t *intr)
 {
   asm volatile ("cpsid   i" : : : "memory");
   chx_enable_intr (intr->irq_num);
@@ -867,4 +880,59 @@ chopstx_wait_intr (chopstix_intr_t *intr)
     }
   intr->ready--;
   asm volatile ("cpsie   i" : : : "memory");
+}
+
+
+/* The RETVAL is saved into register R4.  */
+void __attribute__((noreturn))
+chopstx_exit (void *retval)
+{
+  register uint32_t r4 __asm__ ("r4") = (uint32_t)retval;
+  struct chx_thread *q;
+
+  asm volatile ("cpsid   i" : : : "memory");
+  /* wake up a thread waiting to join */
+  chx_LOCK (&q_waitexit.lock);
+  for (q = q_waitexit.next; q != (struct chx_thread *)&q_waitexit; q = q->next)
+    if ((q->v & ~3) == (uint32_t)running)
+      {			/* should be one at most. */
+	ll_dequeue (q);
+	chx_ready_enqueue (q);
+	break;
+      }
+  chx_UNLOCK (&q_waitexit.lock);
+
+  chx_LOCK (&q_exit.lock);
+  ll_insert (running, &q_exit);
+  running->v = THREAD_EXITED;
+  chx_UNLOCK (&q_exit.lock);
+  asm volatile ("cpsie   i" : : "r" (r4) : "memory");
+  chx_sched ();
+  /* never comes here. */
+  for (;;);
+}
+
+int
+chopstx_join (chopstx_t thd, void **ret)
+{
+  struct chx_thread *tp = (struct chx_thread *)thd;
+
+  /* XXX: check if another thread is waiting same thread and return error. */
+  /* XXX: dead lock detection (waiting each other) and return error. */
+
+  asm volatile ("cpsid   i" : : : "memory");
+  if (tp->v != THREAD_EXITED)
+    {
+      chx_LOCK (&q_waitexit.lock);
+      ll_insert (running, &q_waitexit);
+      running->v = ((uint32_t) tp) | THREAD_WAIT_OBJ;
+      chx_UNLOCK (&q_waitexit.lock);
+      asm volatile ("cpsie   i" : : : "memory");
+      chx_sched ();
+    }
+  else
+      asm volatile ("cpsie   i" : : : "memory");
+
+  *ret = (void *)tp->tc.reg[0];
+  return 0;
 }
