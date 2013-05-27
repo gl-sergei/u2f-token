@@ -1,6 +1,13 @@
 2013-05-27  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_fatal, chopstx_exit, chopstx_join): New.
+	(struct chx_thread): Independent member of state.  Use bit fields.
+	(chx_timer_expired, chx_handle_intr): Check priority before
+	calling chx_request_preemption.
+	(chx_disable_intr): Clear pending interrupt too.
+	(chopstx_claim_irq): Rename from chopstx_intr_register.
+	(chopstx_release_irq): New.
+	(chopstx_join): Promote priority of thread to be joined.
 
 2013-05-24  Niibe Yutaka  <gniibe@fsij.org>
 

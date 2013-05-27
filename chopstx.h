@@ -47,7 +47,7 @@ struct chx_spinlock {
   /* nothing for uniprocessor.  */
 };
 
-typedef uint16_t chopstx_prio_t;
+typedef uint8_t chopstx_prio_t;
 typedef struct chx_mtx {
   struct {
     struct chx_thread *next, *prev;
@@ -86,7 +86,8 @@ typedef struct chx_intr {
   uint8_t ready;
 } chopstx_intr_t;
 
-void chopstx_intr_register (chopstx_intr_t *intr, uint8_t irq_num);
+void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
+void chopstx_release_irq (chopstx_intr_t *intr);
 
 void chopstx_wait_intr (chopstx_intr_t *intr);
 

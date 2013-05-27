@@ -69,7 +69,7 @@ usb_intr (void *arg)
   asm volatile ("cpsid   i" : : : "memory");
   /* Disable because of usb_lld_init assumes interrupt handler.  */
   usb_lld_init (0x80);		/* Bus powered. */
-  chopstx_intr_register (&interrupt, INTR_REQ_USB);
+  chopstx_claim_irq (&interrupt, INTR_REQ_USB);
   /* Enable */
   asm volatile ("cpsie   i" : : : "memory");
 
@@ -81,6 +81,7 @@ usb_intr (void *arg)
       usb_interrupt_handler ();
     }
 
+  chopstx_release_irq (&interrupt);
   return NULL;
 }
 
