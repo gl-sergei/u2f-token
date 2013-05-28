@@ -3,7 +3,7 @@
 	* chopstx.c (chopstx_intr_wait): Rename from chopstx_wait_intr.
 	(chopstx_usec_wait): Rename from chosptx_usleep.
 	(chopstx_cancel, chopstx_testcancel): New.
-	(idle): Moved from entry.c and use WFI.
+	(idle): Moved from entry.c and use WFI if USE_WFI_FOR_IDLE.
 
 2013-05-27  Niibe Yutaka  <gniibe@fsij.org>
 

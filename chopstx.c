@@ -292,8 +292,12 @@ chx_ready_enqueue (struct chx_thread *tp)
 static void __attribute__((naked, used))
 idle (void)
 {
+#if defined(USE_WFI_FOR_IDLE)
   for (;;)
     asm volatile ("wfi" : : : "memory");
+#else
+  for (;;);
+#endif
 }
 
 
