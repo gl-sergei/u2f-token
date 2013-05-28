@@ -41,7 +41,7 @@ void chopstx_attr_setstack (chopstx_attr_t *attr, uint32_t addr,
 void chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
 		     void *(thread_entry) (void *), void *);
 
-void chopstx_usleep (uint32_t useconds);
+void chopstx_usec_wait (uint32_t useconds);
 
 struct chx_spinlock {
   /* nothing for uniprocessor.  */
@@ -81,7 +81,7 @@ void chopstx_cond_broadcast (chopstx_cond_t *cond);
 typedef struct chx_intr {
   struct chx_intr *next;
   struct chx_spinlock lock;
-  struct chx_thread *t;
+  struct chx_thread *tp;
   uint8_t irq_num;
   uint8_t ready;
 } chopstx_intr_t;
@@ -89,7 +89,25 @@ typedef struct chx_intr {
 void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
 void chopstx_release_irq (chopstx_intr_t *intr);
 
-void chopstx_wait_intr (chopstx_intr_t *intr);
+void chopstx_intr_wait (chopstx_intr_t *intr);
 
 /* Library provides default as weak reference.  User can replace it.  */
-void chx_fatal (uint32_t err_code);
+void chx_fatal (uint32_t err_code) __attribute__((__noreturn__));
+
+void chopstx_join (chopstx_t, void **);
+void chopstx_exit (void *retval) __attribute__((__noreturn__));
+
+
+enum {
+  CHOPSTX_ERR_NONE = 0,
+  CHOPSTX_ERR_JOIN,
+};
+
+enum {
+  CHOPSTX_EXIT_SUCCESS = 0,
+  CHOPSTX_EXIT_CANCELED         = 256,
+  CHOPSTX_EXIT_CANCELED_IN_SYNC = 257,
+};
+
+void chopstx_cancel (chopstx_t thd);
+void chopstx_testcancel (void);

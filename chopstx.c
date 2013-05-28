@@ -31,7 +31,7 @@
 #include <string.h>
 #include <chopstx.h>
 
-void __attribute__((weak))
+void __attribute__((weak, noreturn))
 chx_fatal (uint32_t err_code)
 {
   (void)err_code;
@@ -157,10 +157,11 @@ struct chx_thread {
   uint32_t state            : 4;
   uint32_t flag_detached    : 1;
   uint32_t flag_got_cancel  : 1;
-  uint32_t                  : 2;
-  uint32_t prio             : 8;
-  uint32_t prio_orig        : 8;
+  uint32_t flag_join_req    : 1;
+  uint32_t flag_sched_rr    : 1;
   uint32_t                  : 8;
+  uint32_t prio_orig        : 8;
+  uint32_t prio             : 8;
   uint32_t v;
   struct chx_mtx *mutex_list;
 };
@@ -250,7 +251,8 @@ ll_prio_enqueue (struct chx_thread *tp0, void *head)
 #define THREAD_WAIT_INT	 0x05
 #define THREAD_JOIN	 0x06
 /**/
-#define THREAD_EXITED	 0x0F
+#define THREAD_EXITED	 0x0E
+#define THREAD_FINISHED	 0x0F
 
 
 static uint32_t
@@ -269,21 +271,21 @@ chx_ready_pop (void)
 
 
 static void
-chx_ready_push (struct chx_thread *t)
+chx_ready_push (struct chx_thread *tp)
 {
   chx_LOCK (&q_ready.lock);
-  t->state = THREAD_READY;
-  ll_prio_push (t, &q_ready);
+  tp->state = THREAD_READY;
+  ll_prio_push (tp, &q_ready);
   chx_UNLOCK (&q_ready.lock);
 }
 
 
 static void
-chx_ready_enqueue (struct chx_thread *t)
+chx_ready_enqueue (struct chx_thread *tp)
 {
   chx_LOCK (&q_ready.lock);
-  t->state = THREAD_READY;
-  ll_prio_enqueue (t, &q_ready);
+  tp->state = THREAD_READY;
+  ll_prio_enqueue (tp, &q_ready);
   chx_UNLOCK (&q_ready.lock);
 }
 
@@ -472,34 +474,62 @@ chx_timer_insert (struct chx_thread *tp, uint32_t usec)
 }
 
 
+static void
+chx_timer_dequeue (struct chx_thread *tp)
+{
+  struct chx_thread *tp_prev;
+
+  asm volatile ("cpsid   i" : : : "memory");
+  chx_LOCK (&q_timer.lock);
+  tp_prev = tp->prev;
+  if (tp_prev == (struct chx_thread *)&q_timer)
+    {
+      if (tp->next == (struct chx_thread *)&q_timer)
+	chx_set_timer (tp_prev, 0); /* Cancel timer*/
+      else
+	{			/* Update timer.  */
+	  uint32_t next_ticks = *SYST_CVR + tp->v;
+
+	  chx_set_timer (tp_prev, next_ticks);
+	}
+    }
+  else
+    tp_prev->v += tp->v;
+  ll_dequeue (tp);
+  tp->v = 0;
+  chx_UNLOCK (&q_timer.lock);
+  asm volatile ("cpsie   i" : : : "memory");
+}
+
+
 void
 chx_timer_expired (void)
 {
-  struct chx_thread *t;
+  struct chx_thread *tp;
   chopstx_prio_t prio = 0;
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&q_timer.lock);
-  if ((t = ll_pop (&q_timer)))
+  if ((tp = ll_pop (&q_timer)))
     {
-      uint32_t next_tick = t->v;
+      uint32_t next_tick = tp->v;
 
-      chx_ready_enqueue (t);
+      chx_ready_enqueue (tp);
 
       if (!ll_empty (&q_timer))
 	{
-	  struct chx_thread *t_next;
+	  struct chx_thread *tp_next;
 
-	  for (t = q_timer.next;
-	       t != (struct chx_thread *)&q_timer && next_tick == 0;
-	       t = t_next)
+	  for (tp = q_timer.next;
+	       tp != (struct chx_thread *)&q_timer && next_tick == 0;
+	       tp = tp_next)
 	    {
-	      next_tick = t->v;
-	      t_next = t->next;
-	      ll_dequeue (t);
-	      chx_ready_enqueue (t);
-	      if (t->prio > prio)
-		prio = t->prio;
+	      next_tick = tp->v;
+	      tp_next = tp->next;
+	      ll_dequeue (tp);
+	      chx_ready_enqueue (tp);
+	      if (tp->prio > prio)
+		prio = tp->prio;
 	    }
 
 	  if (!ll_empty (&q_timer))
@@ -555,11 +585,11 @@ chx_handle_intr (void)
     if (intr->irq_num == irq_num)
       break;
 
-  if (intr && intr->t && intr->t->state == THREAD_WAIT_INT)
+  if (intr && intr->tp && intr->tp->state == THREAD_WAIT_INT)
     {
       intr->ready++;
-      chx_ready_enqueue (intr->t);
-      if (running == NULL || running->prio < intr->t->prio)
+      chx_ready_enqueue (intr->tp);
+      if (running == NULL || running->prio < intr->tp->prio)
 	chx_request_preemption ();
     }
   asm volatile ("cpsie   i" : : : "memory");
@@ -586,10 +616,12 @@ chx_init (struct chx_thread *tp)
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
   q_timer.next = q_timer.prev = (struct chx_thread *)&q_timer;
-  tp->prio_orig = tp->prio = PRIO_DEFAULT;
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
   tp->state = THREAD_RUNNING;
+  tp->flag_detached = tp->flag_got_cancel
+    = tp->flag_join_req = tp->flag_sched_rr = 0;
+  tp->prio_orig = tp->prio = PRIO_DEFAULT;
   tp->v = 0;
 
   running = tp;
@@ -620,6 +652,42 @@ chx_yield (void)
 
   asm volatile ("svc	#0" : : "r" (r0) : "memory");
 }
+
+/* The RETVAL is saved into register R4.  */
+static void __attribute__((noreturn))
+chx_exit (void *retval)
+{
+  register uint32_t r4 __asm__ ("r4") = (uint32_t)retval;
+  struct chx_thread *q;
+
+  asm volatile ("cpsid   i" : : : "memory");
+  if (!running->flag_join_req)
+    {		       /* wake up a thread which requests to join */
+      chx_LOCK (&q_join.lock);
+      for (q = q_join.next; q != (struct chx_thread *)&q_join; q = q->next)
+	if (q->v == (uint32_t)running)
+	  {			/* should be one at most. */
+	    ll_dequeue (q);
+	    chx_ready_enqueue (q);
+	    break;
+	  }
+      chx_UNLOCK (&q_join.lock);
+    }
+
+  chx_LOCK (&q_exit.lock);
+  if (!running->flag_detached)
+    {
+      ll_insert (running, &q_exit);
+      running->state = THREAD_EXITED;
+    }
+  else
+    running->state = THREAD_FINISHED;
+  chx_UNLOCK (&q_exit.lock);
+  asm volatile ("cpsie   i" : : "r" (r4) : "memory");
+  chx_sched ();
+  /* never comes here. */
+  for (;;);
+}
 
 void
 chopstx_attr_init (chopstx_attr_t *attr)
@@ -642,6 +710,7 @@ chopstx_attr_setstack (chopstx_attr_t *attr, uint32_t addr, size_t size)
   attr->size = size;
 }
 
+
 void
 chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
 		void *(thread_entry) (void *), void *arg)
@@ -658,17 +727,19 @@ chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
   memset (stack, 0, sizeof (struct chx_stack_regs));
   p = (struct chx_stack_regs *)stack;
   p->reg[REG_R0] = (uint32_t)arg;
-  p->reg[REG_LR] = 0;		/* XXX: address of exit??? */
+  p->reg[REG_LR] = (uint32_t)chopstx_exit;
   p->reg[REG_PC] = (uint32_t)thread_entry;
   p->reg[REG_XPSR] = INITIAL_XPSR;
 
   tp = (struct chx_thread *)(stack + sizeof (struct chx_stack_regs));
   memset (&tp->tc, 0, sizeof (tp->tc));
-  tp->prio_orig = tp->prio = attr->prio;
   tp->tc.reg[REG_SP] = (uint32_t)stack;
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
   tp->state = THREAD_EXITED;
+  tp->flag_detached = tp->flag_got_cancel
+    = tp->flag_join_req = tp->flag_sched_rr = 0;
+  tp->prio_orig = tp->prio = attr->prio;
   tp->v = 0;
   *thd = (uint32_t)tp;
 
@@ -681,7 +752,7 @@ chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
 
 
 void
-chopstx_usleep (uint32_t usec)
+chopstx_usec_wait (uint32_t usec)
 {
   while (usec)
     {
@@ -702,12 +773,13 @@ chopstx_mutex_init (chopstx_mutex_t *mutex)
   mutex->list = NULL;
 }
 
+
 void
 chopstx_mutex_lock (chopstx_mutex_t *mutex)
 {
   while (1)
     {
-      struct chx_thread *t = running;
+      struct chx_thread *tp = running;
       chopstx_mutex_t *m;
       struct chx_thread *owner;
 
@@ -716,9 +788,9 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       if (mutex->owner == NULL)
 	{
 	  /* The mutex is acquired.  */
-	  mutex->owner = t;
-	  mutex->list = t->mutex_list;
-	  t->mutex_list = mutex;
+	  mutex->owner = tp;
+	  mutex->list = tp->mutex_list;
+	  tp->mutex_list = mutex;
 	  chx_UNLOCK (&mutex->lock);
 	  asm volatile ("cpsie   i" : : : "memory");
 	  return;
@@ -728,7 +800,7 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       owner = m->owner;
       while (1)
 	{
-	  owner->prio = t->prio;
+	  owner->prio = tp->prio;
 	  if (owner->state == THREAD_READY)
 	    {
 	      ll_prio_enqueue (ll_dequeue (owner), &q_ready);
@@ -751,22 +823,23 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 	    }
 	  else
 	    break;
-	  /* XXX: RUNNING and SMP??? */
+	  /* Assume it's UP no case of: ->state==RUNNING on SMP??? */
 	}
 
-      ll_prio_enqueue (t, &mutex->q);
-      t->state = THREAD_WAIT_MTX;
-      t->v = (uint32_t)mutex;
+      ll_prio_enqueue (tp, &mutex->q);
+      tp->state = THREAD_WAIT_MTX;
+      tp->v = (uint32_t)mutex;
       chx_UNLOCK (&mutex->lock);
       asm volatile ("cpsie   i" : : : "memory");
       chx_sched ();
     }
 }
 
+
 void
 chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 {
-  struct chx_thread *t;
+  struct chx_thread *tp;
   int yield = 0;
 
   asm volatile ("cpsid   i" : : : "memory");
@@ -775,13 +848,13 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
   running->mutex_list = mutex->list;
   mutex->list = NULL;
 
-  t = ll_pop (&mutex->q);
-  if (t)
+  tp = ll_pop (&mutex->q);
+  if (tp)
     {
       uint16_t newprio = running->prio_orig;
       chopstx_mutex_t *m;
 
-      chx_ready_enqueue (t);
+      chx_ready_enqueue (tp);
 
       /* Examine mutexes we hold, and determine new priority for running.  */
       for (m = running->mutex_list; m; m = m->list)
@@ -790,7 +863,7 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
       /* Then, assign it.  */
       running->prio = newprio;
 
-      if (t->prio > running->prio)
+      if (tp->prio > running->prio)
 	yield = 1;
     }
 
@@ -807,19 +880,20 @@ chopstx_cond_init (chopstx_cond_t *cond)
   cond->q.next = cond->q.prev = (struct chx_thread *)cond;
 }
 
+
 void
 chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
-  struct chx_thread *t = running;
+  struct chx_thread *tp = running;
 
   if (mutex)
     chopstx_mutex_unlock (mutex);
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&cond->lock);
-  ll_prio_enqueue (t, &cond->q);
-  t->state = THREAD_WAIT_CND;
-  t->v = (uint32_t)cond;
+  ll_prio_enqueue (tp, &cond->q);
+  tp->state = THREAD_WAIT_CND;
+  tp->v = (uint32_t)cond;
   chx_UNLOCK (&cond->lock);
   asm volatile ("cpsie   i" : : : "memory");
 
@@ -829,19 +903,20 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
     chopstx_mutex_lock (mutex);
 }
 
+
 void
 chopstx_cond_signal (chopstx_cond_t *cond)
 {
-  struct chx_thread *t;
+  struct chx_thread *tp;
   int yield = 0;
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&cond->lock);
-  t = ll_pop (&cond->q);
-  if (t)
+  tp = ll_pop (&cond->q);
+  if (tp)
     {
-      chx_ready_enqueue (t);
-      if (t->prio > running->prio)
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
 	yield = 1;
     }
   chx_UNLOCK (&cond->lock);
@@ -851,18 +926,19 @@ chopstx_cond_signal (chopstx_cond_t *cond)
     chx_yield ();
 }
 
+
 void
 chopstx_cond_broadcast (chopstx_cond_t *cond)
 {
-  struct chx_thread *t;
+  struct chx_thread *tp;
   int yield = 1;
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&cond->lock);
-  while ((t = ll_pop (&cond->q)))
+  while ((tp = ll_pop (&cond->q)))
     {
-      chx_ready_enqueue (t);
-      if (t->prio > running->prio)
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
 	yield = 1;
     }
   chx_UNLOCK (&cond->lock);
@@ -876,7 +952,7 @@ void
 chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
 {
   intr->irq_num = irq_num;
-  intr->t = running;
+  intr->tp = running;
   intr->ready = 0;
   asm volatile ("cpsid   i" : : : "memory");
   chx_disable_intr (irq_num);
@@ -907,14 +983,36 @@ chopstx_release_irq (chopstx_intr_t *intr0)
 }
 
 
+static void
+chopstx_release_irq_thread (struct chx_thread *tp)
+{
+  chopstx_intr_t *intr, *intr_prev;
+
+  asm volatile ("cpsid   i" : : : "memory");
+  intr_prev = intr_top;
+  for (intr = intr_top; intr; intr = intr->next)
+    if (intr->tp == tp)
+      break;
+
+  if (intr)
+    {
+      chx_disable_intr (intr->irq_num);
+      if (intr == intr_top)
+	intr_top = intr_top->next;
+      else
+	intr_prev->next = intr->next;
+    }
+  asm volatile ("cpsie   i" : : : "memory");
+}
+
+
 void
-chopstx_wait_intr (chopstx_intr_t *intr)
+chopstx_intr_wait (chopstx_intr_t *intr)
 {
   asm volatile ("cpsid   i" : : : "memory");
   chx_enable_intr (intr->irq_num);
   while (intr->ready == 0)
     {
-      intr->t = running;
       running->state = THREAD_WAIT_INT;
       running->v = 0;
       asm volatile ("cpsie   i" : : : "memory");
@@ -930,40 +1028,37 @@ chopstx_wait_intr (chopstx_intr_t *intr)
 void __attribute__((noreturn))
 chopstx_exit (void *retval)
 {
-  register uint32_t r4 __asm__ ("r4") = (uint32_t)retval;
-  struct chx_thread *q;
+  struct chx_mtx *m, *m_next;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  /* wake up a thread waiting to join */
-  chx_LOCK (&q_join.lock);
-  for (q = q_join.next; q != (struct chx_thread *)&q_join; q = q->next)
-    if (q->v == (uint32_t)running)
-      {			/* should be one at most. */
-	ll_dequeue (q);
-	chx_ready_enqueue (q);
-	break;
-      }
-  chx_UNLOCK (&q_join.lock);
+  /* XXX: Call registered "release" routines here.  */
 
-  chx_LOCK (&q_exit.lock);
-  ll_insert (running, &q_exit);
-  running->state = THREAD_EXITED;
-  chx_UNLOCK (&q_exit.lock);
-  asm volatile ("cpsie   i" : : "r" (r4) : "memory");
-  chx_sched ();
-  /* never comes here. */
-  for (;;);
+  /* Release all mutexes this thread still holds.  */
+  for (m = running->mutex_list; m; m = m_next)
+    {
+      m_next = m->list;
+      chopstx_mutex_unlock (m);
+    }
+
+  chopstx_release_irq_thread (running);
+  chx_exit (retval);
 }
 
-int
+
+void
 chopstx_join (chopstx_t thd, void **ret)
 {
   struct chx_thread *tp = (struct chx_thread *)thd;
 
-  /* XXX: check if another thread is waiting same thread and return error. */
-  /* XXX: dead lock detection (waiting each other) and return error. */
+  /* XXX: check if another thread is waiting same thread and call fatal. */
+  /* XXX: dead lock detection (waiting each other) and call fatal. */
 
   asm volatile ("cpsid   i" : : : "memory");
+  if (tp->flag_detached)
+    {
+      asm volatile ("cpsie   i" : : : "memory");
+      chx_fatal (CHOPSTX_ERR_JOIN);
+    }
+
   if (tp->state != THREAD_EXITED)
     {
       chx_LOCK (&q_join.lock);
@@ -971,14 +1066,58 @@ chopstx_join (chopstx_t thd, void **ret)
       running->v = (uint32_t)tp;
       running->state = THREAD_JOIN;
       chx_UNLOCK (&q_join.lock);
+      tp->flag_join_req = 1;
       if (tp->prio < running->prio)
 	tp->prio = running->prio;
       asm volatile ("cpsie   i" : : : "memory");
       chx_sched ();
+      asm volatile ("cpsid   i" : : : "memory");
     }
-  else
-      asm volatile ("cpsie   i" : : : "memory");
 
+  tp->state = THREAD_FINISHED;
   *ret = (void *)tp->tc.reg[0];
-  return 0;
+  asm volatile ("cpsie   i" : : : "memory");
+}
+
+
+void
+chopstx_cancel (chopstx_t thd)
+{
+  struct chx_thread *tp = (struct chx_thread *)thd;
+  struct chx_stack_regs *p;
+  int yield = 0;
+
+  /* Assume it's UP no case of: tp->state==RUNNING on SMP??? */
+  asm volatile ("cpsid   i" : : : "memory");
+  tp->flag_got_cancel = 1;
+  /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
+  if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_INT
+      || tp->state == THREAD_WAIT_TIME)
+    {
+      /* Throw away registers on stack and direct to copstx_exit.  */
+      /* This is pretty much violent, but it works.  */
+      p = (struct chx_stack_regs *)tp->tc.reg[REG_SP];
+      p->reg[REG_R0] = CHOPSTX_EXIT_CANCELED;
+      p->reg[REG_PC] = (uint32_t)chopstx_exit;
+
+      if (tp->state == THREAD_WAIT_CND)
+	ll_dequeue (tp);
+      else if (tp->state == THREAD_WAIT_TIME)
+	chx_timer_dequeue (tp);
+
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
+	yield = 1;
+    }
+  asm volatile ("cpsie   i" : : : "memory");
+  if (yield)
+    chx_yield ();
+}
+
+
+void
+chopstx_testcancel (void)
+{
+  if (running->flag_got_cancel)
+    chopstx_exit ((void *)CHOPSTX_EXIT_CANCELED_IN_SYNC);
 }

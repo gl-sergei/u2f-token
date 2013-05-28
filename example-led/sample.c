@@ -22,9 +22,9 @@ pwm (void *arg)
   while (1)
     {
       set_led (u&v);
-      chopstx_usleep (m);
+      chopstx_usec_wait (m);
       set_led (0);
-      chopstx_usleep (100-m);
+      chopstx_usec_wait (100-m);
     }
 
   return NULL;
@@ -42,9 +42,9 @@ blk (void *arg)
   while (1)
     {
       v = 0;
-      chopstx_usleep (200*1000);
+      chopstx_usec_wait (200*1000);
       v = 1;
-      chopstx_usleep (200*1000);
+      chopstx_usec_wait (200*1000);
     }
 
   return NULL;
@@ -89,7 +89,7 @@ main (int argc, const char *argv[])
 
   chopstx_create (&thd, &attr, blk, NULL);
 
-  chopstx_usleep (200*1000);
+  chopstx_usec_wait (200*1000);
 
   chopstx_mutex_lock (&mtx);
   chopstx_cond_signal (&cnd0);
@@ -99,7 +99,7 @@ main (int argc, const char *argv[])
   while (1)
     {
       u ^= 1;
-      chopstx_usleep (200*1000*6);
+      chopstx_usec_wait (200*1000*6);
     }
 
   return 0;
