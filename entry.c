@@ -294,13 +294,6 @@ void entry (void)
 		: /* no output */ : /* no input */ : "memory");
 }
 
-void __attribute__((naked, used))
-idle (void)
-{
-  /* XXX: use WFI */
-  for (;;);
-}
-
 
 typedef void (*handler)(void);
 extern uint8_t __main_stack_end__;

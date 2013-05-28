@@ -289,6 +289,14 @@ chx_ready_enqueue (struct chx_thread *tp)
   chx_UNLOCK (&q_ready.lock);
 }
 
+static void __attribute__((naked, used))
+idle (void)
+{
+  for (;;)
+    asm volatile ("wfi" : : : "memory");
+}
+
+
 /* Registers on stack (PSP): r0, r1, r2, r3, r12, lr, pc, xpsr */
 static void __attribute__ ((naked,used))
 sched (void)
