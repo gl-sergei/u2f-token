@@ -1,3 +1,9 @@
+2013-05-29  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_mutex_unlock, chopstx_exit): New.
+	(chopstx_mutex_unlock): Use chx_mutex_unlock.
+	(chopstx_cond_wait): Fix race condition.
+
 2013-05-28  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_intr_wait): Rename from chopstx_wait_intr.

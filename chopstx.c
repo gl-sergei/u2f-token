@@ -700,6 +700,39 @@ chx_exit (void *retval)
   /* never comes here. */
   for (;;);
 }
+
+
+static chopstx_prio_t
+chx_mutex_unlock (chopstx_mutex_t *mutex)
+{
+  struct chx_thread *tp;
+  chopstx_prio_t prio = 0;
+
+  mutex->owner = NULL;
+  running->mutex_list = mutex->list;
+  mutex->list = NULL;
+
+  tp = ll_pop (&mutex->q);
+  if (tp)
+    {
+      uint16_t newprio = running->prio_orig;
+      chopstx_mutex_t *m;
+
+      chx_ready_enqueue (tp);
+
+      /* Examine mutexes we hold, and determine new priority for running.  */
+      for (m = running->mutex_list; m; m = m->list)
+	if (!ll_empty (&m->q) && m->q.next->prio > newprio)
+	  newprio = m->q.next->prio;
+      /* Then, assign it.  */
+      running->prio = newprio;
+
+      if (prio < tp->prio)
+	prio = tp->prio;
+    }
+
+  return prio;
+}
 
 void
 chopstx_attr_init (chopstx_attr_t *attr)
@@ -851,37 +884,15 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 void
 chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 {
-  struct chx_thread *tp;
-  int yield = 0;
+  chopstx_prio_t prio;
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&mutex->lock);
-  mutex->owner = NULL;
-  running->mutex_list = mutex->list;
-  mutex->list = NULL;
-
-  tp = ll_pop (&mutex->q);
-  if (tp)
-    {
-      uint16_t newprio = running->prio_orig;
-      chopstx_mutex_t *m;
-
-      chx_ready_enqueue (tp);
-
-      /* Examine mutexes we hold, and determine new priority for running.  */
-      for (m = running->mutex_list; m; m = m->list)
-	if (!ll_empty (&m->q) && m->q.next->prio > newprio)
-	  newprio = m->q.next->prio;
-      /* Then, assign it.  */
-      running->prio = newprio;
-
-      if (tp->prio > running->prio)
-	yield = 1;
-    }
-
+  prio = chx_mutex_unlock (mutex);
   chx_UNLOCK (&mutex->lock);
   asm volatile ("cpsie   i" : : : "memory");
-  if (yield)
+
+  if (prio > running->prio)
     chx_yield ();
 }
 
@@ -898,10 +909,15 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
   struct chx_thread *tp = running;
 
-  if (mutex)
-    chopstx_mutex_unlock (mutex);
-
   asm volatile ("cpsid   i" : : : "memory");
+
+  if (mutex)
+    {
+      chx_LOCK (&mutex->lock);
+      chx_mutex_unlock (mutex);
+      chx_UNLOCK (&mutex->lock);
+    }
+
   chx_LOCK (&cond->lock);
   ll_prio_enqueue (tp, &cond->q);
   tp->state = THREAD_WAIT_CND;
@@ -1048,7 +1064,12 @@ chopstx_exit (void *retval)
   for (m = running->mutex_list; m; m = m_next)
     {
       m_next = m->list;
-      chopstx_mutex_unlock (m);
+
+      asm volatile ("cpsid   i" : : : "memory");
+      chx_LOCK (&m->lock);
+      chx_mutex_unlock (m);
+      chx_UNLOCK (&m->lock);
+      asm volatile ("cpsie   i" : : : "memory");
     }
 
   chopstx_release_irq_thread (running);
