@@ -264,14 +264,27 @@ static __attribute__ ((naked,section(".text.startup.0")))
 void entry (void)
 {
   asm volatile ("bl	clock_init\n\t"
-		/* Clear BSS.  Assume its size is > 0.  */
+		/* Clear BSS section.  */
 		"mov	r0, #0\n\t"
 		"ldr	r1, =_bss_start\n\t"
 		"ldr	r2, =_bss_end\n"
 	"0:\n\t"
+		"cmp	r1, r2\n\t"
+		"beq	1f\n\t"
 		"str	r0, [r1], #4\n\t"
-		"cmp	r2, r1\n\t"
-		"bhi	0b\n\t"
+		"b	0b\n"
+	"1:\n\t"
+		/* Copy data section.  */
+		"ldr	r1, =_data\n\t"
+		"ldr	r2, =_edata\n\t"
+		"ldr	r3, =_textdata\n"
+	"2:\n\t"
+		"cmp	r1, r2\n\t"
+		"beq	3f\n\t"
+		"ldr	r0, [r3], #4\n\t"
+		"str	r0, [r1], #4\n\t"
+		"b	2b\n"
+	"3:\n\t"
 		/* Switch to PSP.  */
 		"ldr	r0, =__process0_stack_end__\n\t"
 		"sub	r0, #56\n\t"
@@ -289,8 +302,8 @@ void entry (void)
 		/* Call main.  */
 		"mov	r1, r0\n\t"
 		"bl	main\n"
-	"1:\n\t"
-		"b	1b"
+	"4:\n\t"
+		"b	4b"
 		: /* no output */ : /* no input */ : "memory");
 }
 

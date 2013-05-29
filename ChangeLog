@@ -1,13 +1,18 @@
 2013-05-29  Niibe Yutaka  <gniibe@fsij.org>
 
+	* entry.c (entry): Initialize data section.
+
 	* chopstx.c (svc): Implement race avoidance between
 	chx_handle_intr.
 	(chx_handle_intr): Increment ->ready.  Put to ready queue
 	only when it's not running.
 	(chx_sched): Add an argument for race avoidance.
-	(chopstx_intr_wait): Fix the race condition.
+	(chopstx_intr_wait): Fix race condition.
 	(chopstx_cond_broadcast): Fix initial value.
 	(chopstx_join): Check RET.
+	(chx_init): Initialize q_exit and q_join.
+	(chopstx_release_irq, chopstx_release_irq_thread): Enable IRQ on
+	release (as system reset default).
 
 	* board/board-olimex-stm32-h103.h (NEUG_ADC_SETTING2_*): Add.
 

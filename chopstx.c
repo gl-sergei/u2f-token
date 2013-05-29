@@ -51,27 +51,22 @@ struct chx_dll {
 };
 
 
+struct chx_queue {
+  struct chx_thread *next, *prev;
+  struct chx_spinlock lock;
+};
+
 /* READY: priority queue. */
-struct chx_ready {
-  struct chx_thread *next, *prev;
-  struct chx_spinlock lock;
-};
+static struct chx_queue q_ready;
 
-static struct chx_ready q_ready;
-
-struct chx_timer {
-  struct chx_thread *next, *prev;
-  struct chx_spinlock lock;
-};
-
-/* threads waiting for timer.  */
-static struct chx_timer q_timer;
+/* Queue of threads waiting for timer.  */
+static struct chx_queue q_timer;
 
 /* Queue of threads which have been exited. */
-static struct chx_timer q_exit;
+static struct chx_queue q_exit;
 
 /* Queue of threads which wait exit of some thread.  */
-static struct chx_timer q_join;
+static struct chx_queue q_join;
 
 
 /* Forward declaration(s). */
@@ -648,6 +643,8 @@ chx_init (struct chx_thread *tp)
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
   q_timer.next = q_timer.prev = (struct chx_thread *)&q_timer;
+  q_exit.next = q_exit.prev = (struct chx_thread *)&q_exit;
+  q_join.next = q_join.prev = (struct chx_thread *)&q_join;
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
   tp->state = THREAD_RUNNING;
@@ -692,7 +689,7 @@ chx_exit (void *retval)
   struct chx_thread *q;
 
   asm volatile ("cpsid   i" : : : "memory");
-  if (!running->flag_join_req)
+  if (running->flag_join_req)
     {		       /* wake up a thread which requests to join */
       chx_LOCK (&q_join.lock);
       for (q = q_join.next; q != (struct chx_thread *)&q_join; q = q->next)
@@ -706,13 +703,13 @@ chx_exit (void *retval)
     }
 
   chx_LOCK (&q_exit.lock);
-  if (!running->flag_detached)
+  if (running->flag_detached)
+    running->state = THREAD_FINISHED;
+  else
     {
       ll_insert (running, &q_exit);
       running->state = THREAD_EXITED;
     }
-  else
-    running->state = THREAD_FINISHED;
   chx_UNLOCK (&q_exit.lock);
   asm volatile ("cpsie   i" : : "r" (r4) : "memory");
   chx_sched (NULL);
@@ -1016,7 +1013,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
   chopstx_intr_t *intr, *intr_prev;
 
   asm volatile ("cpsid   i" : : : "memory");
-  chx_disable_intr (intr0->irq_num);
+  chx_enable_intr (intr0->irq_num);
   intr_prev = intr_top;
   for (intr = intr_top; intr; intr = intr->next)
     if (intr == intr0)
@@ -1043,7 +1040,7 @@ chopstx_release_irq_thread (struct chx_thread *tp)
 
   if (intr)
     {
-      chx_disable_intr (intr->irq_num);
+      chx_enable_intr (intr->irq_num);
       if (intr == intr_top)
 	intr_top = intr_top->next;
       else
