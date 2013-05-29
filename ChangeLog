@@ -6,6 +6,7 @@
 	only when it's not running.
 	(chx_sched): Add an argument for race avoidance.
 	(chopstx_intr_wait): Fix the race condition.
+	(chopstx_cond_broadcast): Fix initial value.
 
 	* board/board-olimex-stm32-h103.h (NEUG_ADC_SETTING2_*): Add.
 

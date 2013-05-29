@@ -243,16 +243,18 @@ ll_prio_enqueue (struct chx_thread *tp0, void *head)
 /*
  * Thread status.
  */
-#define THREAD_RUNNING   0x00
-#define THREAD_READY	 0x01
-#define THREAD_WAIT_MTX  0x02
-#define THREAD_WAIT_CND  0x03
-#define THREAD_WAIT_TIME 0x04
-#define THREAD_WAIT_INT	 0x05
-#define THREAD_JOIN	 0x06
-/**/
-#define THREAD_EXITED	 0x0E
-#define THREAD_FINISHED	 0x0F
+enum  {
+  THREAD_RUNNING=0,
+  THREAD_READY,
+  THREAD_WAIT_MTX,
+  THREAD_WAIT_CND,
+  THREAD_WAIT_TIME, 
+  THREAD_WAIT_INT,
+  THREAD_JOIN,
+  /**/
+  THREAD_EXITED=0x0E,
+  THREAD_FINISHED=0x0F
+};
 
 
 static uint32_t
@@ -686,7 +688,7 @@ chx_yield (void)
 static void __attribute__((noreturn))
 chx_exit (void *retval)
 {
-  register uint32_t r4 __asm__ ("r4") = (uint32_t)retval;
+  register uint32_t r4 asm ("r4") = (uint32_t)retval;
   struct chx_thread *q;
 
   asm volatile ("cpsid   i" : : : "memory");
@@ -976,7 +978,7 @@ void
 chopstx_cond_broadcast (chopstx_cond_t *cond)
 {
   struct chx_thread *tp;
-  int yield = 1;
+  int yield = 0;
 
   asm volatile ("cpsid   i" : : : "memory");
   chx_LOCK (&cond->lock);
