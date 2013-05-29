@@ -1,5 +1,14 @@
 2013-05-29  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (svc): Implement race avoidance between
+	chx_handle_intr.
+	(chx_handle_intr): Increment ->ready.  Put to ready queue
+	only when it's not running.
+	(chx_sched): Add an argument for race avoidance.
+	(chopstx_intr_wait): Fix the race condition.
+
+	* board/board-olimex-stm32-h103.h (NEUG_ADC_SETTING2_*): Add.
+
 	* chopstx.c (chx_mutex_unlock, chopstx_exit): New.
 	(chopstx_mutex_unlock): Use chx_mutex_unlock.
 	(chopstx_cond_wait): Fix race condition.

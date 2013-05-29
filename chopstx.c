@@ -402,6 +402,7 @@ svc (void)
 {
   register uint32_t r0 asm ("r0");
   register uint32_t orig_r0 asm ("r2");
+  register uint32_t *orig_r1 asm ("r3");
 
   asm volatile ("ldr	r1, =running\n\t"
 		"ldr	r0, [r1]\n\t"
@@ -414,8 +415,10 @@ svc (void)
 		"mov	r6, r11\n\t"
 		"mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
 		"stm	r2, {r3, r4, r5, r6, r7}\n\t"
-		"ldr	r2, [r7]"
-		: "=r" (r0), "=r" (orig_r0) : /* no input */ : "memory");
+		"ldr	r2, [r7]\n\t"
+		"ldr	r3, [r7, #4]\n\t"
+		: "=r" (r0), "=r" (orig_r0), "=r" (orig_r1)
+		: /* no input */ : "memory");
 
   if (orig_r0)
     {
@@ -426,6 +429,17 @@ svc (void)
 		    "str	r2, [r1]\n\t" /* running := NULL */
 		    "cpsie	i"	      /* Unmask interrupts.  */
 		    : /* no output */ : /* no input */ : "memory");
+    }
+  else if (orig_r1)
+    {
+      asm volatile ("cpsid   i" : : : "memory");
+      if (*orig_r1)
+	{
+	  running->state = THREAD_RUNNING;
+	  asm volatile ("cpsie   i" : : : "memory");
+	  return;
+	}
+      /* call sched with keeping interrupt disabled.  */
     }
 
   asm volatile ("b	sched"
@@ -581,6 +595,7 @@ chx_set_intr_prio (uint8_t n)
 }
 
 static chopstx_intr_t *intr_top;
+static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
 
 void
 chx_handle_intr (void)
@@ -597,12 +612,15 @@ chx_handle_intr (void)
     if (intr->irq_num == irq_num)
       break;
 
-  if (intr && intr->tp && intr->tp->state == THREAD_WAIT_INT)
+  if (intr)
     {
       intr->ready++;
-      chx_ready_enqueue (intr->tp);
-      if (running == NULL || running->prio < intr->tp->prio)
-	chx_request_preemption ();
+      if (intr->tp != running && intr->tp->state == THREAD_WAIT_INT)
+	{
+	  chx_ready_enqueue (intr->tp);
+	  if (running == NULL || running->prio < intr->tp->prio)
+	    chx_request_preemption ();
+	}
     }
   asm volatile ("cpsie   i" : : : "memory");
 }
@@ -643,18 +661,17 @@ chx_init (struct chx_thread *tp)
 static void
 chx_request_preemption (void)
 {
-  static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
-
   *ICSR = (1 << 28);
   asm volatile ("" : : : "memory");
 }
 
 static void
-chx_sched (void)
+chx_sched (uint32_t *ptr)
 {
   register uint32_t r0 asm ("r0") = 0;
+  register uint32_t r1 asm ("r1") = (uint32_t)ptr;
 
-  asm volatile ("svc	#0" : : "r" (r0) : "memory");
+  asm volatile ("svc	#0" : : "r" (r0), "r" (r1) : "memory");
 }
 
 static void
@@ -696,7 +713,7 @@ chx_exit (void *retval)
     running->state = THREAD_FINISHED;
   chx_UNLOCK (&q_exit.lock);
   asm volatile ("cpsie   i" : : "r" (r4) : "memory");
-  chx_sched ();
+  chx_sched (NULL);
   /* never comes here. */
   for (;;);
 }
@@ -804,7 +821,7 @@ chopstx_usec_wait (uint32_t usec)
       uint32_t usec0 = (usec > 200*1000) ? 200*1000: usec;
 
       chx_timer_insert (running, usec0);
-      chx_sched ();
+      chx_sched (NULL);
 
       usec -= usec0;
     }
@@ -876,7 +893,7 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       tp->v = (uint32_t)mutex;
       chx_UNLOCK (&mutex->lock);
       asm volatile ("cpsie   i" : : : "memory");
-      chx_sched ();
+      chx_sched (NULL);
     }
 }
 
@@ -925,7 +942,7 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
   chx_UNLOCK (&cond->lock);
   asm volatile ("cpsie   i" : : : "memory");
 
-  chx_sched ();
+  chx_sched (NULL);
 
   if (mutex)
     chopstx_mutex_lock (mutex);
@@ -1039,12 +1056,16 @@ chopstx_intr_wait (chopstx_intr_t *intr)
 {
   asm volatile ("cpsid   i" : : : "memory");
   chx_enable_intr (intr->irq_num);
-  while (intr->ready == 0)
+  if (intr->ready == 0)
     {
       running->state = THREAD_WAIT_INT;
       running->v = 0;
       asm volatile ("cpsie   i" : : : "memory");
-      chx_sched ();
+      /*
+       * Here is the race with chx_handle_intr.
+       * Bring a pointer to intr->ready, so that it won't sleep when ready.
+       */
+      chx_sched (&intr->ready);
       asm volatile ("cpsid   i" : : : "memory");
     }
   intr->ready--;
@@ -1103,7 +1124,7 @@ chopstx_join (chopstx_t thd, void **ret)
       if (tp->prio < running->prio)
 	tp->prio = running->prio;
       asm volatile ("cpsie   i" : : : "memory");
-      chx_sched ();
+      chx_sched (NULL);
       asm volatile ("cpsid   i" : : : "memory");
     }
 

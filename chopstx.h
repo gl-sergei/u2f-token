@@ -82,8 +82,8 @@ typedef struct chx_intr {
   struct chx_intr *next;
   struct chx_spinlock lock;
   struct chx_thread *tp;
+  uint32_t ready;
   uint8_t irq_num;
-  uint8_t ready;
 } chopstx_intr_t;
 
 void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
