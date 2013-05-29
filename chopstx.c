@@ -1131,7 +1131,8 @@ chopstx_join (chopstx_t thd, void **ret)
     }
 
   tp->state = THREAD_FINISHED;
-  *ret = (void *)tp->tc.reg[0];
+  if (ret)
+    *ret = (void *)tp->tc.reg[0];
   asm volatile ("cpsie   i" : : : "memory");
 }
 
