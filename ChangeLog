@@ -1,3 +1,7 @@
+2013-06-03  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_exit): Use R8.
+
 2013-05-29  Niibe Yutaka  <gniibe@fsij.org>
 
 	* entry.c (entry): Initialize data section.

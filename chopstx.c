@@ -97,6 +97,7 @@ struct chx_stack_regs {
 /*
  * Constants for ARM.
  */
+#define REG_EXIT 4		/* R8 */
 #define REG_SP 8
 
 #define REG_R0   0
@@ -681,14 +682,14 @@ chx_yield (void)
   asm volatile ("svc	#0" : : "r" (r0) : "memory");
 }
 
-/* The RETVAL is saved into register R4.  */
+/* The RETVAL is saved into register R8.  */
 static void __attribute__((noreturn))
 chx_exit (void *retval)
 {
-  register uint32_t r4 asm ("r4") = (uint32_t)retval;
+  register uint32_t r8 asm ("r8") = (uint32_t)retval;
   struct chx_thread *q;
 
-  asm volatile ("cpsid   i" : : : "memory");
+  asm volatile ("cpsid   i" : : "r" (r8) : "memory");
   if (running->flag_join_req)
     {		       /* wake up a thread which requests to join */
       chx_LOCK (&q_join.lock);
@@ -711,7 +712,7 @@ chx_exit (void *retval)
       running->state = THREAD_EXITED;
     }
   chx_UNLOCK (&q_exit.lock);
-  asm volatile ("cpsie   i" : : "r" (r4) : "memory");
+  asm volatile ("cpsie   i" : : "r" (r8) : "memory");
   chx_sched (NULL);
   /* never comes here. */
   for (;;);
@@ -1072,7 +1073,7 @@ chopstx_intr_wait (chopstx_intr_t *intr)
 }
 
 
-/* The RETVAL is saved into register R4.  */
+/* The RETVAL is saved into register R8.  */
 void __attribute__((noreturn))
 chopstx_exit (void *retval)
 {
@@ -1129,7 +1130,7 @@ chopstx_join (chopstx_t thd, void **ret)
 
   tp->state = THREAD_FINISHED;
   if (ret)
-    *ret = (void *)tp->tc.reg[0];
+    *ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
   asm volatile ("cpsie   i" : : : "memory");
 }
 
@@ -1148,7 +1149,7 @@ chopstx_cancel (chopstx_t thd)
   if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_INT
       || tp->state == THREAD_WAIT_TIME)
     {
-      /* Throw away registers on stack and direct to copstx_exit.  */
+      /* Throw away registers on stack and direct to chopstx_exit.  */
       /* This is pretty much violent, but it works.  */
       p = (struct chx_stack_regs *)tp->tc.reg[REG_SP];
       p->reg[REG_R0] = CHOPSTX_EXIT_CANCELED;
