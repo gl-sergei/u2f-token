@@ -31,6 +31,35 @@
 #include <string.h>
 #include <chopstx.h>
 
+/*
+ * Note: Lower has higher precedence.
+ *
+ * Prio  0: svc
+ * Prio 32: thread temporarily inhibiting schedule for critical region
+ * Prio 64: systick, external interrupt
+ * Prio 96: pendsv
+ */
+
+#define CPU_EXCEPTION_PRIORITY_SVC           0
+#define CPU_EXCEPTION_PRIORITY_CLEAR         0
+#define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 32
+#define CPU_EXCEPTION_PRIORITY_INTERRUPT     64
+#define CPU_EXCEPTION_PRIORITY_PENDSV        96
+
+static void
+chx_cpu_sched_lock (void)
+{
+  register uint32_t tmp = CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
+  asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+}
+
+static void
+chx_cpu_sched_unlock (void)
+{
+  register uint32_t tmp = CPU_EXCEPTION_PRIORITY_CLEAR;
+  asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+}
+
 void __attribute__((weak, noreturn))
 chx_fatal (uint32_t err_code)
 {
@@ -74,12 +103,12 @@ static void chx_request_preemption (void);
 
 
 /**************/
-static void chx_LOCK (struct chx_spinlock *lk)
+static void chx_spin_lock (struct chx_spinlock *lk)
 {
   (void)lk;
 }
 
-static void chx_UNLOCK (struct chx_spinlock *lk)
+static void chx_spin_unlock (struct chx_spinlock *lk)
 {
   (void)lk;
 }
@@ -258,11 +287,11 @@ chx_ready_pop (void)
 {
   struct chx_thread *tp;
 
-  chx_LOCK (&q_ready.lock);
+  chx_spin_lock (&q_ready.lock);
   tp = ll_pop (&q_ready);
   if (tp)
     tp->state = THREAD_RUNNING;
-  chx_UNLOCK (&q_ready.lock);
+  chx_spin_unlock (&q_ready.lock);
 
   return (uint32_t)tp;
 }
@@ -271,20 +300,20 @@ chx_ready_pop (void)
 static void
 chx_ready_push (struct chx_thread *tp)
 {
-  chx_LOCK (&q_ready.lock);
+  chx_spin_lock (&q_ready.lock);
   tp->state = THREAD_READY;
   ll_prio_push (tp, &q_ready);
-  chx_UNLOCK (&q_ready.lock);
+  chx_spin_unlock (&q_ready.lock);
 }
 
 
 static void
 chx_ready_enqueue (struct chx_thread *tp)
 {
-  chx_LOCK (&q_ready.lock);
+  chx_spin_lock (&q_ready.lock);
   tp->state = THREAD_READY;
   ll_prio_enqueue (tp, &q_ready);
-  chx_UNLOCK (&q_ready.lock);
+  chx_spin_unlock (&q_ready.lock);
 }
 
 static void __attribute__((naked, used))
@@ -305,8 +334,6 @@ sched (void)
 {
   register uint32_t r0 asm ("r0");
 
-  asm volatile ("cpsid   i" : : : "memory");
-
   r0 = chx_ready_pop ();
 
   asm volatile (/* Now, r0 points to the thread to be switched.  */
@@ -318,7 +345,6 @@ sched (void)
 		/**/
 		"str	r0, [r0]\n\t"
 		"str	r0, [r0, 4]\n\t"
-		"cpsie   i\n\t"	      /* Unmask interrupts.  */
 		"add	r0, #8\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
 		"ldr	r8, [r0], 4\n\t"
@@ -327,11 +353,11 @@ sched (void)
 		"ldr	r11, [r0], 4\n\t"
 		"ldr	r1, [r0]\n\t"
 		"msr	PSP, r1\n\t"
+		/**/
 		"mov	r0, #-1\n\t"
 		"sub	r0, #2\n\t" /* EXC_RETURN to a thread with PSP */
 		"bx	r0\n"
 	"3:\n\t"
-		"cpsie   i\n\t"	      /* Unmask interrupts.  */
 		/* Spawn an IDLE thread.  */
 		"ldr	r0, =__main_stack_end__\n\t"
 		"msr	MSP, r0\n\t"
@@ -345,6 +371,10 @@ sched (void)
 		"mov	r2, #0\n\t"
 		"mov	r3, #0\n\t"
 		"push	{r0, r1, r2, r3}\n"
+		/**/
+		"mov	r0, #0\n\t"
+		"msr	BASEPRI, r0\n\t"	      /* Unmask interrupts.  */
+		/**/
 		"mov	r0, #-1\n\t"
 		"sub	r0, #6\n\t" /* EXC_RETURN to a thread with MSP */
 		"bx	r0\n"
@@ -356,38 +386,32 @@ preempt (void)
 {
   register uint32_t r0 asm ("r0");
 
-  asm volatile ("ldr	r1, =running\n\t"
-		"ldr	r0, [r1]\n\t"
-		"cbnz	r0, 0f\n\t"
-		/* It's idle which was preempted.  */
-		"ldr	r1, =__main_stack_end__\n\t"
-		"msr	MSP, r1\n\t"
-		"b	sched\n"
-	"0:\n\t"
-		"ldr	r2, [r0, 44]\n\t" /* Check ->state to avoid RACE.  */
-		"tst	r2, #0x0f\n\t"
-		"beq	1f\n\t"
-		/* RUNNING is busy on transition, do nothing.  */
-		"bx	lr\n"
-	"1:\n\t"
-		"add	r2, r0, #8\n\t"
-		/* Save registers onto CHX_THREAD struct.  */
-		"stm	r2!, {r4, r5, r6, r7}\n\t"
-		"mov	r3, r8\n\t"
-		"mov	r4, r9\n\t"
-		"mov	r5, r10\n\t"
-		"mov	r6, r11\n\t"
-		"mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
-		"stm	r2, {r3, r4, r5, r6, r7}"
-		: "=r" (r0): /* no input */ : "memory");
+  asm ("ldr	r1, =running\n\t"
+       "ldr	r0, [r1]\n\t"
+       "cbnz	r0, 0f\n\t"
+       /* It's idle which was preempted.  */
+       "mov	r0, #2\n\t"
+       "msr	BASEPRI, r0\n\t"	      /* mask any interrupts.  */
+       "ldr	r1, =__main_stack_end__\n\t"
+       "msr	MSP, r1\n\t"
+       "b	sched\n"
+  "0:\n\t"
+       "add	r2, r0, #8\n\t"
+       /* Save registers onto CHX_THREAD struct.  */
+       "stm	r2!, {r4, r5, r6, r7}\n\t"
+       "mov	r3, r8\n\t"
+       "mov	r4, r9\n\t"
+       "mov	r5, r10\n\t"
+       "mov	r6, r11\n\t"
+       "mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
+       "stm	r2, {r3, r4, r5, r6, r7}"
+       : "=r" (r0)
+       : /* no input */
+       : "r1", "r2", "r3", "r4", "r7", "cc", "memory");
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   chx_ready_push ((struct chx_thread *)r0);
-  asm volatile ("ldr	r1, =running\n\t"
-		"mov	r2, #0\n\t"
-		"str	r2, [r1]\n\t" /* running := NULL */
-		"cpsie   i"	      /* Unmask interrupts.  */
-		: /* no output */ : /* no input */ : "memory");
+  running = NULL;
 
   asm volatile ("b	sched"
 		: /* no output */: /* no input */ : "memory");
@@ -399,45 +423,28 @@ void __attribute__ ((naked))
 svc (void)
 {
   register uint32_t r0 asm ("r0");
-  register uint32_t orig_r0 asm ("r2");
-  register uint32_t *orig_r1 asm ("r3");
+  register uint32_t orig_r0 asm ("r1");
 
-  asm volatile ("ldr	r1, =running\n\t"
-		"ldr	r0, [r1]\n\t"
-		"add	r2, r0, #8\n\t"
-		/* Save registers onto CHX_THREAD struct.  */
-		"stm	r2!, {r4, r5, r6, r7}\n\t"
-		"mov	r3, r8\n\t"
-		"mov	r4, r9\n\t"
-		"mov	r5, r10\n\t"
-		"mov	r6, r11\n\t"
-		"mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
-		"stm	r2, {r3, r4, r5, r6, r7}\n\t"
-		"ldr	r2, [r7]\n\t"
-		"ldr	r3, [r7, #4]\n\t"
-		: "=r" (r0), "=r" (orig_r0), "=r" (orig_r1)
-		: /* no input */ : "memory");
+  asm ("ldr	r1, =running\n\t"
+       "ldr	r0, [r1]\n\t"
+       "add	r2, r0, #8\n\t"
+       /* Save registers onto CHX_THREAD struct.  */
+       "stm	r2!, {r4, r5, r6, r7}\n\t"
+       "mov	r3, r8\n\t"
+       "mov	r4, r9\n\t"
+       "mov	r5, r10\n\t"
+       "mov	r6, r11\n\t"
+       "mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
+       "stm	r2, {r3, r4, r5, r6, r7}\n\t"
+       "ldr	r1, [r7]"
+       : "=r" (r0), "=r" (orig_r0)
+       : /* no input */
+       : "r2", "r3", "r4", "r7", "memory");
 
   if (orig_r0)
     {
-      asm volatile ("cpsid   i" : : : "memory");
       chx_ready_enqueue ((struct chx_thread *)r0);
-      asm volatile ("ldr	r1, =running\n\t"
-		    "mov	r2, #0\n\t"
-		    "str	r2, [r1]\n\t" /* running := NULL */
-		    "cpsie	i"	      /* Unmask interrupts.  */
-		    : /* no output */ : /* no input */ : "memory");
-    }
-  else if (orig_r1)
-    {
-      asm volatile ("cpsid   i" : : : "memory");
-      if (*orig_r1)
-	{
-	  running->state = THREAD_RUNNING;
-	  asm volatile ("cpsie   i" : : : "memory");
-	  return;
-	}
-      /* call sched with keeping interrupt disabled.  */
+      running = NULL;
     }
 
   asm volatile ("b	sched"
@@ -468,9 +475,6 @@ chx_timer_insert (struct chx_thread *tp, uint32_t usec)
   uint32_t next_ticks = *SYST_CVR;
   struct chx_thread *q;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&q_timer.lock);
-
   for (q = q_timer.next; q != (struct chx_thread *)&q_timer; q = q->next)
     {
       if (ticks < next_ticks)
@@ -493,8 +497,6 @@ chx_timer_insert (struct chx_thread *tp, uint32_t usec)
       chx_set_timer (tp->prev, ticks);
       chx_set_timer (tp, 1);	/* Non-zero for the last entry. */
     }
-  chx_UNLOCK (&q_timer.lock);
-  asm volatile ("cpsie   i" : : : "memory");
 }
 
 
@@ -503,8 +505,8 @@ chx_timer_dequeue (struct chx_thread *tp)
 {
   struct chx_thread *tp_prev;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&q_timer.lock);
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&q_timer.lock);
   tp_prev = tp->prev;
   if (tp_prev == (struct chx_thread *)&q_timer)
     {
@@ -521,8 +523,8 @@ chx_timer_dequeue (struct chx_thread *tp)
     tp_prev->v += tp->v;
   ll_dequeue (tp);
   tp->v = 0;
-  chx_UNLOCK (&q_timer.lock);
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_spin_unlock (&q_timer.lock);
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -532,8 +534,8 @@ chx_timer_expired (void)
   struct chx_thread *tp;
   chopstx_prio_t prio = 0;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&q_timer.lock);
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&q_timer.lock);
   if ((tp = ll_pop (&q_timer)))
     {
       uint32_t next_tick = tp->v;
@@ -563,8 +565,8 @@ chx_timer_expired (void)
 
   if (running == NULL || running->prio < prio)
     chx_request_preemption ();
-  chx_UNLOCK (&q_timer.lock);
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_spin_unlock (&q_timer.lock);
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -582,14 +584,14 @@ chx_disable_intr (uint8_t irq_num)
   NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f);
 }
 
-#define INTR_PRIO (11<<4)
 
 static void
 chx_set_intr_prio (uint8_t n)
 {
   unsigned int sh = (n & 3) << 3;
 
-  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (INTR_PRIO << sh);
+  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh))
+    | (CPU_EXCEPTION_PRIORITY_INTERRUPT << sh);
 }
 
 static chopstx_intr_t *intr_top;
@@ -601,8 +603,8 @@ chx_handle_intr (void)
   chopstx_intr_t *intr;
   register uint32_t irq_num;
 
-  asm volatile ("cpsid	i\n\t"
-		"mrs	%0, IPSR\n\t"
+  chx_cpu_sched_lock ();
+  asm volatile ("mrs	%0, IPSR\n\t"
 		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
 		: "=r" (irq_num) : /* no input */ : "memory");
   chx_disable_intr (irq_num);
@@ -620,7 +622,7 @@ chx_handle_intr (void)
 	    chx_request_preemption ();
 	}
     }
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 void
@@ -631,15 +633,17 @@ chx_systick_init (void)
   *SYST_CSR = 7;
 }
 
+static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
 static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
-#define INTR_PRIO_PENDSV (15<<4)
 
 #define PRIO_DEFAULT 1
 
 void
 chx_init (struct chx_thread *tp)
 {
-  *SHPR3 = (INTR_PRIO_PENDSV << 16);
+  *SHPR2 = (CPU_EXCEPTION_PRIORITY_SVC << 24); /* SVCall */
+  *SHPR3 = ((CPU_EXCEPTION_PRIORITY_INTERRUPT << 24) /* SysTick */
+	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16)); /* PendSV */
 
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
@@ -666,12 +670,11 @@ chx_request_preemption (void)
 }
 
 static void
-chx_sched (uint32_t *ptr)
+chx_sched (void)
 {
   register uint32_t r0 asm ("r0") = 0;
-  register uint32_t r1 asm ("r1") = (uint32_t)ptr;
 
-  asm volatile ("svc	#0" : : "r" (r0), "r" (r1) : "memory");
+  asm volatile ("svc	#0" : : "r" (r0): "memory");
 }
 
 static void
@@ -689,10 +692,10 @@ chx_exit (void *retval)
   register uint32_t r8 asm ("r8") = (uint32_t)retval;
   struct chx_thread *q;
 
-  asm volatile ("cpsid   i" : : "r" (r8) : "memory");
+  chx_cpu_sched_lock ();
   if (running->flag_join_req)
     {		       /* wake up a thread which requests to join */
-      chx_LOCK (&q_join.lock);
+      chx_spin_lock (&q_join.lock);
       for (q = q_join.next; q != (struct chx_thread *)&q_join; q = q->next)
 	if (q->v == (uint32_t)running)
 	  {			/* should be one at most. */
@@ -700,10 +703,10 @@ chx_exit (void *retval)
 	    chx_ready_enqueue (q);
 	    break;
 	  }
-      chx_UNLOCK (&q_join.lock);
+      chx_spin_unlock (&q_join.lock);
     }
 
-  chx_LOCK (&q_exit.lock);
+  chx_spin_lock (&q_exit.lock);
   if (running->flag_detached)
     running->state = THREAD_FINISHED;
   else
@@ -711,10 +714,11 @@ chx_exit (void *retval)
       ll_insert (running, &q_exit);
       running->state = THREAD_EXITED;
     }
-  chx_UNLOCK (&q_exit.lock);
-  asm volatile ("cpsie   i" : : "r" (r8) : "memory");
-  chx_sched (NULL);
+  chx_spin_unlock (&q_exit.lock);
+  asm volatile ("" : : "r" (r8) : "memory");
+  chx_sched ();
   /* never comes here. */
+  chx_cpu_sched_unlock ();
   for (;;);
 }
 
@@ -805,11 +809,11 @@ chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
   tp->v = 0;
   *thd = (uint32_t)tp;
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   chx_ready_enqueue (tp);
-  asm volatile ("cpsie   i" : : : "memory");
   if (tp->prio > running->prio)
     chx_yield ();
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -820,9 +824,12 @@ chopstx_usec_wait (uint32_t usec)
     {
       uint32_t usec0 = (usec > 200*1000) ? 200*1000: usec;
 
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&q_timer.lock);
       chx_timer_insert (running, usec0);
-      chx_sched (NULL);
-
+      chx_spin_unlock (&q_timer.lock);
+      chx_sched ();
+      chx_cpu_sched_unlock ();
       usec -= usec0;
     }
 }
@@ -845,17 +852,17 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       chopstx_mutex_t *m;
       struct chx_thread *owner;
 
-      asm volatile ("cpsid   i" : : : "memory");
-      chx_LOCK (&mutex->lock);
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&mutex->lock);
       if (mutex->owner == NULL)
 	{
 	  /* The mutex is acquired.  */
 	  mutex->owner = tp;
 	  mutex->list = tp->mutex_list;
 	  tp->mutex_list = mutex;
-	  chx_UNLOCK (&mutex->lock);
-	  asm volatile ("cpsie   i" : : : "memory");
-	  return;
+	  chx_spin_unlock (&mutex->lock);
+	  chx_cpu_sched_unlock ();
+	  break;
 	}
 
       m = mutex;
@@ -891,10 +898,12 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       ll_prio_enqueue (tp, &mutex->q);
       tp->state = THREAD_WAIT_MTX;
       tp->v = (uint32_t)mutex;
-      chx_UNLOCK (&mutex->lock);
-      asm volatile ("cpsie   i" : : : "memory");
-      chx_sched (NULL);
+      chx_spin_unlock (&mutex->lock);
+      chx_sched ();
+      chx_cpu_sched_unlock ();
     }
+
+  return;
 }
 
 
@@ -903,14 +912,13 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 {
   chopstx_prio_t prio;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&mutex->lock);
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&mutex->lock);
   prio = chx_mutex_unlock (mutex);
-  chx_UNLOCK (&mutex->lock);
-  asm volatile ("cpsie   i" : : : "memory");
-
+  chx_spin_unlock (&mutex->lock);
   if (prio > running->prio)
     chx_yield ();
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -926,23 +934,22 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
   struct chx_thread *tp = running;
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
 
   if (mutex)
     {
-      chx_LOCK (&mutex->lock);
+      chx_spin_lock (&mutex->lock);
       chx_mutex_unlock (mutex);
-      chx_UNLOCK (&mutex->lock);
+      chx_spin_unlock (&mutex->lock);
     }
 
-  chx_LOCK (&cond->lock);
+  chx_spin_lock (&cond->lock);
   ll_prio_enqueue (tp, &cond->q);
   tp->state = THREAD_WAIT_CND;
   tp->v = (uint32_t)cond;
-  chx_UNLOCK (&cond->lock);
-  asm volatile ("cpsie   i" : : : "memory");
-
-  chx_sched (NULL);
+  chx_spin_unlock (&cond->lock);
+  chx_sched ();
+  chx_cpu_sched_unlock ();
 
   if (mutex)
     chopstx_mutex_lock (mutex);
@@ -955,8 +962,8 @@ chopstx_cond_signal (chopstx_cond_t *cond)
   struct chx_thread *tp;
   int yield = 0;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&cond->lock);
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&cond->lock);
   tp = ll_pop (&cond->q);
   if (tp)
     {
@@ -964,11 +971,10 @@ chopstx_cond_signal (chopstx_cond_t *cond)
       if (tp->prio > running->prio)
 	yield = 1;
     }
-  chx_UNLOCK (&cond->lock);
-  asm volatile ("cpsie   i" : : : "memory");
-
+  chx_spin_unlock (&cond->lock);
   if (yield)
     chx_yield ();
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -978,18 +984,18 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
   struct chx_thread *tp;
   int yield = 0;
 
-  asm volatile ("cpsid   i" : : : "memory");
-  chx_LOCK (&cond->lock);
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&cond->lock);
   while ((tp = ll_pop (&cond->q)))
     {
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
 	yield = 1;
     }
-  chx_UNLOCK (&cond->lock);
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_spin_unlock (&cond->lock);
   if (yield)
     chx_yield ();
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -999,12 +1005,12 @@ chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
   intr->irq_num = irq_num;
   intr->tp = running;
   intr->ready = 0;
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   chx_disable_intr (irq_num);
   chx_set_intr_prio (irq_num);
   intr->next = intr_top;
   intr_top = intr;
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1013,7 +1019,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
 {
   chopstx_intr_t *intr, *intr_prev;
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   chx_enable_intr (intr0->irq_num);
   intr_prev = intr_top;
   for (intr = intr_top; intr; intr = intr->next)
@@ -1024,7 +1030,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
     intr_top = intr_top->next;
   else
     intr_prev->next = intr->next;
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1033,7 +1039,7 @@ chopstx_release_irq_thread (struct chx_thread *tp)
 {
   chopstx_intr_t *intr, *intr_prev;
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   intr_prev = intr_top;
   for (intr = intr_top; intr; intr = intr->next)
     if (intr->tp == tp)
@@ -1047,29 +1053,23 @@ chopstx_release_irq_thread (struct chx_thread *tp)
       else
 	intr_prev->next = intr->next;
     }
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
 {
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   chx_enable_intr (intr->irq_num);
   if (intr->ready == 0)
     {
       running->state = THREAD_WAIT_INT;
       running->v = 0;
-      asm volatile ("cpsie   i" : : : "memory");
-      /*
-       * Here is the race with chx_handle_intr.
-       * Bring a pointer to intr->ready, so that it won't sleep when ready.
-       */
-      chx_sched (&intr->ready);
-      asm volatile ("cpsid   i" : : : "memory");
+      chx_sched ();
     }
   intr->ready--;
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1086,11 +1086,11 @@ chopstx_exit (void *retval)
     {
       m_next = m->list;
 
-      asm volatile ("cpsid   i" : : : "memory");
-      chx_LOCK (&m->lock);
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&m->lock);
       chx_mutex_unlock (m);
-      chx_UNLOCK (&m->lock);
-      asm volatile ("cpsie   i" : : : "memory");
+      chx_spin_unlock (&m->lock);
+      chx_cpu_sched_unlock ();
     }
 
   chopstx_release_irq_thread (running);
@@ -1106,32 +1106,30 @@ chopstx_join (chopstx_t thd, void **ret)
   /* XXX: check if another thread is waiting same thread and call fatal. */
   /* XXX: dead lock detection (waiting each other) and call fatal. */
 
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   if (tp->flag_detached)
     {
-      asm volatile ("cpsie   i" : : : "memory");
+      chx_cpu_sched_unlock ();
       chx_fatal (CHOPSTX_ERR_JOIN);
     }
 
   if (tp->state != THREAD_EXITED)
     {
-      chx_LOCK (&q_join.lock);
+      chx_spin_lock (&q_join.lock);
       ll_insert (running, &q_join);
       running->v = (uint32_t)tp;
       running->state = THREAD_JOIN;
-      chx_UNLOCK (&q_join.lock);
+      chx_spin_unlock (&q_join.lock);
       tp->flag_join_req = 1;
       if (tp->prio < running->prio)
 	tp->prio = running->prio;
-      asm volatile ("cpsie   i" : : : "memory");
-      chx_sched (NULL);
-      asm volatile ("cpsid   i" : : : "memory");
+      chx_sched ();
     }
 
   tp->state = THREAD_FINISHED;
   if (ret)
     *ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
-  asm volatile ("cpsie   i" : : : "memory");
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1143,7 +1141,7 @@ chopstx_cancel (chopstx_t thd)
   int yield = 0;
 
   /* Assume it's UP no case of: tp->state==RUNNING on SMP??? */
-  asm volatile ("cpsid   i" : : : "memory");
+  chx_cpu_sched_lock ();
   tp->flag_got_cancel = 1;
   /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
   if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_INT
@@ -1164,9 +1162,9 @@ chopstx_cancel (chopstx_t thd)
       if (tp->prio > running->prio)
 	yield = 1;
     }
-  asm volatile ("cpsie   i" : : : "memory");
   if (yield)
     chx_yield ();
+  chx_cpu_sched_unlock ();
 }
 
 
