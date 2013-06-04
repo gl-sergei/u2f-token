@@ -91,7 +91,10 @@ void chopstx_release_irq (chopstx_intr_t *intr);
 
 void chopstx_intr_wait (chopstx_intr_t *intr);
 
-/* Library provides default as weak reference.  User can replace it.  */
+/*
+ * Library provides default implementation as weak reference.
+ * User can replace it.
+  */
 void chx_fatal (uint32_t err_code) __attribute__((__noreturn__));
 
 void chopstx_join (chopstx_t, void **);
@@ -111,3 +114,11 @@ enum {
 
 void chopstx_cancel (chopstx_t thd);
 void chopstx_testcancel (void);
+
+/*
+ * User can define this macro (like: -DCHX_PRIO_DEFAULT=3) to specify
+ * default priority.
+ */
+#if !defined(CHX_PRIO_DEFAULT)
+#define CHX_PRIO_DEFAULT 1
+#endif

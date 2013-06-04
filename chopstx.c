@@ -32,7 +32,14 @@
 #include <chopstx.h>
 
 /*
- * Note: Lower has higher precedence.
+ * Thread priority: higer has higher precedence.
+ */
+#if !defined(CHX_PRIO_DEFAULT)
+#define CHX_PRIO_MAIN 1
+#endif
+
+/*
+ * Exception priority: lower has higher precedence.
  *
  * Prio 0x30: svc
  * ---------------------
@@ -635,8 +642,6 @@ static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
 static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
 static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
 
-#define PRIO_DEFAULT 1
-
 void
 chx_init (struct chx_thread *tp)
 {
@@ -655,7 +660,7 @@ chx_init (struct chx_thread *tp)
   tp->state = THREAD_RUNNING;
   tp->flag_detached = tp->flag_got_cancel
     = tp->flag_join_req = tp->flag_sched_rr = 0;
-  tp->prio_orig = tp->prio = PRIO_DEFAULT;
+  tp->prio_orig = tp->prio = CHX_PRIO_MAIN;
   tp->v = 0;
 
   running = tp;
@@ -757,7 +762,7 @@ chx_mutex_unlock (chopstx_mutex_t *mutex)
 void
 chopstx_attr_init (chopstx_attr_t *attr)
 {
-  attr->prio = PRIO_DEFAULT;
+  attr->prio = CHX_PRIO_DEFAULT;
   attr->addr = 0;
   attr->size = 0;
 }

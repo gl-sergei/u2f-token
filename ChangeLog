@@ -6,6 +6,7 @@
 	(preempt, chx_timer_expired, chx_handle_intr): Those can be
 	considered holding cpu_sched_lock (by its equal exception
 	priorities), thus no acquiring lock required.
+	(CHX_PRIO_MAIN): New macro.
 
 2013-06-03  Niibe Yutaka  <gniibe@fsij.org>
 
