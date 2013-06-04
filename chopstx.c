@@ -34,17 +34,22 @@
 /*
  * Note: Lower has higher precedence.
  *
- * Prio  0: svc
- * Prio 32: thread temporarily inhibiting schedule for critical region
- * Prio 64: systick, external interrupt
- * Prio 96: pendsv
+ * Prio 0x30: svc
+ * ---------------------
+ * Prio 0x40: thread temporarily inhibiting schedule for critical region
+ * Prio 0x50: systick
+ * Prio 0x60: external interrupt
+ * Prio 0x70: pendsv
  */
 
-#define CPU_EXCEPTION_PRIORITY_SVC           0
 #define CPU_EXCEPTION_PRIORITY_CLEAR         0
-#define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 32
-#define CPU_EXCEPTION_PRIORITY_INTERRUPT     64
-#define CPU_EXCEPTION_PRIORITY_PENDSV        96
+
+#define CPU_EXCEPTION_PRIORITY_SVC           0x30
+
+#define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
+#define CPU_EXCEPTION_PRIORITY_SYSTICK       0x50
+#define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x60
+#define CPU_EXCEPTION_PRIORITY_PENDSV        0x70
 
 static void
 chx_cpu_sched_lock (void)
@@ -335,7 +340,6 @@ sched (void)
   register uint32_t r0 asm ("r0");
 
   r0 = chx_ready_pop ();
-
   asm volatile (/* Now, r0 points to the thread to be switched.  */
 		/* Put it to *running.  */
 		"ldr	r1, =running\n\t"
@@ -354,8 +358,10 @@ sched (void)
 		"ldr	r1, [r0]\n\t"
 		"msr	PSP, r1\n\t"
 		/**/
-		"mov	r0, #-1\n\t"
-		"sub	r0, #2\n\t" /* EXC_RETURN to a thread with PSP */
+		"mov	r0, #0\n\t"
+		"msr	BASEPRI, r0\n\t"	      /* Unmask interrupts.  */
+		/**/
+		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
 		"bx	r0\n"
 	"3:\n\t"
 		/* Spawn an IDLE thread.  */
@@ -375,8 +381,7 @@ sched (void)
 		"mov	r0, #0\n\t"
 		"msr	BASEPRI, r0\n\t"	      /* Unmask interrupts.  */
 		/**/
-		"mov	r0, #-1\n\t"
-		"sub	r0, #6\n\t" /* EXC_RETURN to a thread with MSP */
+		"sub	r0, #7\n\t" /* EXC_RETURN to a thread with MSP */
 		"bx	r0\n"
 		: /* no output */ : "r" (r0) : "memory");
 }
@@ -390,8 +395,6 @@ preempt (void)
        "ldr	r0, [r1]\n\t"
        "cbnz	r0, 0f\n\t"
        /* It's idle which was preempted.  */
-       "mov	r0, #2\n\t"
-       "msr	BASEPRI, r0\n\t"	      /* mask any interrupts.  */
        "ldr	r1, =__main_stack_end__\n\t"
        "msr	MSP, r1\n\t"
        "b	sched\n"
@@ -409,7 +412,6 @@ preempt (void)
        : /* no input */
        : "r1", "r2", "r3", "r4", "r7", "cc", "memory");
 
-  chx_cpu_sched_lock ();
   chx_ready_push ((struct chx_thread *)r0);
   running = NULL;
 
@@ -534,7 +536,6 @@ chx_timer_expired (void)
   struct chx_thread *tp;
   chopstx_prio_t prio = 0;
 
-  chx_cpu_sched_lock ();
   chx_spin_lock (&q_timer.lock);
   if ((tp = ll_pop (&q_timer)))
     {
@@ -566,7 +567,6 @@ chx_timer_expired (void)
   if (running == NULL || running->prio < prio)
     chx_request_preemption ();
   chx_spin_unlock (&q_timer.lock);
-  chx_cpu_sched_unlock ();
 }
 
 
@@ -603,7 +603,6 @@ chx_handle_intr (void)
   chopstx_intr_t *intr;
   register uint32_t irq_num;
 
-  chx_cpu_sched_lock ();
   asm volatile ("mrs	%0, IPSR\n\t"
 		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
 		: "=r" (irq_num) : /* no input */ : "memory");
@@ -622,7 +621,6 @@ chx_handle_intr (void)
 	    chx_request_preemption ();
 	}
     }
-  chx_cpu_sched_unlock ();
 }
 
 void
@@ -633,6 +631,7 @@ chx_systick_init (void)
   *SYST_CSR = 7;
 }
 
+static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
 static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
 static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
 
@@ -641,9 +640,10 @@ static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
 void
 chx_init (struct chx_thread *tp)
 {
-  *SHPR2 = (CPU_EXCEPTION_PRIORITY_SVC << 24); /* SVCall */
-  *SHPR3 = ((CPU_EXCEPTION_PRIORITY_INTERRUPT << 24) /* SysTick */
-	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16)); /* PendSV */
+  *AIRCR = 0x05FA0000 | ( 5 << 8); /* PRIGROUP = 5, 2-bit:2-bit. */
+  *SHPR2 = (CPU_EXCEPTION_PRIORITY_SVC << 24);
+  *SHPR3 = ((CPU_EXCEPTION_PRIORITY_SYSTICK << 24)
+	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16));
 
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
@@ -718,7 +718,6 @@ chx_exit (void *retval)
   asm volatile ("" : : "r" (r8) : "memory");
   chx_sched ();
   /* never comes here. */
-  chx_cpu_sched_unlock ();
   for (;;);
 }
 
@@ -813,7 +812,8 @@ chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
   chx_ready_enqueue (tp);
   if (tp->prio > running->prio)
     chx_yield ();
-  chx_cpu_sched_unlock ();
+  else
+    chx_cpu_sched_unlock ();
 }
 
 
@@ -829,7 +829,6 @@ chopstx_usec_wait (uint32_t usec)
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
       chx_sched ();
-      chx_cpu_sched_unlock ();
       usec -= usec0;
     }
 }
@@ -900,7 +899,6 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       tp->v = (uint32_t)mutex;
       chx_spin_unlock (&mutex->lock);
       chx_sched ();
-      chx_cpu_sched_unlock ();
     }
 
   return;
@@ -918,7 +916,8 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
   chx_spin_unlock (&mutex->lock);
   if (prio > running->prio)
     chx_yield ();
-  chx_cpu_sched_unlock ();
+  else
+    chx_cpu_sched_unlock ();
 }
 
 
@@ -949,7 +948,6 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
   tp->v = (uint32_t)cond;
   chx_spin_unlock (&cond->lock);
   chx_sched ();
-  chx_cpu_sched_unlock ();
 
   if (mutex)
     chopstx_mutex_lock (mutex);
@@ -974,7 +972,8 @@ chopstx_cond_signal (chopstx_cond_t *cond)
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_yield ();
-  chx_cpu_sched_unlock ();
+  else
+    chx_cpu_sched_unlock ();
 }
 
 
@@ -995,7 +994,8 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_yield ();
-  chx_cpu_sched_unlock ();
+  else
+    chx_cpu_sched_unlock ();
 }
 
 
@@ -1069,7 +1069,6 @@ chopstx_intr_wait (chopstx_intr_t *intr)
       chx_sched ();
     }
   intr->ready--;
-  chx_cpu_sched_unlock ();
 }
 
 
@@ -1129,7 +1128,6 @@ chopstx_join (chopstx_t thd, void **ret)
   tp->state = THREAD_FINISHED;
   if (ret)
     *ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
-  chx_cpu_sched_unlock ();
 }
 
 
@@ -1164,7 +1162,8 @@ chopstx_cancel (chopstx_t thd)
     }
   if (yield)
     chx_yield ();
-  chx_cpu_sched_unlock ();
+  else
+    chx_cpu_sched_unlock ();
 }
 
 

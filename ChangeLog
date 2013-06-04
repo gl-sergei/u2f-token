@@ -1,3 +1,12 @@
+2013-06-04  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (AIRCR): New.
+	(chx_init): Setting for PRIGROUP 2-bit:2-bit.
+	(sched): Unlock cpu_sched_lock on return to thread.
+	(preempt, chx_timer_expired, chx_handle_intr): Those can be
+	considered holding cpu_sched_lock (by its equal exception
+	priorities), thus no acquiring lock required.
+
 2013-06-03  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_spin_lock, chx_spin_unlock): Rename.

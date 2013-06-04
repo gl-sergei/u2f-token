@@ -4,8 +4,7 @@
 #include "usb_lld.h"
 
 extern chopstx_mutex_t usb_mtx;
-extern chopstx_cond_t cnd_usb_connection;
-extern chopstx_cond_t cnd_usb_buffer_ready;
+extern chopstx_cond_t cnd_usb;
 
 #define ENDP0_RXADDR        (0x40)
 #define ENDP0_TXADDR        (0x80)
@@ -241,7 +240,7 @@ vcom_port_data_setup (uint8_t req, uint8_t req_no, uint16_t value)
 
 	  chopstx_mutex_lock (&usb_mtx);
 	  if (connected != connected_saved)
-	    chopstx_cond_signal (&cnd_usb_connection);
+	    chopstx_cond_signal (&cnd_usb);
 	  chopstx_mutex_unlock (&usb_mtx);
 
 	  return USB_SUCCESS;
@@ -416,7 +415,7 @@ void
 EP1_IN_Callback (void)
 {
   chopstx_mutex_lock (&usb_mtx);
-  chopstx_cond_signal (&cnd_usb_buffer_ready);
+  chopstx_cond_signal (&cnd_usb);
   chopstx_mutex_unlock (&usb_mtx);
 }
 
