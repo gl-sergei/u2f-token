@@ -7,6 +7,12 @@
 	considered holding cpu_sched_lock (by its equal exception
 	priorities), thus no acquiring lock required.
 	(CHX_PRIO_MAIN): New macro.
+	(chopstx_create): Change API.
+	(chopstx_attr_init, chopstx_attr_setschedparam)
+	(chopstx_attr_setstack): Remove.
+	(chopstx_intr_wait, chopstx_join): Call chx_cpu_sched_unlock.
+	(chopstx_cleanup_push, chopstx_cleanup_pop): New.
+	(chopstx_exit): Call cleanup routines.
 
 2013-06-03  Niibe Yutaka  <gniibe@fsij.org>
 

@@ -287,8 +287,8 @@ void entry (void)
 	"3:\n\t"
 		/* Switch to PSP.  */
 		"ldr	r0, =__process0_stack_end__\n\t"
-		"sub	r0, #56\n\t"
-		"msr	PSP, r0\n\t" /* Process (main routine) stack */
+		"sub	r0, #60\n\t" /* Size of struct chx_thread.     */
+		"msr	PSP, r0\n\t" /* Process (main routine) stack.  */
 		"mov	r1, #2\n\t"
 		"msr	CONTROL, r1\n\t"
 		"isb\n\t"

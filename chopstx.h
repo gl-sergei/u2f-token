@@ -27,19 +27,11 @@
  */
 
 typedef uint32_t chopstx_t;
-struct struct_attr { uint32_t prio; uint32_t addr; size_t size; };
-typedef struct struct_attr chopstx_attr_t;
-
-void chopstx_attr_init (chopstx_attr_t *attr);
 
 /* NOTE: This signature is different to PTHREAD's one.  */
-void chopstx_attr_setschedparam (chopstx_attr_t *attr, uint8_t prio);
-
-void chopstx_attr_setstack (chopstx_attr_t *attr, uint32_t addr,
-			    size_t size);
-
-void chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
-		     void *(thread_entry) (void *), void *);
+chopstx_t
+chopstx_create (uint8_t prio, uint32_t stack_addr, size_t stack_size,
+		void *(thread_entry) (void *), void *);
 
 void chopstx_usec_wait (uint32_t useconds);
 
@@ -103,6 +95,7 @@ void chopstx_exit (void *retval) __attribute__((__noreturn__));
 
 enum {
   CHOPSTX_ERR_NONE = 0,
+  CHOPSTX_ERR_THREAD_CREATE,
   CHOPSTX_ERR_JOIN,
 };
 
@@ -115,10 +108,12 @@ enum {
 void chopstx_cancel (chopstx_t thd);
 void chopstx_testcancel (void);
 
-/*
- * User can define this macro (like: -DCHX_PRIO_DEFAULT=3) to specify
- * default priority.
- */
-#if !defined(CHX_PRIO_DEFAULT)
-#define CHX_PRIO_DEFAULT 1
-#endif
+struct chx_cleanup {
+  struct chx_cleanup *next;
+  void (*routine) (void *);
+  void *arg;
+};
+
+/* NOTE: This signature is different to PTHREAD's one.  */
+void chopstx_cleanup_push (struct chx_cleanup *clp);
+void chopstx_cleanup_pop (int execute);

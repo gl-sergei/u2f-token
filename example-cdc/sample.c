@@ -116,8 +116,6 @@ static char hexchar (uint8_t x)
 int
 main (int argc, const char *argv[])
 {
-  chopstx_t thd;
-  chopstx_attr_t attr;
   uint8_t count;
 
   (void)argc;
@@ -132,21 +130,10 @@ main (int argc, const char *argv[])
 
   m = 10;
 
-  chopstx_attr_init (&attr);
-  chopstx_attr_setschedparam (&attr, PRIO_PWM);
-  chopstx_attr_setstack (&attr, __stackaddr_pwm, __stacksize_pwm);
-
-  chopstx_create (&thd, &attr, pwm, NULL);
-
-  chopstx_attr_setschedparam (&attr, PRIO_BLK);
-  chopstx_attr_setstack (&attr, __stackaddr_blk, __stacksize_blk);
-
-  chopstx_create (&thd, &attr, blk, NULL);
-
-  chopstx_attr_setschedparam (&attr, PRIO_INTR);
-  chopstx_attr_setstack (&attr, __stackaddr_intr, __stacksize_intr);
-
-  chopstx_create (&thd, &attr, usb_intr, NULL);
+  chopstx_create (PRIO_PWM, __stackaddr_pwm, __stacksize_pwm, pwm, NULL);
+  chopstx_create (PRIO_BLK, __stackaddr_blk, __stacksize_blk, blk, NULL);
+  chopstx_create (PRIO_INTR, __stackaddr_intr, __stacksize_intr,
+		  usb_intr, NULL);
 
   chopstx_usec_wait (200*1000);
 

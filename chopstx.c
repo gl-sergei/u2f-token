@@ -34,7 +34,7 @@
 /*
  * Thread priority: higer has higher precedence.
  */
-#if !defined(CHX_PRIO_DEFAULT)
+#if !defined(CHX_PRIO_MAIN)
 #define CHX_PRIO_MAIN 1
 #endif
 
@@ -201,6 +201,7 @@ struct chx_thread {
   uint32_t prio             : 8;
   uint32_t v;
   struct chx_mtx *mutex_list;
+  struct chx_cleanup *clp;
 };
 
 
@@ -657,6 +658,7 @@ chx_init (struct chx_thread *tp)
   q_join.next = q_join.prev = (struct chx_thread *)&q_join;
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
+  tp->clp = NULL;
   tp->state = THREAD_RUNNING;
   tp->flag_detached = tp->flag_got_cancel
     = tp->flag_join_req = tp->flag_sched_rr = 0;
@@ -674,21 +676,17 @@ chx_request_preemption (void)
   asm volatile ("" : : : "memory");
 }
 
+#define CHX_SLEEP 0
+#define CHX_YIELD 1
+
 static void
-chx_sched (void)
+chx_sched (uint32_t arg)
 {
-  register uint32_t r0 asm ("r0") = 0;
+  register uint32_t r0 asm ("r0") = arg;
 
   asm volatile ("svc	#0" : : "r" (r0): "memory");
 }
 
-static void
-chx_yield (void)
-{
-  register uint32_t r0 asm ("r0") = 1;
-
-  asm volatile ("svc	#0" : : "r" (r0) : "memory");
-}
 
 /* The RETVAL is saved into register R8.  */
 static void __attribute__((noreturn))
@@ -721,7 +719,7 @@ chx_exit (void *retval)
     }
   chx_spin_unlock (&q_exit.lock);
   asm volatile ("" : : "r" (r8) : "memory");
-  chx_sched ();
+  chx_sched (CHX_SLEEP);
   /* never comes here. */
   for (;;);
 }
@@ -759,40 +757,18 @@ chx_mutex_unlock (chopstx_mutex_t *mutex)
   return prio;
 }
 
-void
-chopstx_attr_init (chopstx_attr_t *attr)
-{
-  attr->prio = CHX_PRIO_DEFAULT;
-  attr->addr = 0;
-  attr->size = 0;
-}
-
-void
-chopstx_attr_setschedparam (chopstx_attr_t *attr, uint8_t prio)
-{
-  attr->prio = prio;
-}
-
-void
-chopstx_attr_setstack (chopstx_attr_t *attr, uint32_t addr, size_t size)
-{
-  attr->addr = addr;
-  attr->size = size;
-}
-
-
-void
-chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
+chopstx_t
+chopstx_create (uint8_t prio, uint32_t stack_addr, size_t stack_size,
 		void *(thread_entry) (void *), void *arg)
 {
   struct chx_thread *tp;
   void *stack;
   struct chx_stack_regs *p;
 
-  if (attr->size < sizeof (struct chx_thread) + 8 * sizeof (uint32_t))
-    return;
+  if (stack_size < sizeof (struct chx_thread) + 8 * sizeof (uint32_t))
+    chx_fatal (CHOPSTX_ERR_THREAD_CREATE);
   
-  stack = (void *)(attr->addr + attr->size - sizeof (struct chx_thread)
+  stack = (void *)(stack_addr + stack_size - sizeof (struct chx_thread)
 		   - sizeof (struct chx_stack_regs));
   memset (stack, 0, sizeof (struct chx_stack_regs));
   p = (struct chx_stack_regs *)stack;
@@ -806,19 +782,21 @@ chopstx_create (chopstx_t *thd, const chopstx_attr_t *attr,
   tp->tc.reg[REG_SP] = (uint32_t)stack;
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
+  tp->clp = NULL;
   tp->state = THREAD_EXITED;
   tp->flag_detached = tp->flag_got_cancel
     = tp->flag_join_req = tp->flag_sched_rr = 0;
-  tp->prio_orig = tp->prio = attr->prio;
+  tp->prio_orig = tp->prio = prio;
   tp->v = 0;
-  *thd = (uint32_t)tp;
 
   chx_cpu_sched_lock ();
   chx_ready_enqueue (tp);
   if (tp->prio > running->prio)
-    chx_yield ();
+    chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
+
+  return (uint32_t)tp;
 }
 
 
@@ -833,7 +811,7 @@ chopstx_usec_wait (uint32_t usec)
       chx_spin_lock (&q_timer.lock);
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
-      chx_sched ();
+      chx_sched (CHX_SLEEP);
       usec -= usec0;
     }
 }
@@ -903,7 +881,7 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       tp->state = THREAD_WAIT_MTX;
       tp->v = (uint32_t)mutex;
       chx_spin_unlock (&mutex->lock);
-      chx_sched ();
+      chx_sched (CHX_SLEEP);
     }
 
   return;
@@ -920,7 +898,7 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
   prio = chx_mutex_unlock (mutex);
   chx_spin_unlock (&mutex->lock);
   if (prio > running->prio)
-    chx_yield ();
+    chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
 }
@@ -952,7 +930,7 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
   tp->state = THREAD_WAIT_CND;
   tp->v = (uint32_t)cond;
   chx_spin_unlock (&cond->lock);
-  chx_sched ();
+  chx_sched (CHX_SLEEP);
 
   if (mutex)
     chopstx_mutex_lock (mutex);
@@ -976,7 +954,7 @@ chopstx_cond_signal (chopstx_cond_t *cond)
     }
   chx_spin_unlock (&cond->lock);
   if (yield)
-    chx_yield ();
+    chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
 }
@@ -998,7 +976,7 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
     }
   chx_spin_unlock (&cond->lock);
   if (yield)
-    chx_yield ();
+    chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
 }
@@ -1071,9 +1049,32 @@ chopstx_intr_wait (chopstx_intr_t *intr)
     {
       running->state = THREAD_WAIT_INT;
       running->v = 0;
-      chx_sched ();
+      chx_sched (CHX_SLEEP);
     }
+  else
+    chx_cpu_sched_unlock ();
   intr->ready--;
+}
+
+
+void
+chopstx_cleanup_push (struct chx_cleanup *clp)
+{
+  clp->next = running->clp;
+  running->clp = clp;
+}
+
+void
+chopstx_cleanup_pop (int execute)
+{
+  struct chx_cleanup *clp = running->clp;
+
+  if (clp)
+    {
+      running->clp = clp->next;
+      if (execute)
+	clp->routine (clp->arg);
+    }
 }
 
 
@@ -1082,8 +1083,14 @@ void __attribute__((noreturn))
 chopstx_exit (void *retval)
 {
   struct chx_mtx *m, *m_next;
+  struct chx_cleanup *clp = running->clp;
 
-  /* XXX: Call registered "release" routines here.  */
+  running->clp = NULL;
+  while (clp)
+    {
+      clp->routine (clp->arg);
+      clp = clp->next;
+    }      
 
   /* Release all mutexes this thread still holds.  */
   for (m = running->mutex_list; m; m = m_next)
@@ -1127,8 +1134,10 @@ chopstx_join (chopstx_t thd, void **ret)
       tp->flag_join_req = 1;
       if (tp->prio < running->prio)
 	tp->prio = running->prio;
-      chx_sched ();
+      chx_sched (CHX_SLEEP);
     }
+  else
+    chx_cpu_sched_unlock ();
 
   tp->state = THREAD_FINISHED;
   if (ret)
@@ -1166,7 +1175,7 @@ chopstx_cancel (chopstx_t thd)
 	yield = 1;
     }
   if (yield)
-    chx_yield ();
+    chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
 }
