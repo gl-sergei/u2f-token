@@ -849,6 +849,7 @@ chopstx_usec_wait (uint32_t usec)
   while (usec)
     {
       uint32_t usec0 = (usec > 200*1000) ? 200*1000: usec;
+      register int r8 asm ("r8") = 0;
 
       chx_cpu_sched_lock ();
       if (running->flag_sched_rr)
@@ -856,7 +857,10 @@ chopstx_usec_wait (uint32_t usec)
       chx_spin_lock (&q_timer.lock);
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
+      asm ("" : "=r" (r8) : "r" (r8));
       chx_sched (CHX_SLEEP);
+      if (r8)			/* awakened */
+	break;
       usec -= usec0;
     }
 }
@@ -1211,6 +1215,7 @@ chopstx_wakeup_usec_wait (chopstx_t thd)
   chx_cpu_sched_lock ();
   if (tp->state == THREAD_WAIT_TIME)
     {
+      tp->tc.reg[REG_EXIT] = 1;
       chx_timer_dequeue (tp);
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)

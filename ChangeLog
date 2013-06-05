@@ -5,6 +5,7 @@
 	(chopstx_intr_wait, chopstx_join): Implement SCHED_RR.
 	(chopstx_create): Change API.
 	(chopstx_wakeup_usec_wait): New.
+	(chopstx_usec_wait): Accept wakeup to break.
 
 2013-06-04  Niibe Yutaka  <gniibe@fsij.org>
 
