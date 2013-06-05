@@ -14,7 +14,7 @@ static void
 wait_for (uint32_t usec)
 {
 #if defined(BUSY_LOOP)
-  uint32_t count = usec *18;
+  uint32_t count = usec * 6;
   uint32_t i;
 
   for (i = 0; i < count; i++)
