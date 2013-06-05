@@ -37,6 +37,10 @@
 #if !defined(CHX_PRIO_MAIN)
 #define CHX_PRIO_MAIN 1
 #endif
+#if !defined(CHX_FLAGS_MAIN)
+#define CHX_FLAGS_MAIN 0
+#endif
+
 #define MAX_PRIO 255
 
 /*
@@ -504,10 +508,7 @@ chx_set_timer (struct chx_thread *q, uint32_t ticks)
       *SYST_RVR = 0;
     }
   else
-    {
-      q->state = THREAD_WAIT_TIME;
-      q->v = ticks;
-    }
+    q->v = ticks;
 }
 
 static void
@@ -675,6 +676,15 @@ chx_systick_init (void)
   *SYST_RVR = 0;
   *SYST_CVR = 0;
   *SYST_CSR = 7;
+
+  if ((CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR))
+    {
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&q_timer.lock);
+      chx_timer_insert (running, PREEMPTION_USEC);
+      chx_spin_unlock (&q_timer.lock);
+      chx_cpu_sched_unlock ();
+    }
 }
 
 static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
@@ -698,8 +708,9 @@ chx_init (struct chx_thread *tp)
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_RUNNING;
-  tp->flag_detached = tp->flag_got_cancel
-    = tp->flag_join_req = tp->flag_sched_rr = 0;
+  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_sched_rr = (CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR)? 1 : 0;
+  tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = tp->prio = CHX_PRIO_MAIN;
   tp->v = 0;
 
@@ -861,6 +872,7 @@ chopstx_usec_wait_internal (uint32_t *arg)
       if (running->flag_sched_rr)
 	chx_timer_dequeue (running);
       chx_spin_lock (&q_timer.lock);
+      running->state = THREAD_WAIT_TIME;
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
       asm ("" : "=r" (usec_p) : "r" (usec_p));

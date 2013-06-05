@@ -10,6 +10,20 @@ static chopstx_cond_t cnd1;
 static uint8_t u, v;
 static uint8_t m;		/* 0..100 */
 
+static void
+wait_for (uint32_t usec)
+{
+#if defined(BUSY_LOOP)
+  uint32_t count = usec *18;
+  uint32_t i;
+
+  for (i = 0; i < count; i++)
+    asm volatile ("" : : "r" (i) : "memory");
+#else
+  chopstx_usec_wait (usec);
+#endif
+}
+
 static void *
 pwm (void *arg)
 {
@@ -22,9 +36,9 @@ pwm (void *arg)
   while (1)
     {
       set_led (u&v);
-      chopstx_usec_wait (m);
+      wait_for (m);
       set_led (0);
-      chopstx_usec_wait (100-m);
+      wait_for (100-m);
     }
 
   return NULL;
@@ -42,16 +56,21 @@ blk (void *arg)
   while (1)
     {
       v = 0;
-      chopstx_usec_wait (200*1000);
+      wait_for (200*1000);
       v = 1;
-      chopstx_usec_wait (200*1000);
+      wait_for (200*1000);
     }
 
   return NULL;
 }
 
+#if defined(BUSY_LOOP)
+#define PRIO_PWM (CHOPSTX_SCHED_RR|1)
+#define PRIO_BLK (CHOPSTX_SCHED_RR|1)
+#else
 #define PRIO_PWM 3
 #define PRIO_BLK 2
+#endif
 
 extern uint8_t __process1_stack_base__, __process1_stack_size__;
 extern uint8_t __process2_stack_base__, __process2_stack_size__;
@@ -88,7 +107,7 @@ main (int argc, const char *argv[])
   while (1)
     {
       u ^= 1;
-      chopstx_usec_wait (200*1000*6);
+      wait_for (200*1000*6);
     }
 
   return 0;

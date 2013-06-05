@@ -7,6 +7,10 @@
 	(chopstx_wakeup_usec_wait): New.
 	(chopstx_usec_wait): Accept wakeup to break.
 	(chopstx_usec_wait_internal): New.
+	(CHX_FLAGS_MAIN): New.
+	(chx_systick_init): Add chx_timer_insert for main.
+	(chx_set_timer): Don't set thread state.
+	(chopstx_usec_wait_internal): Set thread state to THREAD_WAIT_TIME.
 
 2013-06-04  Niibe Yutaka  <gniibe@fsij.org>
 
