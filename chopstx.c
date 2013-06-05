@@ -37,6 +37,7 @@
 #if !defined(CHX_PRIO_MAIN)
 #define CHX_PRIO_MAIN 1
 #endif
+#define MAX_PRIO 255
 
 /*
  * Exception priority: lower has higher precedence.
@@ -83,7 +84,7 @@ chx_fatal (uint32_t err_code)
 /* RUNNING: the current thread. */
 struct chx_thread *running;
 
-/* Use this when we support round robin scheduling.  */
+/* For round robin scheduling.  */
 #define PREEMPTION_USEC (1000*MHZ) /* 1ms */
 
 /* Double linked list operations.  */
@@ -112,6 +113,9 @@ static struct chx_queue q_join;
 
 /* Forward declaration(s). */
 static void chx_request_preemption (void);
+static void chx_timer_dequeue (struct chx_thread *tp);
+static void chx_timer_insert (struct chx_thread *tp, uint32_t usec);
+
 
 
 /**************/
@@ -220,11 +224,10 @@ ll_empty (void *head)
 static struct chx_thread *
 ll_dequeue (struct chx_thread *tp)
 {
-  struct chx_thread *tp0 = tp;
-
   tp->next->prev = tp->prev;
   tp->prev->next = tp->next;
-  return tp0;
+  tp->prev = tp->next = tp;
+  return tp;
 }
 
 static void
@@ -295,7 +298,7 @@ enum  {
 };
 
 
-static uint32_t
+static struct chx_thread *
 chx_ready_pop (void)
 {
   struct chx_thread *tp;
@@ -306,7 +309,7 @@ chx_ready_pop (void)
     tp->state = THREAD_RUNNING;
   chx_spin_unlock (&q_ready.lock);
 
-  return (uint32_t)tp;
+  return tp;
 }
 
 
@@ -345,18 +348,22 @@ idle (void)
 static void __attribute__ ((naked,used))
 sched (void)
 {
-  register uint32_t r0 asm ("r0");
+  register struct chx_thread *tp asm ("r0");
 
-  r0 = chx_ready_pop ();
+  tp = chx_ready_pop ();
+  if (tp->flag_sched_rr)
+    {
+      chx_spin_lock (&q_timer.lock);
+      chx_timer_insert (tp, PREEMPTION_USEC);
+      chx_spin_unlock (&q_timer.lock);
+    }
   asm volatile (/* Now, r0 points to the thread to be switched.  */
 		/* Put it to *running.  */
 		"ldr	r1, =running\n\t"
 		/* Update running.  */
 		"str	r0, [r1]\n\t"
-		"cbz	r0, 3f\n\t"
+		"cbz	r0, 1f\n\t"
 		/**/
-		"str	r0, [r0]\n\t"
-		"str	r0, [r0, 4]\n\t"
 		"add	r0, #8\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
 		"ldr	r8, [r0], 4\n\t"
@@ -371,7 +378,7 @@ sched (void)
 		/**/
 		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
 		"bx	r0\n"
-	"3:\n\t"
+	"1:\n\t"
 		/* Spawn an IDLE thread.  */
 		"ldr	r0, =__main_stack_end__\n\t"
 		"msr	MSP, r0\n\t"
@@ -391,69 +398,94 @@ sched (void)
 		/**/
 		"sub	r0, #7\n\t" /* EXC_RETURN to a thread with MSP */
 		"bx	r0\n"
-		: /* no output */ : "r" (r0) : "memory");
+		: /* no output */ : "r" (tp) : "memory");
 }
 
 void __attribute__ ((naked))
 preempt (void)
 {
-  register uint32_t r0 asm ("r0");
+  register struct chx_thread *tp asm ("r0");
 
   asm ("ldr	r1, =running\n\t"
        "ldr	r0, [r1]\n\t"
        "cbnz	r0, 0f\n\t"
-       /* It's idle which was preempted.  */
+       /* It's idle which was preempted.  Discard saved registers on stack.  */
        "ldr	r1, =__main_stack_end__\n\t"
        "msr	MSP, r1\n\t"
        "b	sched\n"
   "0:\n\t"
-       "add	r2, r0, #8\n\t"
+       "add	r1, r0, #8\n\t"
        /* Save registers onto CHX_THREAD struct.  */
-       "stm	r2!, {r4, r5, r6, r7}\n\t"
-       "mov	r3, r8\n\t"
-       "mov	r4, r9\n\t"
-       "mov	r5, r10\n\t"
-       "mov	r6, r11\n\t"
-       "mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
-       "stm	r2, {r3, r4, r5, r6, r7}"
-       : "=r" (r0)
+       "stm	r1!, {r4, r5, r6, r7}\n\t"
+       "mov	r2, r8\n\t"
+       "mov	r3, r9\n\t"
+       "mov	r4, r10\n\t"
+       "mov	r5, r11\n\t"
+       "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
+       "stm	r1, {r2, r3, r4, r5, r6}"
+       : "=r" (tp)
        : /* no input */
-       : "r1", "r2", "r3", "r4", "r7", "cc", "memory");
+       : "r1", "r2", "r3", "r4", "r5", "r6", "cc", "memory");
 
-  chx_ready_push ((struct chx_thread *)r0);
-  running = NULL;
+  if (tp)
+    {
+      if (tp->flag_sched_rr)
+	{
+	  if (tp->state == THREAD_RUNNING)
+	    {
+	      chx_timer_dequeue (tp);
+	      chx_ready_enqueue (tp);
+	    }
+	  /*
+	   * It may be THREAD_READY after chx_timer_expired.
+	   * Then, do nothing.
+	   */
+	}
+      else
+	chx_ready_push (tp);
+      running = NULL;
+    }
 
   asm volatile ("b	sched"
 		: /* no output */: /* no input */ : "memory");
 }
 
 
-/* system call: sched */
+/*
+ * System call: switch to another thread.
+ * There are two cases:
+ *   ORIG_R0=0 (SLEEP): Current RUNNING thread is already connected to
+ *                      something (mutex, cond, intr, etc.)
+ *   ORIG_R0=1 (YIELD): Current RUNNING thread is active,
+ *                      it is needed to be enqueued to READY queue.
+ */
 void __attribute__ ((naked))
 svc (void)
 {
-  register uint32_t r0 asm ("r0");
+  register struct chx_thread *tp asm ("r0");
   register uint32_t orig_r0 asm ("r1");
 
   asm ("ldr	r1, =running\n\t"
        "ldr	r0, [r1]\n\t"
-       "add	r2, r0, #8\n\t"
+       "add	r1, r0, #8\n\t"
        /* Save registers onto CHX_THREAD struct.  */
-       "stm	r2!, {r4, r5, r6, r7}\n\t"
-       "mov	r3, r8\n\t"
-       "mov	r4, r9\n\t"
-       "mov	r5, r10\n\t"
-       "mov	r6, r11\n\t"
-       "mrs	r7, PSP\n\t" /* r13(=SP) in user space.  */
-       "stm	r2, {r3, r4, r5, r6, r7}\n\t"
-       "ldr	r1, [r7]"
-       : "=r" (r0), "=r" (orig_r0)
+       "stm	r1!, {r4, r5, r6, r7}\n\t"
+       "mov	r2, r8\n\t"
+       "mov	r3, r9\n\t"
+       "mov	r4, r10\n\t"
+       "mov	r5, r11\n\t"
+       "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
+       "stm	r1, {r2, r3, r4, r5, r6}\n\t"
+       "ldr	r1, [r6]"
+       : "=r" (tp), "=r" (orig_r0)
        : /* no input */
-       : "r2", "r3", "r4", "r7", "memory");
+       : "r2", "r3", "r4", "r5", "r6", "memory");
 
-  if (orig_r0)
+  if (orig_r0)			/* yield */
     {
-      chx_ready_enqueue ((struct chx_thread *)r0);
+      if (tp->flag_sched_rr)
+	chx_timer_dequeue (tp);
+      chx_ready_enqueue (tp);
       running = NULL;
     }
 
@@ -515,7 +547,6 @@ chx_timer_dequeue (struct chx_thread *tp)
 {
   struct chx_thread *tp_prev;
 
-  chx_cpu_sched_lock ();
   chx_spin_lock (&q_timer.lock);
   tp_prev = tp->prev;
   if (tp_prev == (struct chx_thread *)&q_timer)
@@ -534,7 +565,6 @@ chx_timer_dequeue (struct chx_thread *tp)
   ll_dequeue (tp);
   tp->v = 0;
   chx_spin_unlock (&q_timer.lock);
-  chx_cpu_sched_unlock ();
 }
 
 
@@ -550,6 +580,11 @@ chx_timer_expired (void)
       uint32_t next_tick = tp->v;
 
       chx_ready_enqueue (tp);
+      if (tp == running)	/* tp->flag_sched_rr == 1 */
+	prio = MAX_PRIO;
+      else
+	if (tp->prio > prio)
+	  prio = tp->prio;
 
       if (!ll_empty (&q_timer))
 	{
@@ -563,8 +598,11 @@ chx_timer_expired (void)
 	      tp_next = tp->next;
 	      ll_dequeue (tp);
 	      chx_ready_enqueue (tp);
-	      if (tp->prio > prio)
-		prio = tp->prio;
+	      if (tp == running)
+		prio = MAX_PRIO;
+	      else
+		if (tp->prio > prio)
+		  prio = tp->prio;
 	    }
 
 	  if (!ll_empty (&q_timer))
@@ -709,14 +747,14 @@ chx_exit (void *retval)
       chx_spin_unlock (&q_join.lock);
     }
 
+  if (running->flag_sched_rr)
+    chx_timer_dequeue (running);
   chx_spin_lock (&q_exit.lock);
+  ll_insert (running, &q_exit);
   if (running->flag_detached)
     running->state = THREAD_FINISHED;
   else
-    {
-      ll_insert (running, &q_exit);
-      running->state = THREAD_EXITED;
-    }
+    running->state = THREAD_EXITED;
   chx_spin_unlock (&q_exit.lock);
   asm volatile ("" : : "r" (r8) : "memory");
   chx_sched (CHX_SLEEP);
@@ -757,13 +795,17 @@ chx_mutex_unlock (chopstx_mutex_t *mutex)
   return prio;
 }
 
+#define CHOPSTX_PRIO_MASK ((1 << CHOPSTX_PRIO_BITS) - 1)
+
 chopstx_t
-chopstx_create (uint8_t prio, uint32_t stack_addr, size_t stack_size,
+chopstx_create (uint32_t flags_and_prio,
+		uint32_t stack_addr, size_t stack_size,
 		void *(thread_entry) (void *), void *arg)
 {
   struct chx_thread *tp;
   void *stack;
   struct chx_stack_regs *p;
+  chopstx_prio_t prio = (flags_and_prio & CHOPSTX_PRIO_MASK);
 
   if (stack_size < sizeof (struct chx_thread) + 8 * sizeof (uint32_t))
     chx_fatal (CHOPSTX_ERR_THREAD_CREATE);
@@ -784,8 +826,9 @@ chopstx_create (uint8_t prio, uint32_t stack_addr, size_t stack_size,
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_EXITED;
-  tp->flag_detached = tp->flag_got_cancel
-    = tp->flag_join_req = tp->flag_sched_rr = 0;
+  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_sched_rr = (flags_and_prio & CHOPSTX_SCHED_RR)? 1 : 0;
+  tp->flag_detached = (flags_and_prio & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = tp->prio = prio;
   tp->v = 0;
 
@@ -796,7 +839,7 @@ chopstx_create (uint8_t prio, uint32_t stack_addr, size_t stack_size,
   else
     chx_cpu_sched_unlock ();
 
-  return (uint32_t)tp;
+  return (chopstx_t)tp;
 }
 
 
@@ -808,6 +851,8 @@ chopstx_usec_wait (uint32_t usec)
       uint32_t usec0 = (usec > 200*1000) ? 200*1000: usec;
 
       chx_cpu_sched_lock ();
+      if (running->flag_sched_rr)
+	chx_timer_dequeue (running);
       chx_spin_lock (&q_timer.lock);
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
@@ -828,29 +873,29 @@ chopstx_mutex_init (chopstx_mutex_t *mutex)
 void
 chopstx_mutex_lock (chopstx_mutex_t *mutex)
 {
+  struct chx_thread *tp = running;
+
   while (1)
     {
-      struct chx_thread *tp = running;
-      chopstx_mutex_t *m;
+      chopstx_mutex_t *m = mutex;
       struct chx_thread *owner;
 
       chx_cpu_sched_lock ();
-      chx_spin_lock (&mutex->lock);
-      if (mutex->owner == NULL)
+      chx_spin_lock (&m->lock);
+      if (m->owner == NULL)
 	{
 	  /* The mutex is acquired.  */
-	  mutex->owner = tp;
-	  mutex->list = tp->mutex_list;
-	  tp->mutex_list = mutex;
-	  chx_spin_unlock (&mutex->lock);
+	  m->owner = tp;
+	  m->list = tp->mutex_list;
+	  tp->mutex_list = m;
+	  chx_spin_unlock (&m->lock);
 	  chx_cpu_sched_unlock ();
 	  break;
 	}
 
-      m = mutex;
       owner = m->owner;
       while (1)
-	{
+	{			/* Priority inheritance.  */
 	  owner->prio = tp->prio;
 	  if (owner->state == THREAD_READY)
 	    {
@@ -877,6 +922,8 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 	  /* Assume it's UP no case of: ->state==RUNNING on SMP??? */
 	}
 
+      if (tp->flag_sched_rr)
+	chx_timer_dequeue (tp);
       ll_prio_enqueue (tp, &mutex->q);
       tp->state = THREAD_WAIT_MTX;
       tp->v = (uint32_t)mutex;
@@ -925,6 +972,8 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
       chx_spin_unlock (&mutex->lock);
     }
 
+  if (tp->flag_sched_rr)
+    chx_timer_dequeue (tp);
   chx_spin_lock (&cond->lock);
   ll_prio_enqueue (tp, &cond->q);
   tp->state = THREAD_WAIT_CND;
@@ -1047,6 +1096,8 @@ chopstx_intr_wait (chopstx_intr_t *intr)
   chx_enable_intr (intr->irq_num);
   if (intr->ready == 0)
     {
+      if (running->flag_sched_rr)
+	chx_timer_dequeue (running);
       running->state = THREAD_WAIT_INT;
       running->v = 0;
       chx_sched (CHX_SLEEP);
@@ -1114,8 +1165,9 @@ chopstx_join (chopstx_t thd, void **ret)
 {
   struct chx_thread *tp = (struct chx_thread *)thd;
 
-  /* XXX: check if another thread is waiting same thread and call fatal. */
-  /* XXX: dead lock detection (waiting each other) and call fatal. */
+  /*
+   * We don't offer deadlock detection.  It's users' responsibility.
+   */
 
   chx_cpu_sched_lock ();
   if (tp->flag_detached)
@@ -1126,6 +1178,8 @@ chopstx_join (chopstx_t thd, void **ret)
 
   if (tp->state != THREAD_EXITED)
     {
+      if (running->flag_sched_rr)
+	chx_timer_dequeue (running);
       chx_spin_lock (&q_join.lock);
       ll_insert (running, &q_join);
       running->v = (uint32_t)tp;
@@ -1152,7 +1206,7 @@ chopstx_cancel (chopstx_t thd)
   struct chx_stack_regs *p;
   int yield = 0;
 
-  /* Assume it's UP no case of: tp->state==RUNNING on SMP??? */
+  /* Assume it's UP, it's *never*: tp->state==RUNNING on SMP??? */
   chx_cpu_sched_lock ();
   tp->flag_got_cancel = 1;
   /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
