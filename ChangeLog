@@ -6,6 +6,7 @@
 	(chopstx_create): Change API.
 	(chopstx_wakeup_usec_wait): New.
 	(chopstx_usec_wait): Accept wakeup to break.
+	(chopstx_usec_wait_internal): New.
 
 2013-06-04  Niibe Yutaka  <gniibe@fsij.org>
 

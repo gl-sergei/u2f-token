@@ -39,7 +39,9 @@ chopstx_create (uint32_t flags_and_prio,
 #define CHOPSTX_SCHED_RR 0x20000
 
 
-void chopstx_usec_wait (uint32_t useconds);
+void chopstx_usec_wait_internal (uint32_t *arg);
+
+void chopstx_usec_wait (uint32_t usec);
 
 struct chx_spinlock {
   /* nothing for uniprocessor.  */
