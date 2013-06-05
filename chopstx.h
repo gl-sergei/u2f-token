@@ -122,3 +122,6 @@ struct chx_cleanup {
 /* NOTE: This signature is different to PTHREAD's one.  */
 void chopstx_cleanup_push (struct chx_cleanup *clp);
 void chopstx_cleanup_pop (int execute);
+
+
+void chopstx_wakeup_usec_wait (chopstx_t thd);

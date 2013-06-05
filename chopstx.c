@@ -1187,7 +1187,10 @@ chopstx_join (chopstx_t thd, void **ret)
       chx_spin_unlock (&q_join.lock);
       tp->flag_join_req = 1;
       if (tp->prio < running->prio)
-	tp->prio = running->prio;
+	{
+	  tp->prio = running->prio;
+	  /*XXX: dequeue and enqueue with new prio.  */
+	}
       chx_sched (CHX_SLEEP);
     }
   else
@@ -1196,6 +1199,27 @@ chopstx_join (chopstx_t thd, void **ret)
   tp->state = THREAD_FINISHED;
   if (ret)
     *ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
+}
+
+
+void
+chopstx_wakeup_usec_wait (chopstx_t thd)
+{
+  struct chx_thread *tp = (struct chx_thread *)thd;
+  int yield = 0;
+
+  chx_cpu_sched_lock ();
+  if (tp->state == THREAD_WAIT_TIME)
+    {
+      chx_timer_dequeue (tp);
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
+	yield = 1;
+    }
+  if (yield)
+    chx_sched (CHX_YIELD);
+  else
+    chx_cpu_sched_unlock ();
 }
 
 
