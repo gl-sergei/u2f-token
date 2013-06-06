@@ -6,12 +6,15 @@
 #define GPIO_LED_CLEAR_TO_EMIT		12
 
 /*
- * PC0  - Digital input with PullUp.  AN10 for NeuG
- * PC1  - Digital input with PullUp.  AN11 for NeuG
- * PC6  - Normal input because there is an external resistor.
- * PC7  - Normal input because there is an external resistor.
- * PC11 - Open Drain output (USB disconnect).
- * PC12 - Push Pull output (LED).
+ * Port C setup.
+ * PC0  - input with pull-up.  AN10 for NeuG
+ * PC1  - input with pull-up.  AN11 for NeuG
+ * PC6  - input without pull-up/down
+ * PC7  - input without pull-up/down
+ * PC11 - Open-drain output 50MHz (USB disconnect).
+ * PC12 - Push Pull output 50MHz (LED).
+ * ------------------------ Default
+ * PCx  - input with pull-up
  */
 #define VAL_GPIO_ODR            0xFFFFFFFF
 #define VAL_GPIO_CRL            0x44888888      /*  PC7...PC0 */

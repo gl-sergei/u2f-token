@@ -5,10 +5,37 @@
 #define GPIO_USB_SET_TO_ENABLE		10
 #define GPIO_LED_SET_TO_EMIT		0
 
+/*
+ * Port A setup.
+ * PA0  - input with pull-up (TIM2_CH1): AN0 for NeuG
+ * PA1  - input with pull-down (TIM2_CH2)
+ * PA2  - input with pull-up (TIM2_CH3) connected to CIR module
+ * PA3  - input with pull-up: external pin available to user
+ * PA4  - Push pull output           (SPI1_NSS)
+ * PA5  - Alternate Push pull output (SPI1_SCK)
+ * PA6  - Alternate Push pull output (SPI1_MISO)
+ * PA7  - Alternate Push pull output (SPI1_MOSI)
+ * PA10 - Push pull output   (USB 1:ON 0:OFF)
+ * PA11 - Push Pull output 10MHz 0 default (until USB enabled) (USBDM)
+ * PA12 - Push Pull output 10MHz 0 default (until USB enabled) (USBDP)
+ * ------------------------ Default
+ * PA8  - input with pull-up.
+ * PA9  - input with pull-up.
+ * PA13 - input with pull-up.
+ * PA14 - input with pull-up.
+ * PA15 - input with pull-up.
+ */
 #define VAL_GPIO_ODR            0xFFFFE7FD
 #define VAL_GPIO_CRL            0xBBB38888      /*  PA7...PA0 */
 #define VAL_GPIO_CRH            0x88811388      /* PA15...PA8 */
 
+/*
+ * Port B setup.
+ * PB0  - Push pull output   (LED 1:ON 0:OFF)
+ * PB1  - input with pull-up: AN9 for NeuG
+ * ------------------------ Default
+ * PBx  - input with pull-up.
+ */
 #define VAL_GPIO_LED_ODR            0xFFFFFFFF
 #define VAL_GPIO_LED_CRL            0x88888883      /*  PA7...PA0 */
 #define VAL_GPIO_LED_CRH            0x88888888      /* PA15...PA8 */
