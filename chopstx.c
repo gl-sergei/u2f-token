@@ -89,7 +89,7 @@ chx_fatal (uint32_t err_code)
 struct chx_thread *running;
 
 /* For round robin scheduling.  */
-#define PREEMPTION_USEC (1000*MHZ) /* 1ms */
+#define PREEMPTION_USEC 1000 /* 1ms */
 
 /* Double linked list operations.  */
 struct chx_dll {

@@ -1,3 +1,7 @@
+2013-06-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (PREEMPTION_USEC): Fix.
+
 2013-06-05  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (sched, preempt, svc, chx_timer_expired, chx_exit)
