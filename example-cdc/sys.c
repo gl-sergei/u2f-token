@@ -21,10 +21,7 @@
 #define CORTEX_PRIORITY_BITS    4
 #define CORTEX_PRIORITY_MASK(n)  ((n) << (8 - CORTEX_PRIORITY_BITS))
 #define USB_LP_CAN1_RX0_IRQn	 20
-#define STM32_USB_IRQ_PRIORITY     11
-
-#define FLASH_PAGE_SIZE 1024
-
+#define STM32_USB_IRQ_PRIORITY   11
 
 
 #define STM32_SW_PLL		(2 << 0)
@@ -336,9 +333,7 @@ flash_unlock (void)
 
 
 #define intr_disable()  asm volatile ("cpsid   i" : : : "memory")
-
-#define intr_enable()  asm volatile ("msr     BASEPRI, %0\n\t"		 \
-				     "cpsie   i" : : "r" (0) : "memory")
+#define intr_enable()  asm volatile ("cpsie   i" : : : "memory")
 
 #define FLASH_SR_BSY		0x01
 #define FLASH_SR_PGERR		0x04

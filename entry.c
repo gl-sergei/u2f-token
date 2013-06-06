@@ -29,20 +29,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if 0
+#ifdef HAVE_SYS_H
+#define INLINE __attribute__ ((used))
 #include "sys.h"
-
-static void __attribute__ ((used))
-clock_init (void)
-{
-  (*vector[16]) ();
-}
-
-static void __attribute__ ((used))
-gpio_init (void)
-{
-  (*vector[17]) ();
-}
 #else
 #include "board.h"
 
@@ -101,7 +90,7 @@ struct RCC {
 };
 
 #define RCC_BASE		(AHBPERIPH_BASE + 0x1000)
-#define RCC			((struct RCC *)RCC_BASE)
+static struct RCC *const RCC = ((struct RCC *const)RCC_BASE);
 
 #define RCC_APB1ENR_USBEN	0x00800000
 #define RCC_APB1RSTR_USBRST	0x00800000
@@ -132,7 +121,7 @@ struct FLASH {
 };
 
 #define FLASH_R_BASE	(AHBPERIPH_BASE + 0x2000)
-#define FLASH		((struct FLASH *) FLASH_R_BASE)
+static struct FLASH *const FLASH = ((struct FLASH *const) FLASH_R_BASE);
 
 static void __attribute__((used))
 clock_init (void)
@@ -204,8 +193,8 @@ struct GPIO {
 #define GPIOE_BASE	(APB2PERIPH_BASE + 0x1800)
 #define GPIOE		((struct GPIO *) GPIOE_BASE)
 
-#define GPIO_USB	((struct GPIO *) GPIO_USB_BASE)
-#define GPIO_LED	((struct GPIO *) GPIO_LED_BASE)
+static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
+static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
 
 static void __attribute__((used))
 gpio_init (void)

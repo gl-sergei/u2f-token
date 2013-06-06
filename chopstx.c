@@ -41,6 +41,11 @@
 #define CHX_FLAGS_MAIN 0
 #endif
 
+/* Constant for round robin scheduling.  */
+#if !defined(PREEMPTION_USEC)
+#define PREEMPTION_USEC 1000 /* 1ms */
+#endif
+
 #define MAX_PRIO 255
 
 /*
@@ -87,9 +92,6 @@ chx_fatal (uint32_t err_code)
 
 /* RUNNING: the current thread. */
 struct chx_thread *running;
-
-/* For round robin scheduling.  */
-#define PREEMPTION_USEC 1000 /* 1ms */
 
 /* Double linked list operations.  */
 struct chx_dll {

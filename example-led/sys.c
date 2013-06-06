@@ -21,10 +21,7 @@
 #define CORTEX_PRIORITY_BITS    4
 #define CORTEX_PRIORITY_MASK(n)  ((n) << (8 - CORTEX_PRIORITY_BITS))
 #define USB_LP_CAN1_RX0_IRQn	 20
-#define STM32_USB_IRQ_PRIORITY     11
-
-#define FLASH_PAGE_SIZE 1024
-
+#define STM32_USB_IRQ_PRIORITY   11
 
 
 #define STM32_SW_PLL		(2 << 0)
@@ -78,19 +75,19 @@ struct NVIC {
   uint32_t IPR[60];
 };
 
-#define NVICBase	((struct NVIC *)0xE000E100)
-#define NVIC_ISER(n)	(NVICBase->ISER[n])
-#define NVIC_ICPR(n)	(NVICBase->ICPR[n])
-#define NVIC_IPR(n)	(NVICBase->IPR[n])
+static struct NVIC *const NVICBase = ((struct NVIC *const)0xE000E100);
+#define NVIC_ISER(n)	(NVICBase->ISER[n >> 5])
+#define NVIC_ICPR(n)	(NVICBase->ICPR[n >> 5])
+#define NVIC_IPR(n)	(NVICBase->IPR[n >> 2])
 
 static void
 nvic_enable_vector (uint32_t n, uint32_t prio)
 {
   unsigned int sh = (n & 3) << 3;
 
-  NVIC_IPR (n >> 2) = (NVIC_IPR(n >> 2) & ~(0xFF << sh)) | (prio << sh);
-  NVIC_ICPR (n >> 5) = 1 << (n & 0x1F);
-  NVIC_ISER (n >> 5) = 1 << (n & 0x1F);
+  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (prio << sh);
+  NVIC_ICPR (n) = 1 << (n & 0x1F);
+  NVIC_ISER (n) = 1 << (n & 0x1F);
 }
 
 
@@ -112,7 +109,7 @@ struct RCC {
 };
 
 #define RCC_BASE		(AHBPERIPH_BASE + 0x1000)
-#define RCC			((struct RCC *)RCC_BASE)
+static struct RCC *const RCC = ((struct RCC *const)RCC_BASE);
 
 #define RCC_APB1ENR_USBEN	0x00800000
 #define RCC_APB1RSTR_USBRST	0x00800000
@@ -143,7 +140,7 @@ struct FLASH {
 };
 
 #define FLASH_R_BASE	(AHBPERIPH_BASE + 0x2000)
-#define FLASH		((struct FLASH *) FLASH_R_BASE)
+static struct FLASH *const FLASH = ((struct FLASH *const) FLASH_R_BASE);
 
 static void
 clock_init (void)
@@ -215,8 +212,8 @@ struct GPIO {
 #define GPIOE_BASE	(APB2PERIPH_BASE + 0x1800)
 #define GPIOE		((struct GPIO *) GPIOE_BASE)
 
-#define GPIO_USB	((struct GPIO *) GPIO_USB_BASE)
-#define GPIO_LED	((struct GPIO *) GPIO_LED_BASE)
+static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
+static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
 
 static void
 gpio_init (void)
@@ -336,9 +333,7 @@ flash_unlock (void)
 
 
 #define intr_disable()  asm volatile ("cpsid   i" : : : "memory")
-
-#define intr_enable()  asm volatile ("msr     BASEPRI, %0\n\t"		 \
-				     "cpsie   i" : : "r" (0) : "memory")
+#define intr_enable()  asm volatile ("cpsie   i" : : : "memory")
 
 #define FLASH_SR_BSY		0x01
 #define FLASH_SR_PGERR		0x04
@@ -537,7 +532,7 @@ struct SCB
 
 #define SCS_BASE	(0xE000E000)
 #define SCB_BASE	(SCS_BASE +  0x0D00)
-#define SCB		((struct SCB *) SCB_BASE)
+static struct SCB *const SCB = ((struct SCB *const) SCB_BASE);
 
 #define SYSRESETREQ 0x04
 static void

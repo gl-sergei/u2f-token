@@ -93,3 +93,23 @@ nvic_system_reset (void)
 {
   (*vector[12]) ();
 }
+
+/*
+ * Users can override INLINE by 'attribute((used))' to have an
+ * implementation defined.
+ */
+#if !defined(INLINE)
+#define INLINE __inline__
+#endif
+
+static INLINE void
+clock_init (void)
+{
+  (*vector[13]) ();
+}
+
+static INLINE void
+gpio_init (void)
+{
+  (*vector[14]) ();
+}

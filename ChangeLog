@@ -1,6 +1,8 @@
 2013-06-06  Niibe Yutaka  <gniibe@fsij.org>
 
-	* chopstx.c (PREEMPTION_USEC): Fix.
+	* entry.c: Include sys.h for clock_init and gpio_init.
+
+	* chopstx.c (PREEMPTION_USEC): Fix the value.
 
 2013-06-05  Niibe Yutaka  <gniibe@fsij.org>
 
