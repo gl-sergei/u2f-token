@@ -3,6 +3,7 @@
 	* entry.c: Include sys.h for clock_init and gpio_init.
 
 	* chopstx.c (PREEMPTION_USEC): Fix the value.
+	(sched): Check tp != NULL to see flag_sched_rr.
 
 2013-06-05  Niibe Yutaka  <gniibe@fsij.org>
 

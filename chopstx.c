@@ -357,7 +357,7 @@ sched (void)
   register struct chx_thread *tp asm ("r0");
 
   tp = chx_ready_pop ();
-  if (tp->flag_sched_rr)
+  if (tp && tp->flag_sched_rr)
     {
       chx_spin_lock (&q_timer.lock);
       chx_timer_insert (tp, PREEMPTION_USEC);
