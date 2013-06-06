@@ -540,11 +540,14 @@ nvic_system_reset (void)
 {
   SCB->AIRCR = (0x05FA0000 | (SCB->AIRCR & 0x70) | SYSRESETREQ);
   asm volatile ("dsb");
+  for (;;);
 }
 
 static void __attribute__ ((naked))
 reset (void)
 {
+  extern const unsigned long *FT0, *FT1, *FT2;
+
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"mov.w	r0, #0xed00\n\t" /* r0 = SCR */
 		"movt	r0, #0xe000\n\t"
@@ -559,12 +562,15 @@ reset (void)
 		"ldr	r0, [r1]\n\t"	/* Reset handler.                  */
 		"bx	r0\n"
 		: /* no output */ : /* no input */ : "memory");
+
+  /* Never reach here. */
+  /* Artificial entry to refer FT0, FT1, and FT2.  */
+  asm volatile (""
+		: : "r" (&FT0), "r" (&FT1), "r" (&FT2));
 }
 
 typedef void (*handler)(void);
 extern uint8_t __ram_end__;
-
-extern const unsigned long *FT0, *FT1, *FT2;
 
 handler vector[] __attribute__ ((section(".vectors"))) = {
   (handler)&__ram_end__,
@@ -582,9 +588,7 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
   nvic_system_reset,
   clock_init,
   gpio_init,
-  (handler)&FT0,
-  (handler)&FT1,
-  (handler)&FT2,
+  NULL,
 };
 
 const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
