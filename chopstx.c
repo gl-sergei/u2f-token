@@ -46,7 +46,7 @@
 #define PREEMPTION_USEC 1000 /* 1ms */
 #endif
 
-#define MAX_PRIO 255
+#define MAX_PRIO (255+1)
 
 /*
  * Exception priority: lower has higher precedence.
@@ -67,20 +67,6 @@
 #define CPU_EXCEPTION_PRIORITY_SYSTICK       0x50
 #define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x60
 #define CPU_EXCEPTION_PRIORITY_PENDSV        0x70
-
-static void
-chx_cpu_sched_lock (void)
-{
-  register uint32_t tmp = CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
-  asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
-}
-
-static void
-chx_cpu_sched_unlock (void)
-{
-  register uint32_t tmp = CPU_EXCEPTION_PRIORITY_CLEAR;
-  asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
-}
 
 void __attribute__((weak, noreturn))
 chx_fatal (uint32_t err_code)
@@ -213,6 +199,27 @@ struct chx_thread {
   struct chx_mtx *mutex_list;
   struct chx_cleanup *clp;
 };
+
+
+static void
+chx_cpu_sched_lock (void)
+{
+  if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    {
+      register uint32_t tmp = CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
+      asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+    }
+}
+
+static void
+chx_cpu_sched_unlock (void)
+{
+  if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    {
+      register uint32_t tmp = CPU_EXCEPTION_PRIORITY_CLEAR;
+      asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+    }
+}
 
 
 /*
@@ -372,16 +379,20 @@ sched (void)
 		/**/
 		"add	r0, #8\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
-		"ldr	r8, [r0], 4\n\t"
-		"ldr	r9, [r0], 4\n\t"
-		"ldr	r10, [r0], 4\n\t"
-		"ldr	r11, [r0], 4\n\t"
-		"ldr	r1, [r0]\n\t"
+		"ldr	r8, [r0], #4\n\t"
+		"ldr	r9, [r0], #4\n\t"
+		"ldr	r10, [r0], #4\n\t"
+		"ldr	r11, [r0], #4\n\t"
+		"ldr	r1, [r0], #4\n\t"
 		"msr	PSP, r1\n\t"
+		"ldrb	r1, [r0, #3]\n\t" /* ->PRIO field.  */
+		"cmp	r1, #247\n\t"
+		"bhi	0f\n\t"	/* Leave interrupt disabled if >= 248 */
 		/**/
 		"mov	r0, #0\n\t"
-		"msr	BASEPRI, r0\n\t"	      /* Unmask interrupts.  */
+		"msr	BASEPRI, r0\n"	      /* Unmask interrupts.  */
 		/**/
+	"0:\n\t"
 		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
 		"bx	r0\n"
 	"1:\n\t"
@@ -575,7 +586,7 @@ void
 chx_timer_expired (void)
 {
   struct chx_thread *tp;
-  chopstx_prio_t prio = 0;
+  uint16_t prio = 0;			/* Use uint16_t here. */
 
   chx_spin_lock (&q_timer.lock);
   if ((tp = ll_pop (&q_timer)))
@@ -586,8 +597,8 @@ chx_timer_expired (void)
       if (tp == running)	/* tp->flag_sched_rr == 1 */
 	prio = MAX_PRIO;
       else
-	if (tp->prio > prio)
-	  prio = tp->prio;
+	if ((uint16_t)tp->prio > prio)
+	  prio = (uint16_t)tp->prio;
 
       if (!ll_empty (&q_timer))
 	{
@@ -604,8 +615,8 @@ chx_timer_expired (void)
 	      if (tp == running)
 		prio = MAX_PRIO;
 	      else
-		if (tp->prio > prio)
-		  prio = tp->prio;
+		if ((uint16_t)tp->prio > prio)
+		  prio = (uint16_t)tp->prio;
 	    }
 
 	  if (!ll_empty (&q_timer))
@@ -613,7 +624,7 @@ chx_timer_expired (void)
 	}
     }
 
-  if (running == NULL || running->prio < prio)
+  if (running == NULL || (uint16_t)running->prio < prio)
     chx_request_preemption ();
   chx_spin_unlock (&q_timer.lock);
 }

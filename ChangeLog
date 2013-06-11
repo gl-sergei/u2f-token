@@ -1,3 +1,9 @@
+2013-06-11  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_timer_expired): Use uint16_t here.
+	(chx_cpu_sched_lock, chx_cpu_sched_unlock): Change only when
+	its priority is lower than CHOPSTX_PRIO_INHIBIT_PREEMPTION.
+
 2013-06-06  Niibe Yutaka  <gniibe@fsij.org>
 
 	* entry.c: Include sys.h for clock_init and gpio_init.
