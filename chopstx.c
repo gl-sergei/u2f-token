@@ -724,10 +724,15 @@ chx_init (struct chx_thread *tp)
   tp->flag_got_cancel = tp->flag_join_req = 0;
   tp->flag_sched_rr = (CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
-  tp->prio_orig = tp->prio = CHX_PRIO_MAIN;
+  tp->prio_orig = CHX_PRIO_MAIN;
+  tp->prio = 0;
   tp->v = 0;
-
   running = tp;
+
+  if (CHX_PRIO_MAIN >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    chx_cpu_sched_lock ();
+
+  tp->prio = CHX_PRIO_MAIN;
 }
 
 

@@ -1,3 +1,7 @@
+2013-06-12  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_init): Inhibit preemption for main thread.
+
 2013-06-11  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_timer_expired): Use uint16_t here.
