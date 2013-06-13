@@ -1,3 +1,8 @@
+2013-06-13  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): Rename (was:
+	chopstx_usec_wait_internal), as it's user visible.
+
 2013-06-12  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_init): Inhibit preemption for main thread.

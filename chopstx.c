@@ -68,6 +68,13 @@
 #define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x60
 #define CPU_EXCEPTION_PRIORITY_PENDSV        0x70
 
+/**
+ * chx_fatal: Fatal error point.
+ *
+ * At runtime, detected an coding error which should be known at least
+ * at compile time (or on design phase), this function will be called
+ * to stop further execution of code.  It never returns.
+ */
 void __attribute__((weak, noreturn))
 chx_fatal (uint32_t err_code)
 {
@@ -826,6 +833,14 @@ chx_mutex_unlock (chopstx_mutex_t *mutex)
 
 #define CHOPSTX_PRIO_MASK ((1 << CHOPSTX_PRIO_BITS) - 1)
 
+/**
+ * chopstx_create: Create a thread
+ * @flags_and_prio: flags and priority
+ * @stack_addr: stack address
+ * @stack_size: size of stack
+ * @thread_entry: Entry function of new thread
+ * @arg: Argument to new thread function
+ */
 chopstx_t
 chopstx_create (uint32_t flags_and_prio,
 		uint32_t stack_addr, size_t stack_size,
@@ -872,10 +887,16 @@ chopstx_create (uint32_t flags_and_prio,
 }
 
 
+/**
+ * chopstx_usec_wait_var: Sleep for micro seconds (specified by variable)
+ * @var: Pointer to usec
+ *
+ * This is useful to avoid a race condition.
+ */
 void
-chopstx_usec_wait_internal (uint32_t *arg)
+chopstx_usec_wait_var (uint32_t *var)
 {
-  register uint32_t *usec_p asm ("r8") = arg;
+  register uint32_t *usec_p asm ("r8") = var;
   uint32_t usec;
   uint32_t usec0 = 0;
 
@@ -903,13 +924,22 @@ chopstx_usec_wait_internal (uint32_t *arg)
   chx_cpu_sched_unlock ();
 }
 
+
+/**
+ * chopstx_usec_wait: Sleep for micro seconds
+ * @usec: number of micro seconds
+ */
 void
 chopstx_usec_wait (uint32_t usec)
 {
-  chopstx_usec_wait_internal (&usec);
+  chopstx_usec_wait_var (&usec);
 }
 
 
+/**
+ * chopstx_mutex_init: Initialize the mutex
+ * @mutex: Mutex
+ */
 void
 chopstx_mutex_init (chopstx_mutex_t *mutex)
 {
@@ -918,6 +948,10 @@ chopstx_mutex_init (chopstx_mutex_t *mutex)
 }
 
 
+/**
+ * chopstx_mutex_lock: Lock the mutex
+ * @mutex: Mutex
+ */
 void
 chopstx_mutex_lock (chopstx_mutex_t *mutex)
 {
@@ -983,6 +1017,10 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 }
 
 
+/**
+ * chopstx_mutex_unlock: Unlock the mutex
+ * @mutex: Mutex
+ */
 void
 chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 {
@@ -999,6 +1037,10 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 }
 
 
+/**
+ * chopstx_cond_init: Initialize the condition variable
+ * @cond: Condition variable
+ */
 void
 chopstx_cond_init (chopstx_cond_t *cond)
 {
@@ -1006,6 +1048,11 @@ chopstx_cond_init (chopstx_cond_t *cond)
 }
 
 
+/**
+ * chopstx_cond_wait: Wait on the condition variable
+ * @cond: Condition variable
+ * @mutex: Associated mutex
+ */
 void
 chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
@@ -1034,6 +1081,10 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 }
 
 
+/**
+ * chopstx_cond_signal: Wakeup a thread waiting on the condition variable
+ * @cond: Condition variable
+ */
 void
 chopstx_cond_signal (chopstx_cond_t *cond)
 {
@@ -1057,6 +1108,10 @@ chopstx_cond_signal (chopstx_cond_t *cond)
 }
 
 
+/**
+ * chopstx_cond_broadcast: Wakeup all threads waiting on the condition variable 
+ * @cond: Condition Variable
+ */
 void
 chopstx_cond_broadcast (chopstx_cond_t *cond)
 {
@@ -1079,6 +1134,11 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 }
 
 
+/**
+ * chopstx_claim_irq: Claim interrupt request to handle by this thread
+ * @intr: Pointer to INTR structure
+ * @irq_num: IRQ Number (hardware specific)
+ */
 void
 chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
 {
@@ -1094,6 +1154,10 @@ chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
 }
 
 
+/**
+ * chopstx_realease_irq: Unregister interrupt request
+ * @intr0: interrupt request to be unregistered
+ */
 void
 chopstx_release_irq (chopstx_intr_t *intr0)
 {
@@ -1137,6 +1201,10 @@ chopstx_release_irq_thread (struct chx_thread *tp)
 }
 
 
+/**
+ * chopstx_intr_wait: Wait for interrupt request from hardware
+ * @intr: Pointer to INTR structure
+ */
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
 {
@@ -1156,6 +1224,11 @@ chopstx_intr_wait (chopstx_intr_t *intr)
 }
 
 
+/**
+ * chopstx_cleanup_push: Register a cleanup function
+ * @clp: clean up thunk
+ *
+ */
 void
 chopstx_cleanup_push (struct chx_cleanup *clp)
 {
@@ -1163,6 +1236,11 @@ chopstx_cleanup_push (struct chx_cleanup *clp)
   running->clp = clp;
 }
 
+/**
+ * chopstx_cleanup_pop: Release a cleanup function
+ * @execute: execute the clenup function on release
+ *
+ */
 void
 chopstx_cleanup_pop (int execute)
 {
@@ -1177,7 +1255,15 @@ chopstx_cleanup_pop (int execute)
 }
 
 
-/* The RETVAL is saved into register R8.  */
+/**
+ * chopstx_exit: Terminate the execution of thread
+ * @retval: Return value (to be caught by a joining thread)
+ *
+ * Calling this function terminates the execution of thread, after
+ * calling clean up functions.  If the calling thread still holds
+ * mutexes, they will be released.  If the calling thread claiming
+ * IRQ, it will be released, too.  This function never returns.
+ */
 void __attribute__((noreturn))
 chopstx_exit (void *retval)
 {
@@ -1208,6 +1294,13 @@ chopstx_exit (void *retval)
 }
 
 
+/**
+ * chopstx_join: join with a terminated thread
+ * @thd: Thread to wait
+ * @ret: pointer to void * to store return value
+ *
+ * Waits for the thread of @thd to terminate.
+ */
 void
 chopstx_join (chopstx_t thd, void **ret)
 {
@@ -1250,6 +1343,13 @@ chopstx_join (chopstx_t thd, void **ret)
 }
 
 
+/**
+ * chopstx_wakeup_usec_wait: wakeup the sleeping thread for timer
+ * @thd: thread to be awakened
+ *
+ * Canceling the timer, wakup the sleeping thread for it.
+ * No return value.
+ */
 void
 chopstx_wakeup_usec_wait (chopstx_t thd)
 {
@@ -1271,7 +1371,13 @@ chopstx_wakeup_usec_wait (chopstx_t thd)
     chx_cpu_sched_unlock ();
 }
 
-
+/**
+ * chopstx_cancel: request a cancellation to a thread
+ * @thd: thread to be canceled
+ *
+ * This function requests a cancellation th the thread @thd.
+ * No return value.
+ */
 void
 chopstx_cancel (chopstx_t thd)
 {
@@ -1308,6 +1414,13 @@ chopstx_cancel (chopstx_t thd)
 }
 
 
+/**
+ * chopstx_testcancel: catch pending cancellation request
+ * 
+ * Calling chopstx_testcancel creates a cancellation point.
+ * No return value.  If the thread is canceled, this function
+ * does not return.
+ */
 void
 chopstx_testcancel (void)
 {

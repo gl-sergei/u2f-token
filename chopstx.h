@@ -40,7 +40,7 @@ chopstx_create (uint32_t flags_and_prio,
 
 #define CHOPSTX_PRIO_INHIBIT_PREEMPTION 248
 
-void chopstx_usec_wait_internal (uint32_t *arg);
+void chopstx_usec_wait_var (uint32_t *arg);
 
 void chopstx_usec_wait (uint32_t usec);
 
