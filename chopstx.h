@@ -95,7 +95,7 @@ void chopstx_intr_wait (chopstx_intr_t *intr);
  * Library provides default implementation as weak reference.
  * User can replace it.
   */
-void chx_fatal (uint32_t err_code) __attribute__((__noreturn__));
+void chx_fatal (uint32_t err_code) __attribute__((__weak__, __noreturn__));
 
 void chopstx_join (chopstx_t, void **);
 void chopstx_exit (void *retval) __attribute__((__noreturn__));
