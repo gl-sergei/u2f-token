@@ -6,7 +6,7 @@ ifneq ($(USE_EVENTFLAG),)
 CSRC += $(CHOPSTX)/eventflag.c
 endif
 
-INCDIR = $(CHOPSTX)
+INCDIR _= $(CHOPSTX)
 
 BUILDDIR = build
 OUTFILES = $(BUILDDIR)/$(PROJECT).elf $(BUILDDIR)/$(PROJECT).bin
