@@ -1,3 +1,8 @@
+2013-06-19  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sample.c (usb_intr): No disable/enable interrupt,
+	but call the handler.
+
 2013-06-13  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_usec_wait_var): Rename (was:

@@ -66,12 +66,24 @@ usb_intr (void *arg)
   chopstx_intr_t interrupt;
 
   (void)arg;
-  asm volatile ("cpsid   i" : : : "memory");
-  /* Disable because of usb_lld_init assumes interrupt handler.  */
   usb_lld_init (0x80);		/* Bus powered. */
   chopstx_claim_irq (&interrupt, INTR_REQ_USB);
-  /* Enable */
-  asm volatile ("cpsie   i" : : : "memory");
+
+  /*
+   * When USB interrupt occurs between usb_lld_init (which assumes
+   * ISR) and chopstx_claim_irq (which clears pending interrupt),
+   * invocation of usb_interrupt_handler won't occur.
+   *
+   * We can't call usb_lld_init after chopstx_claim_irq, as
+   * usb_lld_init does its own setting for NVIC.  Calling
+   * chopstx_claim_irq after usb_lld_init overrides that.
+   *
+   * Calling usb_interrupt_handler is no harm even if there were no
+   * interrupts, thus, we call it unconditionally here, just in case
+   * if there is a request.
+   *
+   */
+  usb_interrupt_handler ();
 
   while (1)
     {
