@@ -1,6 +1,11 @@
 # Chopstx make rules.
 
 CSRC += $(CHOPSTX)/entry.c $(CHOPSTX)/chopstx.c
+
+ifneq ($(USE_EVENTFLAG),)
+CSRC += $(CHOPSTX)/eventflag.c
+endif
+
 INCDIR = $(CHOPSTX)
 
 BUILDDIR = build
