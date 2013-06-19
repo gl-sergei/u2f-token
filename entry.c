@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <chopstx.h>
 
 #ifdef HAVE_SYS_H
 #define INLINE __attribute__ ((used))
@@ -246,6 +247,9 @@ static void none (void)
 {
 }
 
+#define C_S_SUB(arg0, arg1, arg2) arg0 #arg1 arg2
+#define COMPOSE_STATEMENT(arg0,arg1,arg2)  C_S_SUB (arg0, arg1, arg2)
+
 /*
  * This routine only changes PSP and not MSP.
  */
@@ -276,7 +280,7 @@ void entry (void)
 	"3:\n\t"
 		/* Switch to PSP.  */
 		"ldr	r0, =__process0_stack_end__\n\t"
-		"sub	r0, #60\n\t" /* Size of struct chx_thread.     */
+		COMPOSE_STATEMENT ("sub	r0, #", CHOPSTX_THREAD_SIZE, "\n\t")
 		"msr	PSP, r0\n\t" /* Process (main routine) stack.  */
 		"mov	r1, #2\n\t"
 		"msr	CONTROL, r1\n\t"

@@ -130,3 +130,5 @@ void chopstx_cleanup_pop (int execute);
 
 
 void chopstx_wakeup_usec_wait (chopstx_t thd);
+
+#define CHOPSTX_THREAD_SIZE 60

@@ -840,6 +840,8 @@ chx_mutex_unlock (chopstx_mutex_t *mutex)
 
 typedef void *(voidfunc) (void *);
 
+extern void cause_link_time_error_unexpected_size_of_struct_chx_thread (void);
+
 /**
  * chopstx_create - Create a thread
  * @flags_and_prio: Flags and priority
@@ -859,6 +861,9 @@ chopstx_create (uint32_t flags_and_prio,
   void *stack;
   struct chx_stack_regs *p;
   chopstx_prio_t prio = (flags_and_prio & CHOPSTX_PRIO_MASK);
+
+  if (CHOPSTX_THREAD_SIZE != sizeof(struct chx_thread))
+    cause_link_time_error_unexpected_size_of_struct_chx_thread ();
 
   if (stack_size < sizeof (struct chx_thread) + 8 * sizeof (uint32_t))
     chx_fatal (CHOPSTX_ERR_THREAD_CREATE);

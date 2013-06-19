@@ -1,5 +1,7 @@
 2013-06-19  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.h (CHOPSTX_THREAD_SIZE): New.
+
 	* rules.mk (CSRC): Add eventflag.c.
 	* eventflag.h, eventflag.c: New.
 
