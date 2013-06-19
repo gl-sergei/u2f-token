@@ -1,5 +1,8 @@
 2013-06-19  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chopstx_main): New.
+	(chx_init): Initialize chopstx_main.
+
 	* example-cdc/sample.c (usb_intr): No disable/enable interrupt,
 	but call the handler.
 

@@ -712,6 +712,8 @@ static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
 static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
 static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
 
+chopstx_t chopstx_main;
+
 void
 chx_init (struct chx_thread *tp)
 {
@@ -741,6 +743,8 @@ chx_init (struct chx_thread *tp)
     chx_cpu_sched_lock ();
 
   tp->prio = CHX_PRIO_MAIN;
+
+  chopstx_main = (chopstx_t)tp;
 }
 
 
