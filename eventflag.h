@@ -1,10 +1,13 @@
 typedef uint32_t eventmask_t;
 
 struct eventflag {
-  chopstx_t owner;
-  uint32_t wait_usec;
+  chopstx_t sleeper;
   eventmask_t flag;
   chopstx_mutex_t mutex;
+  union {
+    uint32_t wait_usec;
+    chopstx_cond_t cond;
+  } u;
 };
 
 void eventflag_init (struct eventflag *ev, chopstx_t owner);
