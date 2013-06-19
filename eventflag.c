@@ -38,7 +38,7 @@ enum {
 
 
 void
-eventflag_init (struct event_flag *ev, chopstx_t sleeper)
+eventflag_init (struct eventflag *ev, chopstx_t sleeper)
 {
   ev->sleeper = sleeper;
 
@@ -53,7 +53,7 @@ eventflag_init (struct event_flag *ev, chopstx_t sleeper)
 
 
 eventmask_t
-eventflag_wait (struct event_flag *ev)
+eventflag_wait (struct eventflag *ev)
 {
   int n;
 
@@ -62,9 +62,9 @@ eventflag_wait (struct event_flag *ev)
 
   chopstx_mutex_lock (&ev->mutex);
   if (!ev->flag)
-    chopstx_cond_wait (&ev->cond, &ev->mutex);
+    chopstx_cond_wait (&ev->u.cond, &ev->mutex);
 
-  n = __builtin_ffs ((ev->flag & m));
+  n = __builtin_ffs (ev->flag);
   ev->flag &= ~(1 << (n - 1));
   chopstx_mutex_unlock (&ev->mutex);
 
@@ -72,7 +72,7 @@ eventflag_wait (struct event_flag *ev)
 }
 
 eventmask_t
-eventflag_wait_timeout (struct event_flag *ev, uint32_t usec)
+eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
 {
   eventmask_t em = 0;
   int n;
@@ -104,7 +104,7 @@ eventflag_wait_timeout (struct event_flag *ev, uint32_t usec)
 
 
 void
-eventflag_signal (struct event_flag *ev, eventmask_t m)
+eventflag_signal (struct eventflag *ev, eventmask_t m)
 {
   chopstx_mutex_lock (&ev->mutex);
   ev->flag |= m;
@@ -117,6 +117,6 @@ eventflag_signal (struct event_flag *ev, eventmask_t m)
 	}
     }
   else
-    chopstx_cond_signal (&ev->cond);
+    chopstx_cond_signal (&ev->u.cond);
   chopstx_mutex_unlock (&ev->mutex);
 }
