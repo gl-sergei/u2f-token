@@ -919,6 +919,8 @@ chopstx_usec_wait_var (uint32_t *var)
   while (1)
     {
       chx_cpu_sched_lock ();
+      if (!usec_p)		/* awakened */
+	break;
       *usec_p -= usec0;
       usec = *usec_p;
       if (usec == 0)
@@ -930,11 +932,8 @@ chopstx_usec_wait_var (uint32_t *var)
       running->state = THREAD_WAIT_TIME;
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
-      asm ("" : "=r" (usec_p) : "r" (usec_p));
       chx_sched (CHX_SLEEP);
-
-      if (!usec_p)		/* awakened */
-	break;
+      asm ("" : "=r" (usec_p) : "r" (usec_p));
     }
 
   chx_cpu_sched_unlock ();

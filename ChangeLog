@@ -1,3 +1,8 @@
+2013-08-16  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): Check usec_p at the beginning
+	of the loop, bug fix of sched-unlocking from sched-unlocked state.
+
 2013-06-19  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.h (CHOPSTX_THREAD_SIZE): New.
