@@ -31,7 +31,7 @@ LDFLAGS  += -mthumb -mno-thumb-interwork
 
 CFLAGS   += -MD -MP -MF .dep/$(@F).d
 
-all: $(OBJS) $(OUTFILES)
+all: $(OUTFILES)
 
 $(OBJS): | $(BUILDDIR)
 
@@ -42,9 +42,9 @@ $(OBJS) : $(BUILDDIR)/%.o : %.c Makefile
 	@echo
 	$(CC) -c $(CFLAGS) -I. $(IINCDIR) $< -o $@
 
-%.elf: $(OBJS) $(LDSCRIPT)
+%.elf: $(OBJS) $(OBJS_ADD) $(LDSCRIPT)
 	@echo
-	$(LD) $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+	$(LD) $(OBJS) $(OBJS_ADD) $(LDFLAGS) $(LIBS) -o $@
 
 %.bin: %.elf $(LDSCRIPT)
 	$(OBJCOPY) -O binary $< $@

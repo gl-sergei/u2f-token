@@ -1,3 +1,7 @@
+2013-08-19  Niibe Yutaka  <gniibe@fsij.org>
+
+	* rules.mk (%.elf): Support OBJS_ADD.
+
 2013-08-16  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_usec_wait_var): Check usec_p at the beginning
