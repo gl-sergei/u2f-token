@@ -1,0 +1,7 @@
+example-cdc/.dep
+example-cdc/board.h
+example-cdc/build
+example-led/.dep
+example-led/board.h
+example-led/build
+doc/chopstx.info

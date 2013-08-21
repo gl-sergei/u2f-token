@@ -1,19 +1,38 @@
 Chopstx - Threads and only Threads
 							Version 0.00
-							  2013-06-XX
+							  2013-08-21
 							Niibe Yutaka
 					     Flying Stone Technology
 
 What's Chopstx?
 ===============
 
-Chopstx is a RT thread library for ARM Cortex-M3, specifically,
+Chopstx is an RT thread library for ARM Cortex-M3, specifically,
 STM32F103.
 
 While most RTOSes come with many features, drivers, and stacks,
 Chopstx just offers a RT thread library.
 
 With Chopstx, interrupt handling is also done by a thread.  This
-enables coherent code to allow us ease of maintenance.
+enables coherent code for ease of maintenance.
+
+
+License
+=======
+
+It is distributed under GNU General Public Licence version 3 or later
+(GPLv3+), with additional permission.  Please see COPYING and
+EXCEPTION.
+
+
+Example code
+============
+
+We have two examples in this distribution, LED blinker and
+USB CDC-ACM function.  You can build it like:
+
+   $ cd example-cdc
+   $ ln -s ../board/board-olimex-stm32-h103.h board.h
+   $ make
 
 -- 
