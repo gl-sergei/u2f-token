@@ -1,5 +1,8 @@
 2013-08-21  Niibe Yutaka  <gniibe@fsij.org>
 
+	* Version 0.00.
+
+	* doc: Documentation.
 	* example-led/sys.c: Update from NeuG.
 	* example-cdc/sys.c: Likewise.
 	* example-cdc/usb_stm32f103.c: Likewise.
