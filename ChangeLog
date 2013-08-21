@@ -1,3 +1,11 @@
+2013-08-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-led/sys.c: Update from NeuG.
+	* example-cdc/sys.c: Likewise.
+	* example-cdc/usb_stm32f103.c: Likewise.
+	* example-cdc/usb_lld.h: Likewise.
+	* example-cdc/usb-cdc.c: Likewise.
+
 2013-08-19  Niibe Yutaka  <gniibe@fsij.org>
 
 	* rules.mk (%.elf): Support OBJS_ADD.

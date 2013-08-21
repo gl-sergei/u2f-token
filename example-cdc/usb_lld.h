@@ -88,7 +88,6 @@ enum DEVICE_STATE
   CONFIGURED
 };
 
-extern uint32_t bDeviceState;
 extern const uint8_t usb_initial_feature;
 
 #define STM32_USB_IRQ_PRIORITY     11

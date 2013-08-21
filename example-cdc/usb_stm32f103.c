@@ -1,16 +1,9 @@
-#ifdef FREE_STANDING
 #include <stdint.h>
 #include <stdlib.h>
+
 #define TRUE  1
 #define FALSE 0
 
-#define NULL  0
-
-#define     __IO    volatile
-#else
-#include "ch.h"
-#include "hal.h"
-#endif
 #include "sys.h"
 #include "usb_lld.h"
 
@@ -90,15 +83,15 @@ static struct DATA_INFO *const data_p = &data_info;
 #define PMA_ADDR  (0x40006000UL) /* USB_IP Packet Memory Area base address   */
 
 /* Control register */
-#define CNTR    ((__IO uint16_t *)(REG_BASE + 0x40))
+#define CNTR    ((volatile uint16_t *)(REG_BASE + 0x40))
 /* Interrupt status register */
-#define ISTR    ((__IO uint16_t *)(REG_BASE + 0x44))
+#define ISTR    ((volatile uint16_t *)(REG_BASE + 0x44))
 /* Frame number register */
-#define FNR     ((__IO uint16_t *)(REG_BASE + 0x48))
+#define FNR     ((volatile uint16_t *)(REG_BASE + 0x48))
 /* Device address register */
-#define DADDR   ((__IO uint16_t *)(REG_BASE + 0x4C))
+#define DADDR   ((volatile uint16_t *)(REG_BASE + 0x4C))
 /* Buffer Table address register */
-#define BTABLE  ((__IO uint16_t *)(REG_BASE + 0x50))
+#define BTABLE  ((volatile uint16_t *)(REG_BASE + 0x50))
 
 #define ISTR_CTR    (0x8000) /* Correct TRansfer (clear-only bit) */
 #define ISTR_DOVR   (0x4000) /* DMA OVeR/underrun (clear-only bit) */

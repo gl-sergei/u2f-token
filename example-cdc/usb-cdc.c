@@ -158,6 +158,7 @@ static const uint8_t vcom_string3[28] = {
 #define NUM_INTERFACES 2
 
 uint32_t bDeviceState = UNCONNECTED; /* USB device status */
+uint8_t connected;
 
 void
 usb_cb_device_reset (void)
@@ -179,11 +180,18 @@ void
 usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value,
 			  uint16_t index, uint16_t len)
 {
-  (void)req;
-  (void)req_no;
-  (void)value;
-  (void)index;
-  (void)len;
+  uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
+
+  if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT)
+      && index == 0 && USB_SETUP_SET (req) && len == 0
+      && req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
+    {
+      /* Open/close the connection.  */
+      chopstx_mutex_lock (&usb_mtx);
+      connected = (value != 0)? 1 : 0;
+      chopstx_cond_signal (&cnd_usb);
+      chopstx_mutex_unlock (&usb_mtx);
+    }
 }
 
 struct line_coding
@@ -192,7 +200,7 @@ struct line_coding
   uint8_t format;
   uint8_t paritytype;
   uint8_t datatype;
-};
+}  __attribute__((packed));
 
 static struct line_coding line_coding = {
   115200, /* baud rate: 115200    */
@@ -201,50 +209,30 @@ static struct line_coding line_coding = {
   0x08    /* bits:      8         */
 };
 
-uint8_t connected;
 
 static int
-vcom_port_data_setup (uint8_t req, uint8_t req_no, uint16_t value)
+vcom_port_data_setup (uint8_t req, uint8_t req_no, uint16_t value, uint16_t len)
 {
+  (void)value;
   if (USB_SETUP_GET (req))
     {
-      if (req_no == USB_CDC_REQ_GET_LINE_CODING)
+      if (req_no == USB_CDC_REQ_GET_LINE_CODING
+	  && len == sizeof (line_coding))
 	{
-	  usb_lld_set_data_to_send (&line_coding, sizeof(line_coding));
+	  usb_lld_set_data_to_send (&line_coding, sizeof (line_coding));
 	  return USB_SUCCESS;
 	}
     }
   else  /* USB_SETUP_SET (req) */
     {
-      if (req_no == USB_CDC_REQ_SET_LINE_CODING)
+      if (req_no == USB_CDC_REQ_SET_LINE_CODING
+	  && len == sizeof (line_coding))
 	{
-	  usb_lld_set_data_to_recv (&line_coding, sizeof(line_coding));
+	  usb_lld_set_data_to_recv (&line_coding, sizeof (line_coding));
 	  return USB_SUCCESS;
 	}
       else if (req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
-	{
-	  uint8_t connected_saved = connected;
-
-	  if (value != 0)
-	    {
-	      if (connected == 0)
-		/* It's Open call */
-		connected++;
-	    }
-	  else
-	    {
-	      if (connected)
-		/* Close call */
-		connected = 0;
-	    }
-
-	  chopstx_mutex_lock (&usb_mtx);
-	  if (connected != connected_saved)
-	    chopstx_cond_signal (&cnd_usb);
-	  chopstx_mutex_unlock (&usb_mtx);
-
-	  return USB_SUCCESS;
-	}
+	return USB_SUCCESS;
     }
 
   return USB_UNSUPPORT;
@@ -259,7 +247,7 @@ usb_cb_setup (uint8_t req, uint8_t req_no,
   (void)len;
   if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT))
     if (index == 0)
-      return vcom_port_data_setup (req, req_no, value);
+      return vcom_port_data_setup (req, req_no, value, len);
 
   return USB_UNSUPPORT;
 }

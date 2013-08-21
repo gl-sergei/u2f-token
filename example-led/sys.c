@@ -566,7 +566,7 @@ reset (void)
   /* Never reach here. */
   /* Artificial entry to refer FT0, FT1, and FT2.  */
   asm volatile (""
-		: : "r" (&FT0), "r" (&FT1), "r" (&FT2));
+		: : "r" (FT0), "r" (FT1), "r" (FT2));
 }
 
 typedef void (*handler)(void);
