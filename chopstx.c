@@ -72,9 +72,8 @@
  * chx_fatal - Fatal error point.
  * @err_code: Error code
  *
- * At runtime, detected an coding error which should be known at least
- * at compile time (or on design phase), this function will be called
- * to stop further execution of code.  It never returns.
+ * When it detects a coding error, this function will be called to
+ * stop further execution of code.  It never returns.
  */
 void
 chx_fatal (uint32_t err_code)
@@ -905,9 +904,8 @@ chopstx_create (uint32_t flags_and_prio,
  * chopstx_usec_wait_var - Sleep for micro seconds (specified by variable)
  * @var: Pointer to usec
  *
- * Sleep for micro second specified by @var.
- * This is useful to avoid a race condition by making another thread clear
- * @var on condition (to avoid this thread going into sleep).
+ * Sleep for micro seconds, specified by @var.
+ * Another thread can clear @var to stop the caller going into sleep.
  */
 void
 chopstx_usec_wait_var (uint32_t *var)
@@ -1141,7 +1139,7 @@ chopstx_cond_signal (chopstx_cond_t *cond)
  * chopstx_cond_broadcast - Wake up all waiting on the condition variable
  * @cond: Condition Variable
  *
- * Wake up all thread winting on @cond.
+ * Wake up all threads waiting on @cond.
  */
 void
 chopstx_cond_broadcast (chopstx_cond_t *cond)
@@ -1387,7 +1385,7 @@ chopstx_join (chopstx_t thd, void **ret)
  * chopstx_wakeup_usec_wait - wakeup the sleeping thread for timer
  * @thd: Thread to be awakened
  *
- * Canceling the timer, wakup the sleeping thread for it.
+ * Canceling the timer, wake up the sleeping thread.
  * No return value.
  */
 void
@@ -1415,7 +1413,7 @@ chopstx_wakeup_usec_wait (chopstx_t thd)
  * chopstx_cancel - request a cancellation to a thread
  * @thd: Thread to be canceled
  *
- * This function requests a cancellation th the thread @thd.
+ * This function requests a cancellation of a thread @thd.
  * No return value.
  */
 void
