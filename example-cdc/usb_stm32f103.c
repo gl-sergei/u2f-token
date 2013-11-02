@@ -697,10 +697,7 @@ static int std_get_descriptor (uint8_t req, uint16_t value,
     return USB_UNSUPPORT;
 
   (void)length;
-  if (rcp == DEVICE_RECIPIENT)
-    return usb_cb_get_descriptor ((value >> 8), index, value);
-
-  return USB_UNSUPPORT;
+  return usb_cb_get_descriptor (rcp, (value >> 8), (value & 0xff), index);
 }
 
 static int std_get_configuration (uint8_t req, uint16_t value,

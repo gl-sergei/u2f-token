@@ -60,7 +60,8 @@ void usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no,
 			       uint16_t value, uint16_t index, uint16_t len);
 int usb_cb_setup (uint8_t req, uint8_t req_no, uint16_t value,
 		  uint16_t index, uint16_t len);
-int usb_cb_get_descriptor (uint8_t desc_type, uint16_t index, uint16_t value);
+int usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
+			   uint16_t index);
 int usb_cb_handle_event (uint8_t event_type, uint16_t value);
 int usb_cb_interface (uint8_t cmd, uint16_t interface, uint16_t value);
 
@@ -88,9 +89,8 @@ enum DEVICE_STATE
   CONFIGURED
 };
 
+extern uint32_t bDeviceState;
 extern const uint8_t usb_initial_feature;
-
-#define STM32_USB_IRQ_PRIORITY     11
 
 extern void usb_lld_init (uint8_t feature);
 
