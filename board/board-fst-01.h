@@ -1,11 +1,24 @@
 #define FLASH_PAGE_SIZE 1024
 
-#define STM32_PLLXTPRE			STM32_PLLXTPRE_DIV1
-#define STM32_PLLMUL_VALUE		6
-#define STM32_HSECLK			12000000
+#define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1
+#define STM32_PLLMUL_VALUE              6
+#define STM32_HSECLK                    12000000
 
-#define GPIO_USB_SET_TO_ENABLE		10
-#define GPIO_LED_SET_TO_EMIT		0
+#define GPIO_USB_SET_TO_ENABLE          10
+#define GPIO_LED_SET_TO_EMIT            0
+
+/* For pin-cir settings of Gnuk */
+#define TIMx                  TIM2
+#define INTR_REQ_TIM          TIM2_IRQ
+#define AFIO_EXTICR_INDEX     0
+#define AFIO_EXTICR1_EXTIx_Py AFIO_EXTICR1_EXTI2_PA
+#define EXTI_PR               EXTI_PR_PR2
+#define EXTI_IMR              EXTI_IMR_MR2
+#define EXTI_FTSR_TR          EXTI_FTSR_TR2
+#define INTR_REQ_EXTI         EXTI2_IRQ
+#define ENABLE_RCC_APB1
+#define RCC_APBnENR_TIMxEN    RCC_APB1ENR_TIM2EN
+#define RCC_APBnRSTR_TIMxRST  RCC_APB1RSTR_TIM2RST
 
 /*
  * Port A setup.
@@ -42,11 +55,11 @@
 #define VAL_GPIO_LED_CRL            0x88888883      /*  PA7...PA0 */
 #define VAL_GPIO_LED_CRH            0x88888888      /* PA15...PA8 */
 
-#define GPIO_USB_BASE	GPIOA_BASE
-#define GPIO_LED_BASE	GPIOB_BASE
+#define GPIO_USB_BASE   GPIOA_BASE
+#define GPIO_LED_BASE   GPIOB_BASE
 
-#define RCC_APB2ENR_IOP_EN	(RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN)
-#define RCC_APB2RSTR_IOP_RST	(RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPBRST)
+#define RCC_APB2ENR_IOP_EN      (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN)
+#define RCC_APB2RSTR_IOP_RST    (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPBRST)
 
 /* NeuG settings for ADC2.  */
 #define NEUG_ADC_SETTING2_SMPR1 0

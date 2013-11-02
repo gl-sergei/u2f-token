@@ -1,11 +1,11 @@
 #define FLASH_PAGE_SIZE 1024
 
-#define STM32_PLLXTPRE			STM32_PLLXTPRE_DIV1
-#define STM32_PLLMUL_VALUE		9
-#define STM32_HSECLK			8000000
+#define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1
+#define STM32_PLLMUL_VALUE              9
+#define STM32_HSECLK                    8000000
 
-#define GPIO_USB_SET_TO_ENABLE		10
-#define GPIO_LED_SET_TO_EMIT		8
+#define GPIO_USB_SET_TO_ENABLE          10
+#define GPIO_LED_SET_TO_EMIT            8
 
 /*
  * Port A setup.
@@ -22,10 +22,10 @@
 #define VAL_GPIO_CRL            0x88888888      /*  PA7...PA0 */
 #define VAL_GPIO_CRH            0x88811383      /* PA15...PA8 */
 
-#define GPIO_USB_BASE	GPIOA_BASE
-#define GPIO_LED_BASE	GPIOA_BASE
+#define GPIO_USB_BASE   GPIOA_BASE
+#define GPIO_LED_BASE   GPIOA_BASE
 
-#define RCC_APB2ENR_IOP_EN	RCC_APB2ENR_IOPAEN
-#define RCC_APB2RSTR_IOP_RST	RCC_APB2RSTR_IOPARST
+#define RCC_APB2ENR_IOP_EN      RCC_APB2ENR_IOPAEN
+#define RCC_APB2RSTR_IOP_RST    RCC_APB2RSTR_IOPARST
 
 /* NeuG settings for ADC2 is default (PA0: Analog IN0, PA1: Analog IN1).  */

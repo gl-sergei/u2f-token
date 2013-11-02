@@ -181,14 +181,32 @@ clock_init (void)
     ;
 }
 
-#define RCC_APB2ENR_IOPAEN	0x00000004
+#define RCC_APB2RSTR_AFIORST    0x00000001
 #define RCC_APB2RSTR_IOPARST	0x00000004
-#define RCC_APB2ENR_IOPBEN	0x00000008
 #define RCC_APB2RSTR_IOPBRST	0x00000008
-#define RCC_APB2ENR_IOPCEN	0x00000010
 #define RCC_APB2RSTR_IOPCRST	0x00000010
-#define RCC_APB2ENR_IOPDEN	0x00000020
 #define RCC_APB2RSTR_IOPDRST	0x00000020
+
+#define RCC_APB2ENR_AFIOEN      0x00000001
+#define RCC_APB2ENR_IOPAEN	0x00000004
+#define RCC_APB2ENR_IOPBEN	0x00000008
+#define RCC_APB2ENR_IOPCEN	0x00000010
+#define RCC_APB2ENR_IOPDEN	0x00000020
+
+
+struct AFIO
+{
+  volatile uint32_t EVCR;
+  volatile uint32_t MAPR;
+  volatile uint32_t EXTICR[4];
+  uint32_t RESERVED0;
+  volatile uint32_t MAPR2;
+};
+
+#define AFIO_BASE 0x40010000
+static struct AFIO *const AFIO = (struct AFIO *const)AFIO_BASE;
+
+#define AFIO_MAPR_TIM3_REMAP_PARTIALREMAP 0x00000800
 
 
 struct GPIO {
@@ -214,6 +232,9 @@ struct GPIO {
 
 static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
 static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
+#ifdef GPIO_OTHER_BASE
+static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
+#endif
 
 static void
 gpio_init (void)
@@ -223,6 +244,10 @@ gpio_init (void)
   RCC->APB2RSTR = RCC_APB2RSTR_IOP_RST;
   RCC->APB2RSTR = 0;
 
+#ifdef AFIO_MAPR_SOMETHING
+  AFIO->MAPR |= AFIO_MAPR_SOMETHING;
+#endif
+
   GPIO_USB->ODR = VAL_GPIO_ODR;
   GPIO_USB->CRH = VAL_GPIO_CRH;
   GPIO_USB->CRL = VAL_GPIO_CRL;
@@ -231,6 +256,12 @@ gpio_init (void)
   GPIO_LED->ODR = VAL_GPIO_LED_ODR;
   GPIO_LED->CRH = VAL_GPIO_LED_CRH;
   GPIO_LED->CRL = VAL_GPIO_LED_CRL;
+#endif
+
+#ifdef GPIO_OTHER_BASE
+  GPIO_OTHER->ODR = VAL_GPIO_OTHER_ODR;
+  GPIO_OTHER->CRH = VAL_GPIO_OTHER_CRH;
+  GPIO_OTHER->CRL = VAL_GPIO_OTHER_CRL;
 #endif
 }
 
@@ -276,8 +307,6 @@ static void wait (int count)
     asm volatile ("" : : "r" (i) : "memory");
 }
 
-#define USB_IRQ 20
-#define USB_IRQ_PRIORITY ((11) << 4)
 
 static void
 usb_lld_sys_shutdown (void)

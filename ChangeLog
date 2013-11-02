@@ -1,3 +1,21 @@
+2013-11-02  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sys.c, example-led/sys.c: Update.
+
+	* chopstx.c (CPU_EXCEPTION_PRIORITY_INTERRUPT)
+	(CPU_EXCEPTION_PRIORITY_PENDSV): Change the value, so that
+	interrupt priority matches USB interrupt priority of old SYS 1.0
+	implementation.
+	(chx_enable_intr, chx_disable_intr): Clear pending bit at
+	chx_enable_intr.
+	(chopstx_intr_wait): Call chx_enable_intr only when it's going to
+	sleep.
+	* entry.c (RCC_APB2RSTR_AFIORST, define RCC_APB2ENR_AFIOEN): New.
+	(AFIO, GPIO_OTHER): New.
+	(gpio_init): Handle AFIO and GPIO_OTHER.
+	* board/board-fst-01.h, board/board-stm8s-discovery.h: Add pin-cir
+	usage.
+
 2013-08-21  Niibe Yutaka  <gniibe@fsij.org>
 
 	* Version 0.00.

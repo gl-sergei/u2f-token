@@ -55,8 +55,9 @@
  * ---------------------
  * Prio 0x40: thread temporarily inhibiting schedule for critical region
  * Prio 0x50: systick
- * Prio 0x60: external interrupt
- * Prio 0x70: pendsv
+ * ...
+ * Prio 0xb0: external interrupt
+ * Prio 0xc0: pendsv
  */
 
 #define CPU_EXCEPTION_PRIORITY_CLEAR         0
@@ -65,8 +66,9 @@
 
 #define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
 #define CPU_EXCEPTION_PRIORITY_SYSTICK       0x50
-#define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x60
-#define CPU_EXCEPTION_PRIORITY_PENDSV        0x70
+/* ... */
+#define CPU_EXCEPTION_PRIORITY_INTERRUPT     0xb0
+#define CPU_EXCEPTION_PRIORITY_PENDSV        0xc0
 
 /**
  * chx_fatal - Fatal error point.
@@ -168,11 +170,11 @@ struct NVIC {
   uint32_t IPR[60];
 };
 
-static struct NVIC *const NVICBase = (struct NVIC *const)0xE000E100;
-#define NVIC_ISER(n)	(NVICBase->ISER[n >> 5])
-#define NVIC_ICER(n)	(NVICBase->ICER[n >> 5])
-#define NVIC_ICPR(n)	(NVICBase->ICPR[n >> 5])
-#define NVIC_IPR(n)	(NVICBase->IPR[n >> 2])
+static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
+#define NVIC_ISER(n)	(NVIC->ISER[n >> 5])
+#define NVIC_ICER(n)	(NVIC->ICER[n >> 5])
+#define NVIC_ICPR(n)	(NVIC->ICPR[n >> 5])
+#define NVIC_IPR(n)	(NVIC->IPR[n >> 2])
 
 #define USB_LP_CAN1_RX0_IRQn	 20
 
@@ -640,6 +642,7 @@ chx_timer_expired (void)
 static void
 chx_enable_intr (uint8_t irq_num)
 {
+  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f); /* Clear pending.  */
   NVIC_ISER (irq_num) = 1 << (irq_num & 0x1f);
 }
 
@@ -647,8 +650,6 @@ static void
 chx_disable_intr (uint8_t irq_num)
 {
   NVIC_ICER (irq_num) = 1 << (irq_num & 0x1f);
-  /* Clear pending, too.  */
-  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f);
 }
 
 
@@ -1244,9 +1245,9 @@ void
 chopstx_intr_wait (chopstx_intr_t *intr)
 {
   chx_cpu_sched_lock ();
-  chx_enable_intr (intr->irq_num);
   if (intr->ready == 0)
     {
+      chx_enable_intr (intr->irq_num);
       if (running->flag_sched_rr)
 	chx_timer_dequeue (running);
       running->state = THREAD_WAIT_INT;
