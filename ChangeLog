@@ -1,6 +1,20 @@
+2013-11-03  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.01.
+	* doc/chopstx.texi (VERSION): 0.01.
+
+	* chopstx.c (chx_clr_intr): New.
+	(chopstx_intr_wait): Call chopstx.c.
+	(chx_enable_intr): Let chx_clr_intr clear pending-bit.
+
 2013-11-02  Niibe Yutaka  <gniibe@fsij.org>
 
-	* example-cdc/sys.c, example-led/sys.c: Update.
+	* example-cdc/usb_lld.h, example-cdc/usb_stm32f103.c: Update from
+	Gnuk.
+	* example-cdc/usb-cdc.c (usb_cb_get_descriptor): Follow the
+	change.
+
+	* example-cdc/sys.c, example-led/sys.c: Update from Gnuk.
 
 	* chopstx.c (CPU_EXCEPTION_PRIORITY_INTERRUPT)
 	(CPU_EXCEPTION_PRIORITY_PENDSV): Change the value, so that

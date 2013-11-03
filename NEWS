@@ -1,0 +1,43 @@
+NEWS - Noteworthy changes
+
+* Major changes in Chopstx 0.01
+
+  Released 2013-11-03, by NIIBE Yutaka
+
+** Interrupt handling change
+There was a bug in 0.00, which caused spurious interrupts.  Every
+interrupt event caused two events.  Specifically, after valid
+interrupt event (for the caller of chopstx_intr_wait), another
+spurious event was always occurred.  This was fixed.
+
+In the design of Chopstx, interrupt handling is done by a thread.
+Lower level interrupt handler just accepts interrupt, disabling the
+interrupt, and switchs the control to the thread.  It is the thread to
+check the cause of interrupt, to process it, and to clear the cause.
+Next call to chopstx_intr_wait will enable the interrupt again.
+
+The bug was related to pending interrupt flag.  Pending interrupt flag
+for a specific interrupt is set, on return from handler mode if the
+cause is still active.  With traditional interrupt handling, lower
+level interrupt handler processes it and clears the cause.  Thus,
+pending interrupt flag is not set on return.
+
+In Chopstx, pending interrupt flag was always set, because the control
+goes from lower level interrupt handler (in handler mode) to a
+interrupt handling thread which processes the interrupt.  In 0.01, new
+internal routine chx_clr_intr is introduced, and pending interrupt
+flag is cleared within chopstx_intr_wait after waked up.
+
+For detail of interrupt operation, see the section B.3.4, Nested
+Vectored Interrupt Controller (NVIC), in the ARM v7-M Architecture
+Reference Manual.  The subsection, B3.4.1, Theory of operation,
+explains how it works.
+
+
+** gpio_init change
+Now, gpi_init support AFIO mapping and another GPIO (GPIO_OTHER)
+settings.
+
+Local Variables:
+mode: outline
+End:

@@ -642,8 +642,13 @@ chx_timer_expired (void)
 static void
 chx_enable_intr (uint8_t irq_num)
 {
-  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f); /* Clear pending.  */
   NVIC_ISER (irq_num) = 1 << (irq_num & 0x1f);
+}
+
+static void
+chx_clr_intr (uint8_t irq_num)
+{				/* Clear pending interrupt.  */
+  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f);
 }
 
 static void
@@ -1253,6 +1258,7 @@ chopstx_intr_wait (chopstx_intr_t *intr)
       running->state = THREAD_WAIT_INT;
       running->v = 0;
       chx_sched (CHX_SLEEP);
+      chx_clr_intr (intr->irq_num);
     }
   else
     chx_cpu_sched_unlock ();
