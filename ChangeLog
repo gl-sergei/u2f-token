@@ -1,5 +1,12 @@
 2013-11-08  Niibe Yutaka  <gniibe@fsij.org>
 
+	* Version 0.03.
+	* doc/chopstx.texi (VERSION): 0.03.
+
+	* chopstx.c (preempt): Disable interrupt.
+
+2013-11-08  Niibe Yutaka  <gniibe@fsij.org>
+
 	* Version 0.02.
 	* doc/chopstx.texi (VERSION): 0.02.
 

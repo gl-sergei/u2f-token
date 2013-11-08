@@ -431,7 +431,9 @@ preempt (void)
 {
   register struct chx_thread *tp asm ("r0");
 
-  asm ("ldr	r1, =running\n\t"
+  tp = (struct chx_thread *)CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
+  asm ("msr	BASEPRI, r0\n\t"
+       "ldr	r1, =running\n\t"
        "ldr	r0, [r1]\n\t"
        "cbnz	r0, 0f\n\t"
        /* It's idle which was preempted.  Discard saved registers on stack.  */
@@ -449,7 +451,7 @@ preempt (void)
        "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
        "stm	r1, {r2, r3, r4, r5, r6}"
        : "=r" (tp)
-       : /* no input */
+       : "r" (tp)
        : "r1", "r2", "r3", "r4", "r5", "r6", "cc", "memory");
 
   if (tp)
