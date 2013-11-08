@@ -93,8 +93,8 @@ static struct DATA_INFO *const data_p = &data_info;
 /* Buffer Table address register */
 #define BTABLE  ((volatile uint16_t *)(REG_BASE + 0x50))
 
-#define ISTR_CTR    (0x8000) /* Correct TRansfer (clear-only bit) */
-#define ISTR_DOVR   (0x4000) /* DMA OVeR/underrun (clear-only bit) */
+#define ISTR_CTR    (0x8000) /* Correct TRansfer (read-only bit) */
+#define ISTR_OVR    (0x4000) /* OVeR/underrun (clear-only bit) */
 #define ISTR_ERR    (0x2000) /* ERRor (clear-only bit) */
 #define ISTR_WKUP   (0x1000) /* WaKe UP (clear-only bit) */
 #define ISTR_SUSP   (0x0800) /* SUSPend (clear-only bit) */
@@ -105,8 +105,7 @@ static struct DATA_INFO *const data_p = &data_info;
 #define ISTR_DIR    (0x0010)  /* DIRection of transaction (read-only bit)  */
 #define ISTR_EP_ID  (0x000F)  /* EndPoint IDentifier (read-only bit)  */
 
-#define CLR_CTR    (~ISTR_CTR)   /* clear Correct TRansfer bit */
-#define CLR_DOVR   (~ISTR_DOVR)  /* clear DMA OVeR/underrun bit*/
+#define CLR_OVR    (~ISTR_OVR)   /* clear OVeR/underrun bit*/
 #define CLR_ERR    (~ISTR_ERR)   /* clear ERRor bit */
 #define CLR_WKUP   (~ISTR_WKUP)  /* clear WaKe UP bit     */
 #define CLR_SUSP   (~ISTR_SUSP)  /* clear SUSPend bit     */
@@ -115,7 +114,7 @@ static struct DATA_INFO *const data_p = &data_info;
 #define CLR_ESOF   (~ISTR_ESOF)  /* clear Expected Start Of Frame bit */
 
 #define CNTR_CTRM   (0x8000) /* Correct TRansfer Mask */
-#define CNTR_DOVRM  (0x4000) /* DMA OVeR/underrun Mask */
+#define CNTR_OVRM   (0x4000) /* OVeR/underrun Mask */
 #define CNTR_ERRM   (0x2000) /* ERRor Mask */
 #define CNTR_WKUPM  (0x1000) /* WaKe UP Mask */
 #define CNTR_SUSPM  (0x0800) /* SUSPend Mask */
@@ -391,19 +390,19 @@ usb_interrupt_handler (void)
 {
   uint16_t istr_value = st103_get_istr ();
 
-  if (istr_value & ISTR_CTR)
+  if ((istr_value & ISTR_CTR))
     usb_handle_transfer ();
 
-  if (istr_value & ISTR_RESET)
+  if ((istr_value & ISTR_RESET))
     {
       st103_set_istr (CLR_RESET);
       usb_cb_device_reset ();
     }
 
-  if (istr_value & ISTR_DOVR)
-    st103_set_istr (CLR_DOVR);
+  if ((istr_value & ISTR_OVR))
+    st103_set_istr (CLR_OVR);
 
-  if (istr_value & ISTR_ERR)
+  if ((istr_value & ISTR_ERR))
     st103_set_istr (CLR_ERR);
 }
 
@@ -539,7 +538,7 @@ static int std_get_status (uint8_t req,
       uint8_t endpoint = (index & 0x0f);
       uint16_t status;
 
-      if ((index & 0x70) != 0 || endpoint == ENDP0)
+      if ((index & 0x70) || endpoint == ENDP0)
 	return USB_UNSUPPORT;
 
       if ((index & 0x80))
@@ -938,35 +937,29 @@ usb_handle_transfer (void)
   uint16_t istr_value;
   uint8_t ep_index;
 
-  while (((istr_value = st103_get_istr ()) & ISTR_CTR) != 0)
+  while (((istr_value = st103_get_istr ()) & ISTR_CTR))
     {
       ep_index = (istr_value & ISTR_EP_ID);
+      /* Decode and service non control endpoints interrupt  */
+      /* process related endpoint register */
+      ep_value = st103_get_epreg (ep_index);
+
       if (ep_index == 0)
 	{
-	  if ((istr_value & ISTR_DIR) == 0)
-	    {				/* DIR = 0 */
-	      /* DIR = 0      => IN  int */
-	      /* DIR = 0 implies that (EP_CTR_TX = 1) always  */
-
-	      st103_ep_clear_ctr_tx (ENDP0);
+	  if ((ep_value & EP_CTR_TX))
+	    {
+	      st103_ep_clear_ctr_tx (ep_index);
 	      handle_in0 ();
 	    }
-	  else
-	    {				/* DIR = 1 */
-	      /* DIR = 1 & CTR_RX       => SETUP or OUT int */
-	      /* DIR = 1 & (CTR_TX | CTR_RX) => 2 int pending */
 
-	      ep_value = st103_get_epreg (ENDP0);
-	      if ((ep_value & EP_SETUP) != 0)
-		{
-		  st103_ep_clear_ctr_rx (ENDP0);
-		  handle_setup0 ();
-		}
-	      else if ((ep_value & EP_CTR_RX) != 0)
-		{
-		  st103_ep_clear_ctr_rx (ENDP0);
-		  handle_out0 ();
-		}
+	  if ((ep_value & EP_CTR_RX))
+	    {
+	      st103_ep_clear_ctr_rx (ep_index);
+
+	      if ((ep_value & EP_SETUP))
+		handle_setup0 ();
+	      else
+		handle_out0 ();
 	    }
 
 	  if (dev_p->state == STALLED)
@@ -974,11 +967,7 @@ usb_handle_transfer (void)
 	}
       else
 	{
-	  /* Decode and service non control endpoints interrupt  */
-	  /* process related endpoint register */
-	  ep_value = st103_get_epreg (ep_index);
-
-	  if ((ep_value & EP_CTR_RX) != 0)
+	  if ((ep_value & EP_CTR_RX))
 	    {
 	      st103_ep_clear_ctr_rx (ep_index);
 	      switch ((ep_index - 1))
@@ -993,7 +982,7 @@ usb_handle_transfer (void)
 		}
 	    }
 
-	  if ((ep_value & EP_CTR_TX) != 0)
+	  if ((ep_value & EP_CTR_TX))
 	    {
 	      st103_ep_clear_ctr_tx (ep_index);
 	      switch ((ep_index - 1))

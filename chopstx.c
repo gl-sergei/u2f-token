@@ -54,9 +54,8 @@
  * Prio 0x30: svc
  * ---------------------
  * Prio 0x40: thread temporarily inhibiting schedule for critical region
- * Prio 0x50: systick
  * ...
- * Prio 0xb0: external interrupt
+ * Prio 0xb0: systick, external interrupt
  * Prio 0xc0: pendsv
  */
 
@@ -65,8 +64,8 @@
 #define CPU_EXCEPTION_PRIORITY_SVC           0x30
 
 #define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
-#define CPU_EXCEPTION_PRIORITY_SYSTICK       0x50
 /* ... */
+#define CPU_EXCEPTION_PRIORITY_SYSTICK       CPU_EXCEPTION_PRIORITY_INTERRUPT
 #define CPU_EXCEPTION_PRIORITY_INTERRUPT     0xb0
 #define CPU_EXCEPTION_PRIORITY_PENDSV        0xc0
 

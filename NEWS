@@ -1,5 +1,17 @@
 NEWS - Noteworthy changes
 
+* Major changes in Chopstx 0.02
+
+  Released 2013-11-08, by NIIBE Yutaka
+
+** Bug fix of priority
+There was a severe bug about the configuraion of priority setting of
+exceptions.  As we don't use any inter-lock between interrupts hander
+and timer expiration handler, these priorities should be equal.  If
+not, timer expiration handler might interrupt the execution of
+interrupts handers.
+
+
 * Major changes in Chopstx 0.01
 
   Released 2013-11-03, by NIIBE Yutaka
