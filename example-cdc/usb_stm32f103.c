@@ -160,7 +160,7 @@ static struct DATA_INFO *const data_p = &data_info;
 #define EPRX_DTOG1     (0x1000) /* EndPoint RX Data TOGgle bit1 */
 #define EPRX_DTOG2     (0x2000) /* EndPoint RX Data TOGgle bit1 */
 
-static void usb_handle_transfer (void);
+static void usb_handle_transfer (uint16_t istr_value);
 
 static void st103_set_btable (void)
 {
@@ -390,20 +390,22 @@ usb_interrupt_handler (void)
 {
   uint16_t istr_value = st103_get_istr ();
 
-  if ((istr_value & ISTR_CTR))
-    usb_handle_transfer ();
-
   if ((istr_value & ISTR_RESET))
     {
       st103_set_istr (CLR_RESET);
       usb_cb_device_reset ();
     }
+  else
+    {
+      if ((istr_value & ISTR_OVR))
+	st103_set_istr (CLR_OVR);
 
-  if ((istr_value & ISTR_OVR))
-    st103_set_istr (CLR_OVR);
+      if ((istr_value & ISTR_ERR))
+	st103_set_istr (CLR_ERR);
 
-  if ((istr_value & ISTR_ERR))
-    st103_set_istr (CLR_ERR);
+      if ((istr_value & ISTR_CTR))
+	usb_handle_transfer (istr_value);
+    }
 }
 
 static void handle_datastage_out (void)
@@ -931,70 +933,66 @@ void WEAK EP6_OUT_Callback (void);
 void WEAK EP7_OUT_Callback (void);
 
 static void
-usb_handle_transfer (void)
+usb_handle_transfer (uint16_t istr_value)
 {
   uint16_t ep_value = 0;
-  uint16_t istr_value;
   uint8_t ep_index;
 
-  while (((istr_value = st103_get_istr ()) & ISTR_CTR))
+  ep_index = (istr_value & ISTR_EP_ID);
+  /* Decode and service non control endpoints interrupt  */
+  /* process related endpoint register */
+  ep_value = st103_get_epreg (ep_index);
+
+  if (ep_index == 0)
     {
-      ep_index = (istr_value & ISTR_EP_ID);
-      /* Decode and service non control endpoints interrupt  */
-      /* process related endpoint register */
-      ep_value = st103_get_epreg (ep_index);
-
-      if (ep_index == 0)
+      if ((ep_value & EP_CTR_TX))
 	{
-	  if ((ep_value & EP_CTR_TX))
-	    {
-	      st103_ep_clear_ctr_tx (ep_index);
-	      handle_in0 ();
-	    }
-
-	  if ((ep_value & EP_CTR_RX))
-	    {
-	      st103_ep_clear_ctr_rx (ep_index);
-
-	      if ((ep_value & EP_SETUP))
-		handle_setup0 ();
-	      else
-		handle_out0 ();
-	    }
-
-	  if (dev_p->state == STALLED)
-	    st103_ep_set_rxtx_status (ENDP0, EP_RX_STALL, EP_TX_STALL);
+	  st103_ep_clear_ctr_tx (ep_index);
+	  handle_in0 ();
 	}
-      else
-	{
-	  if ((ep_value & EP_CTR_RX))
-	    {
-	      st103_ep_clear_ctr_rx (ep_index);
-	      switch ((ep_index - 1))
-		{
-		case 0: EP1_OUT_Callback ();  break;
-		case 1: EP2_OUT_Callback ();  break;
-		case 2: EP3_OUT_Callback ();  break;
-		case 3: EP4_OUT_Callback ();  break;
-		case 4: EP5_OUT_Callback ();  break;
-		case 5: EP6_OUT_Callback ();  break;
-		case 6: EP7_OUT_Callback ();  break;
-		}
-	    }
 
-	  if ((ep_value & EP_CTR_TX))
+      if ((ep_value & EP_CTR_RX))
+	{
+	  st103_ep_clear_ctr_rx (ep_index);
+
+	  if ((ep_value & EP_SETUP))
+	    handle_setup0 ();
+	  else
+	    handle_out0 ();
+	}
+
+      if (dev_p->state == STALLED)
+	st103_ep_set_rxtx_status (ENDP0, EP_RX_STALL, EP_TX_STALL);
+    }
+  else
+    {
+      if ((ep_value & EP_CTR_RX))
+	{
+	  st103_ep_clear_ctr_rx (ep_index);
+	  switch ((ep_index - 1))
 	    {
-	      st103_ep_clear_ctr_tx (ep_index);
-	      switch ((ep_index - 1))
-		{
-		case 0: EP1_IN_Callback ();  break;
-		case 1: EP2_IN_Callback ();  break;
-		case 2: EP3_IN_Callback ();  break;
-		case 3: EP4_IN_Callback ();  break;
-		case 4: EP5_IN_Callback ();  break;
-		case 5: EP6_IN_Callback ();  break;
-		case 6: EP7_IN_Callback ();  break;
-		}
+	    case 0: EP1_OUT_Callback ();  break;
+	    case 1: EP2_OUT_Callback ();  break;
+	    case 2: EP3_OUT_Callback ();  break;
+	    case 3: EP4_OUT_Callback ();  break;
+	    case 4: EP5_OUT_Callback ();  break;
+	    case 5: EP6_OUT_Callback ();  break;
+	    case 6: EP7_OUT_Callback ();  break;
+	    }
+	}
+
+      if ((ep_value & EP_CTR_TX))
+	{
+	  st103_ep_clear_ctr_tx (ep_index);
+	  switch ((ep_index - 1))
+	    {
+	    case 0: EP1_IN_Callback ();  break;
+	    case 1: EP2_IN_Callback ();  break;
+	    case 2: EP3_IN_Callback ();  break;
+	    case 3: EP4_IN_Callback ();  break;
+	    case 4: EP5_IN_Callback ();  break;
+	    case 5: EP6_IN_Callback ();  break;
+	    case 6: EP7_IN_Callback ();  break;
 	    }
 	}
     }

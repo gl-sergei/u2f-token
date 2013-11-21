@@ -89,7 +89,6 @@ enum DEVICE_STATE
   CONFIGURED
 };
 
-extern const uint8_t usb_initial_feature;
 
 extern void usb_lld_init (uint8_t feature);
 
