@@ -10,6 +10,10 @@ INCDIR += $(CHOPSTX)
 
 BUILDDIR = build
 OUTFILES = $(BUILDDIR)/$(PROJECT).elf $(BUILDDIR)/$(PROJECT).bin
+ifneq ($(ENABLE_OUTPUT_HEX),)
+OUTFILES += $(BUILDDIR)/$(PROJECT).hex
+endif
+
 
 OPT += -ffunction-sections -fdata-sections -fno-common
 
@@ -48,6 +52,9 @@ $(OBJS) : $(BUILDDIR)/%.o : %.c Makefile
 
 %.bin: %.elf $(LDSCRIPT)
 	$(OBJCOPY) -O binary $< $@
+
+%.hex: %.elf $(LDSCRIPT)
+	$(OBJCOPY) -O ihex $< $@
 
 clean:
 	-rm -f -r .dep $(BUILDDIR)
