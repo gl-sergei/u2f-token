@@ -1,5 +1,7 @@
 2013-11-26  Niibe Yutaka  <gniibe@fsij.org>
 
+	* board/board-stbee.h: New.
+
 	* rules.mk (OUTFILES) [ENABLE_OUTPUT_HEX]: Add hex generation.
 
 2013-11-21  Niibe Yutaka  <gniibe@fsij.org>
