@@ -1,3 +1,9 @@
+2013-11-27  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-stbee-mini.h: New.
+
+	* entry.c (AFIO_MAPR_SWJ_CFG_DISABLE): New.
+
 2013-11-26  Niibe Yutaka  <gniibe@fsij.org>
 
 	* board/board-stbee.h: New.

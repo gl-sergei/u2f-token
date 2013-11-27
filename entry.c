@@ -189,6 +189,7 @@ struct AFIO
 static struct AFIO *const AFIO = (struct AFIO *const)AFIO_BASE;
 
 #define AFIO_MAPR_TIM3_REMAP_PARTIALREMAP 0x00000800
+#define AFIO_MAPR_SWJ_CFG_DISABLE         0x04000000
 
 
 struct GPIO {

@@ -4,8 +4,9 @@ NEWS - Noteworthy changes
 
   Released 2013-12-XX, by NIIBE Yutaka
 
-** Board support STBEE
-The board STBEE is now supported.
+** Board support STBee and STBee Mini
+The board STBee and STBee Mini are now supported.
+
 
 * Major changes in Chopstx 0.03
 
