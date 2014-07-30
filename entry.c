@@ -379,9 +379,22 @@ static void nmi (void)
   for (;;);
 }
 
+extern void svc (void);
+
 static void hard_fault (void)
 {
+#if 1
+  register uint32_t primask;
+
+  asm ("mrs	%0, PRIMASK" : "=r" (primask));
+
+  if (primask)
+    asm volatile ("b	svc");
+  else
+    for (;;);
+#else
   for (;;);
+#endif
 }
 
 static void mem_manage (void)
@@ -462,8 +475,11 @@ void entry (void)
 		"bl	chx_systick_init\n\t"
 		"bl	gpio_init\n\t"
 		/* Enable interrupts.  */
+#if __ARM_ARCH_6M__
+#else
 		"mov	r0, #0\n\t"
 		"msr	BASEPRI, r0\n\t"
+#endif
 		"cpsie	i\n\t"
 		/* Call main.  */
 		"mov	r1, r0\n\t"

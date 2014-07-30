@@ -12,9 +12,10 @@ CC   = $(CROSS)gcc
 LD   = $(CROSS)gcc
 OBJCOPY   = $(CROSS)objcopy
 
-MCU   = cortex-m3
+# MCU   = cortex-m3
+MCU   = cortex-m0 # -save-temps
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DHAVE_SYS_H -DFREE_STANDING
+DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48
 # DEFS  = -DFREE_STANDING -DHAVE_SYS_H -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
 OPT   = -O3 -Os -g
 LIBS  =

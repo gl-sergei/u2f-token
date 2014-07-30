@@ -61,6 +61,7 @@
 
 #define CPU_EXCEPTION_PRIORITY_CLEAR         0
 
+#if 0
 #define CPU_EXCEPTION_PRIORITY_SVC           0x30
 
 #define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
@@ -68,6 +69,15 @@
 #define CPU_EXCEPTION_PRIORITY_SYSTICK       CPU_EXCEPTION_PRIORITY_INTERRUPT
 #define CPU_EXCEPTION_PRIORITY_INTERRUPT     0xb0
 #define CPU_EXCEPTION_PRIORITY_PENDSV        0xc0
+#else
+#define CPU_EXCEPTION_PRIORITY_SVC           0x00
+
+#define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
+/* ... */
+#define CPU_EXCEPTION_PRIORITY_SYSTICK       CPU_EXCEPTION_PRIORITY_INTERRUPT
+#define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x80
+#define CPU_EXCEPTION_PRIORITY_PENDSV        0xc0
+#endif
 
 /**
  * chx_fatal - Fatal error point.
@@ -184,7 +194,9 @@ static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
 static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
 static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
 
+#ifndef MHZ 
 #define MHZ 72
+#endif
 
 static uint32_t usec_to_ticks (uint32_t usec)
 {
@@ -214,8 +226,12 @@ chx_cpu_sched_lock (void)
 {
   if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
     {
+#if __ARM_ARCH_6M__
+      asm volatile ("cpsid	i" : : : "memory");
+#else
       register uint32_t tmp = CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
       asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+#endif
     }
 }
 
@@ -224,8 +240,12 @@ chx_cpu_sched_unlock (void)
 {
   if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
     {
+#if __ARM_ARCH_6M__
+      asm volatile ("cpsie	i" : : : "memory");
+#else
       register uint32_t tmp = CPU_EXCEPTION_PRIORITY_CLEAR;
       asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+#endif
     }
 }
 
@@ -383,22 +403,42 @@ sched (void)
 		"ldr	r1, =running\n\t"
 		/* Update running.  */
 		"str	r0, [r1]\n\t"
+#if __ARM_ARCH_6M__
+		"cmp	r0, #0\n\t"
+		"beq	1f\n\t"
+#else
 		"cbz	r0, 1f\n\t"
+#endif
 		/**/
 		"add	r0, #8\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
+#if __ARM_ARCH_6M__
+		"ldm	r0!, {r1, r2, r3}\n\t"
+		"mov	r8, r1\n\t"
+		"mov	r9, r2\n\t"
+		"mov	r10, r3\n\t"
+		"ldm	r0!, {r1, r2}\n\t"
+		"mov	r11, r1\n\t"
+		"msr	PSP, r2\n\t"
+#else
 		"ldr	r8, [r0], #4\n\t"
 		"ldr	r9, [r0], #4\n\t"
 		"ldr	r10, [r0], #4\n\t"
 		"ldr	r11, [r0], #4\n\t"
 		"ldr	r1, [r0], #4\n\t"
 		"msr	PSP, r1\n\t"
+#endif
 		"ldrb	r1, [r0, #3]\n\t" /* ->PRIO field.  */
 		"cmp	r1, #247\n\t"
 		"bhi	0f\n\t"	/* Leave interrupt disabled if >= 248 */
 		/**/
+		/* Unmask interrupts.  */
 		"mov	r0, #0\n\t"
-		"msr	BASEPRI, r0\n"	      /* Unmask interrupts.  */
+#if __ARM_ARCH_6M__
+		"cpsie	i\n"
+#else
+		"msr	BASEPRI, r0\n"
+#endif
 		/**/
 	"0:\n\t"
 		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
@@ -410,7 +450,12 @@ sched (void)
 		"mov	r0, #0\n\t"
 		"mov	r1, #0\n\t"
 		"ldr	r2, =idle\n\t"	     /* PC = idle */
+#if __ARM_ARCH_6M__
+		"mov	r3, #0x010\n\t"
+		"lsl	r3, r3, #20\n\t" /* xPSR = T-flag set (Thumb) */
+#else
 		"mov	r3, #0x01000000\n\t" /* xPSR = T-flag set (Thumb) */
+#endif
 		"push	{r0, r1, r2, r3}\n\t"
 		"mov	r0, #0\n\t"
 		"mov	r1, #0\n\t"
@@ -418,8 +463,13 @@ sched (void)
 		"mov	r3, #0\n\t"
 		"push	{r0, r1, r2, r3}\n"
 		/**/
+		/* Unmask interrupts.  */
 		"mov	r0, #0\n\t"
-		"msr	BASEPRI, r0\n\t"	      /* Unmask interrupts.  */
+#if __ARM_ARCH_6M__
+		"cpsie	i\n\t"
+#else
+		"msr	BASEPRI, r0\n\t"
+#endif
 		/**/
 		"sub	r0, #7\n\t" /* EXC_RETURN to a thread with MSP */
 		"bx	r0\n"
@@ -430,18 +480,33 @@ void __attribute__ ((naked))
 preempt (void)
 {
   register struct chx_thread *tp asm ("r0");
-
   tp = (struct chx_thread *)CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
-  asm ("msr	BASEPRI, r0\n\t"
+
+  asm (
+#if __ARM_ARCH_6M__
+       "cpsid	i\n\t"
+#else
+       "msr	BASEPRI, r0\n\t"
+#endif
        "ldr	r1, =running\n\t"
        "ldr	r0, [r1]\n\t"
+#if __ARM_ARCH_6M__
+       "cmp	r0, #0\n\t"
+       "bne	0f\n\t"
+#else
        "cbnz	r0, 0f\n\t"
+#endif
        /* It's idle which was preempted.  Discard saved registers on stack.  */
        "ldr	r1, =__main_stack_end__\n\t"
        "msr	MSP, r1\n\t"
        "b	sched\n"
   "0:\n\t"
+#if __ARM_ARCH_6M__
+       "add	r1, r0, #4\n\t"
+       "add	r1, #4\n\t"
+#else
        "add	r1, r0, #8\n\t"
+#endif
        /* Save registers onto CHX_THREAD struct.  */
        "stm	r1!, {r4, r5, r6, r7}\n\t"
        "mov	r2, r8\n\t"
@@ -494,7 +559,12 @@ svc (void)
 
   asm ("ldr	r1, =running\n\t"
        "ldr	r0, [r1]\n\t"
+#if __ARM_ARCH_6M__
+       "add	r1, r0, #4\n\t"
+       "add	r1, #4\n\t"
+#else
        "add	r1, r0, #8\n\t"
+#endif
        /* Save registers onto CHX_THREAD struct.  */
        "stm	r1!, {r4, r5, r6, r7}\n\t"
        "mov	r2, r8\n\t"

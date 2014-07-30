@@ -9,8 +9,12 @@ __process3_stack_size__  = 0x0100; /* third thread program */
 
 MEMORY
 {
+/*
     flash0 : org = 0x08000000, len = 4k
     flash  : org = 0x08000000+0x1000, len = 60k
+*/
+    flash0 : org = 0x08000000, len = 1k
+    flash  : org = 0x08000000+0x0400, len = 60k
     ram : org = 0x20000000, len = 20k
 }
 
@@ -36,9 +40,11 @@ SECTIONS
         build/sys.o(.rodata)
 	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
+/*
 	*(.sys.0)
 	*(.sys.1)
 	*(.sys.2)
+*/
     } > flash0
 
     _text = .;
@@ -77,6 +83,13 @@ SECTIONS
 
     _etext = .;
     _textdata = _etext;
+
+    .vectors_in_ram :
+    {
+        . = ALIGN(8);
+        __vector_ram_addr__ = .;
+	KEEP(*(.data.startup.*))
+    } > ram
 
     .process_stack :
     {
