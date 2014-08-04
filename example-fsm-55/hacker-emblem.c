@@ -56,6 +56,16 @@ set_led_display (uint32_t data)
   l_data[4] = (data >> 20) & 0x1f;
 }
 
+static void
+scroll_led_display (uint8_t row)
+{
+  l_data[0] = (l_data[0] << 1) | ((row >> 0) & 1);
+  l_data[1] = (l_data[1] << 1) | ((row >> 1) & 1);
+  l_data[2] = (l_data[2] << 1) | ((row >> 2) & 1);
+  l_data[3] = (l_data[3] << 1) | ((row >> 3) & 1);
+  l_data[4] = (l_data[4] << 1) | ((row >> 4) & 1);
+}
+
 
 static void
 wait_for (uint32_t usec)
@@ -172,11 +182,71 @@ static uint32_t gnu[] = {
   DATA55 (0x00,	0x00, 0x00, 0x00, 0x00),
 };
 
+#define DATA55V(x0,x1,x2,x3,x4) (x0<<0)|(x1<<5)|(x2<<10)|(x3<< 15)|(x4<< 20)
+
+#define CHAR_SPC 0
+#define CHAR_H   1
+#define CHAR_A   2
+#define CHAR_P   3
+#define CHAR_Y   4
+#define CHAR_C   5
+#define CHAR_K   6
+#define CHAR_I   7
+#define CHAR_N   8
+#define CHAR_G   9
+#define CHAR_EXC 10
+
+static uint8_t hh[] = {
+  CHAR_H, CHAR_A, CHAR_P, CHAR_P, CHAR_Y,
+  CHAR_SPC,
+  CHAR_H, CHAR_A, CHAR_C, CHAR_K, CHAR_I, CHAR_N, CHAR_G,
+  CHAR_EXC,
+  CHAR_SPC, CHAR_SPC, CHAR_SPC,
+};
+
+struct { uint8_t width; uint32_t data; } chargen[] = {
+  { 5, 0 },						/* SPACE */
+  { 5, DATA55V (0x1f, 0x04, 0x04, 0x04, 0x1f) },	/* H */
+  { 5, DATA55V (0x07, 0x0a, 0x12, 0x0a, 0x07) },	/* A */
+  { 5, DATA55V (0x1f, 0x14, 0x14, 0x14, 0x18) },	/* P */
+  { 5, DATA55V (0x18, 0x04, 0x07, 0x04, 0x18) },	/* Y */
+  { 5, DATA55V (0x0e, 0x11, 0x11, 0x11, 0x02) },	/* C */
+  { 5, DATA55V (0x1f, 0x04, 0x0c, 0x12, 0x01) },	/* K */
+  { 3, DATA55V (0x11, 0x1f, 0x11, 0x00, 0x00) },	/* I */
+  { 5, DATA55V (0x1f, 0x08, 0x04, 0x02, 0x1f) },	/* N */
+  { 5, DATA55V (0x0e, 0x11, 0x11, 0x15, 0x06) },	/* G */
+  { 2, DATA55V (0x1d, 0x1c, 0x00, 0x00, 0x00) },	/* ! */
+};
+
+static uint8_t state = 0;
+
+#define CHECK_USER() if (user_button ()) state = 0
+
+static void
+happy_hacking (void)
+{
+  unsigned int i, j;
+
+  set_led_display (0);
+  for (i = 0; i < sizeof (hh); i++)
+    {
+      for (j = 0; j < chargen[hh[i]].width; j++)
+	{
+	  CHECK_USER ();
+	  scroll_led_display ((chargen[hh[i]].data >> j * 5) & 0x1f);
+	  wait_for (150*1000);
+	}
+
+      CHECK_USER ();
+      scroll_led_display (0);
+      wait_for (200*1000);
+    }
+}
+
+
 int
 main (int argc, const char *argv[])
 {
-  uint8_t state = 0;
-
   (void)argc;
   (void)argv;
 
@@ -195,22 +265,24 @@ main (int argc, const char *argv[])
     {
       unsigned int i;
 
-      if (state)
+      if (state == 0)
 	for (i = 0; i < SIZE55 (l55); i++)
 	  {
 	    if (user_button ())
-	      state = 0;
+	      state = 1;
 	    set_led_display (l55[i]);
 	    wait_for (500*1000);
 	  }
-      else
+      else if (state == 1)
 	for (i = 0; i < SIZE55 (gnu); i++)
 	  {
 	    if (user_button ())
-	      state = 1;
+	      state = 2;
 	    set_led_display (gnu[i]);
-	    wait_for (200*1000);
+	    wait_for (250*1000);
 	  }
+      else
+	happy_hacking ();
     }
 
   return 0;

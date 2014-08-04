@@ -40,17 +40,17 @@ ooo
 .o.
 ooo
 
-o...o 11
-oo..o 19
-o.o.o 15
-o..oo 13
-o...o 11
+o...o
+oo..o
+o.o.o
+o..oo
+o...o
 
-.ooo. 0e
-o.... 10
-o..oo 13
-o...o 11
-.ooo. 0e
+.ooo.
+o....
+o..oo
+o...o
+.ooo.
 
 oo
 oo
