@@ -1,0 +1,59 @@
+o...o
+o...o
+ooooo
+o...o
+o...o
+
+..o.
+.o.o.
+o...o
+ooooo
+o...o
+
+ooooo
+o...o
+oooo.
+o....
+o....
+
+o...o
+o...o
+.ooo.
+..o..
+..o..
+
+.ooo.
+o....
+o....
+o...o
+.ooo.
+
+o..o.
+o.o..
+ooo..
+o..o.
+o...o
+
+ooo
+.o.
+.o.
+.o.
+ooo
+
+o...o 11
+oo..o 19
+o.o.o 15
+o..oo 13
+o...o 11
+
+.ooo. 0e
+o.... 10
+o..oo 13
+o...o 11
+.ooo. 0e
+
+oo
+oo
+oo
+..
+o.
