@@ -14,7 +14,7 @@ OBJCOPY   = $(CROSS)objcopy
 
 MCU   = cortex-m0 # -save-temps
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48
+DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48 -DUSE_WFI_FOR_IDLE
 OPT   = -O3 -Os -g
 LIBS  =
 
