@@ -162,6 +162,15 @@ static uint32_t l55[] = {
 #define CHAR_N   8
 #define CHAR_G   9
 #define CHAR_EXC 10
+#define CHAR_W   11
+#define CHAR_h   12
+#define CHAR_t   13
+#define CHAR_AP  14
+#define CHAR_s   15
+#define CHAR_U   16
+#define CHAR_QT  17
+#define CHAR_o   18
+#define CHAR_X   19
 
 static uint8_t hh[] = {
   CHAR_H, CHAR_A, CHAR_P, CHAR_P, CHAR_Y,
@@ -171,10 +180,21 @@ static uint8_t hh[] = {
   CHAR_SPC, CHAR_SPC, CHAR_SPC,
 };
 
+static uint8_t gnu[] = {
+  CHAR_W, CHAR_h, CHAR_A, CHAR_t, CHAR_AP, CHAR_s, CHAR_SPC,
+  CHAR_G, CHAR_N, CHAR_U, CHAR_QT, 
+  CHAR_SPC, CHAR_SPC,
+  CHAR_G, CHAR_N, CHAR_U, CHAR_AP, CHAR_s, CHAR_SPC,
+  CHAR_N, CHAR_o, CHAR_t, CHAR_SPC,
+  CHAR_U, CHAR_N, CHAR_I, CHAR_X,
+  CHAR_EXC,
+  CHAR_SPC, CHAR_SPC,
+};
+
 struct { uint8_t width; uint32_t data; } chargen[] = {
   { 3, 0 },						/* SPACE */
   { 4, DATA55V (0x1f, 0x04, 0x04, 0x1f, 0x00) },	/* H */
-  { 4, DATA55V (0x02, 0x15, 0x15, 0x0f, 0x00) },	/* A */
+  { 3, DATA55V (0x17, 0x15, 0x0f, 0x00, 0x00) },	/* A */
   { 4, DATA55V (0x1f, 0x14, 0x14, 0x08, 0x00) },	/* P */
   { 4, DATA55V (0x19, 0x05, 0x05, 0x1e, 0x00) },	/* Y */
   { 4, DATA55V (0x0e, 0x11, 0x11, 0x0a, 0x00) },	/* C */
@@ -183,6 +203,15 @@ struct { uint8_t width; uint32_t data; } chargen[] = {
   { 4, DATA55V (0x1f, 0x08, 0x06, 0x1f, 0x00) },	/* N */
   { 4, DATA55V (0x0e, 0x11, 0x15, 0x07, 0x00) },	/* G */
   { 2, DATA55V (0x1d, 0x1c, 0x00, 0x00, 0x00) },	/* ! */
+  { 5, DATA55V (0x1e, 0x01, 0x0e, 0x01, 0x1e) },	/* W */
+  { 3, DATA55V (0x1f, 0x04, 0x07, 0x00, 0x00) },	/* h */
+  { 4, DATA55V (0x08, 0x1e, 0x09, 0x09, 0x00) },	/* t */
+  { 3, DATA55V (0x04, 0x18, 0x18, 0x00, 0x00) },	/* ' */
+  { 4, DATA55V (0x09, 0x15, 0x15, 0x12, 0x00) },	/* s */
+  { 4, DATA55V (0x1e, 0x01, 0x01, 0x1e, 0x00) },	/* U */
+  { 4, DATA55V (0x08, 0x10, 0x15, 0x08, 0x00) },	/* ? */
+  { 4, DATA55V (0x06, 0x09, 0x09, 0x06, 0x00) },	/* o */
+  { 5, DATA55V (0x11, 0x0a, 0x04, 0x0a, 0x11) },	/* X */
 };
 
 static uint8_t state = 0;
@@ -190,23 +219,36 @@ static uint8_t state = 0;
 #define CHECK_USER() if (user_button ()) state = 0
 
 static void
-happy_hacking (void)
+text_display (uint8_t kind)
 {
   unsigned int i, j;
+  uint8_t *text;
+  uint8_t len;
+
+  if (kind)
+    {
+      text = hh;
+      len = sizeof (hh);
+    }
+  else
+    {
+      text = gnu;
+      len = sizeof (gnu);
+    }
 
   set_led_display (0);
-  for (i = 0; i < sizeof (hh); i++)
+  for (i = 0; i < len; i++)
     {
-      for (j = 0; j < chargen[hh[i]].width; j++)
+      for (j = 0; j < chargen[text[i]].width; j++)
 	{
 	  CHECK_USER ();
-	  scroll_led_display ((chargen[hh[i]].data >> j * 5) & 0x1f);
-	  wait_for (150*1000);
+	  scroll_led_display ((chargen[text[i]].data >> j * 5) & 0x1f);
+	  wait_for (120*1000);
 	}
 
       CHECK_USER ();
       scroll_led_display (0);
-      wait_for (200*1000);
+      wait_for (120*1000);
     }
 }
 
@@ -219,6 +261,7 @@ int
 main (int argc, const char *argv[])
 {
   uint8_t count = 0;
+  uint8_t happy = 1;
   (void)argc;
   (void)argv;
 
@@ -233,6 +276,13 @@ main (int argc, const char *argv[])
   chopstx_cond_signal (&cnd0);
   chopstx_mutex_unlock (&mtx);
 
+  if (user_button ())
+    {
+      while (user_button ());
+      happy = 0;
+      state = 1;
+    }
+
   while (1)
     {
       unsigned int i;
@@ -244,10 +294,10 @@ main (int argc, const char *argv[])
 	    if (user_button ())
 	      state = 1;
 	    set_led_display (l55[i]);
-	    wait_for (500*1000);
+	    wait_for (350*1000);
 	  }
-      if (state == 1)
-	happy_hacking ();
+      else if (state == 1)
+	text_display (happy);
 
       if (state_prev != state)
 	count = 0;

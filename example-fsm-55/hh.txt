@@ -4,11 +4,11 @@ oooo
 o..o
 o..o
 
-.oo.
-...o
-.ooo
-o..o
-.ooo
+oo.
+..o
+ooo
+o.o
+ooo
 
 ooo.
 o..o
