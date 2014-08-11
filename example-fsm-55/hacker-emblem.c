@@ -4,6 +4,8 @@
 
 #include "board.h"
 
+static uint8_t main_finished;
+
 #define PERIPH_BASE	0x40000000
 #define APBPERIPH_BASE   PERIPH_BASE
 #define APB2PERIPH_BASE	(PERIPH_BASE + 0x10000)
@@ -36,13 +38,17 @@ static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
 static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
 
 static chopstx_mutex_t mtx;
-static chopstx_cond_t cnd0;
+static chopstx_cond_t cnd0, cnd1;
+
+#define BUTTON_PUSHED 1
+static uint8_t button_state;
 
 static uint8_t
 user_button (void)
 {
-  return (GPIO_OTHER->IDR & 1) == 0;
+  return button_state;
 }
+
 
 static uint8_t l_data[5];
 
@@ -87,6 +93,12 @@ led_prepare_row (uint8_t col)
 }
 
 static void
+led_prepare_row_full (void)
+{
+  GPIO_LED->ODR = 0x06ff;
+}
+
+static void
 led_enable_column (uint8_t col)
 {
   GPIO_LED->BRR = (1 << col);
@@ -101,27 +113,75 @@ led (void *arg)
   chopstx_cond_wait (&cnd0, &mtx);
   chopstx_mutex_unlock (&mtx);
 
-  while (1)
+  while (!main_finished)
     {
       int i;
+      int display_full = user_button ();
 
       for (i = 0; i < 5; i++)
 	{
-	  led_prepare_row (i);
+	  if (display_full)
+	    led_prepare_row_full ();
+	  else
+	    led_prepare_row (i);
 	  led_enable_column (i);
 	  wait_for (1000);
 	}
+    }
+
+  GPIO_LED->ODR = 0x0000;	/* Off all LEDs.  */
+  GPIO_LED->OSPEEDR = 0;
+  GPIO_LED->OTYPER = 0;
+  GPIO_LED->MODER = 0;		/* Input mode.  */
+  GPIO_OTHER->PUPDR = 0x0000;	/* No pull-up.  */
+
+  return NULL;
+}
+
+
+static uint8_t get_button_sw (void) { return (GPIO_OTHER->IDR & 1) == 0; }
+
+static void *
+button (void *arg)
+{
+  uint8_t last_button = 0;
+
+  (void)arg;
+
+  chopstx_mutex_lock (&mtx);
+  chopstx_cond_wait (&cnd1, &mtx);
+  chopstx_mutex_unlock (&mtx);
+
+  while (!main_finished)
+    {
+      uint8_t button = get_button_sw ();
+
+      if (last_button == button && button != button_state)
+	{
+	  wait_for (1000);
+	  button = get_button_sw ();
+	  if (last_button == button)
+	    button_state = button;
+	}
+
+      wait_for (2000);
+      last_button = button;
     }
 
   return NULL;
 }
 
 #define PRIO_LED 3
+#define PRIO_BUTTON 2
 
 extern uint8_t __process1_stack_base__, __process1_stack_size__;
+extern uint8_t __process2_stack_base__, __process2_stack_size__;
 
 const uint32_t __stackaddr_led = (uint32_t)&__process1_stack_base__;
 const size_t __stacksize_led = (size_t)&__process1_stack_size__;
+
+const uint32_t __stackaddr_button = (uint32_t)&__process2_stack_base__;
+const size_t __stacksize_button = (size_t)&__process2_stack_size__;
 
 #define DATA55(x0,x1,x2,x3,x4) (x0<<20)|(x1<<15)|(x2<<10)|(x3<< 5)|(x4<< 0)
 #define SIZE55(img) (sizeof (img) / sizeof (uint32_t))
@@ -260,6 +320,8 @@ static void setup_scr_sleepdeep (void);
 int
 main (int argc, const char *argv[])
 {
+  chopstx_t led_thd;
+  chopstx_t button_thd;
   uint8_t count = 0;
   uint8_t happy = 1;
   (void)argc;
@@ -267,18 +329,23 @@ main (int argc, const char *argv[])
 
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd0);
+  chopstx_cond_init (&cnd1);
 
-  chopstx_create (PRIO_LED, __stackaddr_led, __stacksize_led, led, NULL);
+  led_thd = chopstx_create (PRIO_LED, __stackaddr_led,
+			    __stacksize_led, led, NULL);
+  button_thd = chopstx_create (PRIO_BUTTON, __stackaddr_button,
+			       __stacksize_button, button, NULL);
 
   chopstx_usec_wait (200*1000);
 
   chopstx_mutex_lock (&mtx);
   chopstx_cond_signal (&cnd0);
+  chopstx_cond_signal (&cnd1);
   chopstx_mutex_unlock (&mtx);
 
-  if (user_button ())
+  if (get_button_sw ())
     {
-      while (user_button ());
+      while (get_button_sw ());
       happy = 0;
       state = 1;
     }
@@ -305,6 +372,10 @@ main (int argc, const char *argv[])
 	if (++count > REPEAT_COUNT)
 	  break;
     }
+
+  main_finished = 1;
+  chopstx_join (button_thd, NULL);
+  chopstx_join (led_thd, NULL);
 
   setup_scr_sleepdeep ();
   for (;;)
