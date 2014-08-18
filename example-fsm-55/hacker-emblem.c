@@ -51,6 +51,7 @@ user_button (void)
 
 
 static uint8_t l_data[5];
+#define LED_FULL ((0x1f << 20)|(0x1f << 15)|(0x1f << 10)|(0x1f << 5)|0x1f)
 
 static void
 set_led_display (uint32_t data)
@@ -92,11 +93,6 @@ led_prepare_row (uint8_t col)
   GPIO_LED->ODR = data;
 }
 
-static void
-led_prepare_row_full (void)
-{
-  GPIO_LED->ODR = 0x06ff;
-}
 
 static void
 led_enable_column (uint8_t col)
@@ -116,14 +112,10 @@ led (void *arg)
   while (!main_finished)
     {
       int i;
-      int display_full = user_button ();
 
       for (i = 0; i < 5; i++)
 	{
-	  if (display_full)
-	    led_prepare_row_full ();
-	  else
-	    led_prepare_row (i);
+	  led_prepare_row (i);
 	  led_enable_column (i);
 	  wait_for (1000);
 	}
@@ -274,16 +266,43 @@ struct { uint8_t width; uint32_t data; } chargen[] = {
   { 5, DATA55V (0x11, 0x0a, 0x04, 0x0a, 0x11) },	/* X */
 };
 
-static uint8_t state = 0;
 
-#define CHECK_USER() if (user_button ()) state = 0
+#define REPEAT_COUNT 10
 
-static void
+static int
+life_display (void)
+{
+  unsigned int i;
+  uint8_t count = 0;
+  uint8_t state = 0;
+
+  while (count++ < REPEAT_COUNT)
+    for (i = 0; i < SIZE55 (l55); i++)
+      {
+	if (user_button ())
+	  {
+	    set_led_display (LED_FULL);
+	    state = 1;
+	  }
+	else if (state == 1)
+	  return 0;
+	else
+	  set_led_display (l55[i]);
+	wait_for (350*1000);
+      }
+
+  return 1;
+}
+
+
+static int
 text_display (uint8_t kind)
 {
   unsigned int i, j;
   uint8_t *text;
   uint8_t len;
+  uint8_t count = 0;
+  uint8_t state = 0;
 
   if (kind)
     {
@@ -297,23 +316,38 @@ text_display (uint8_t kind)
     }
 
   set_led_display (0);
-  for (i = 0; i < len; i++)
-    {
-      for (j = 0; j < chargen[text[i]].width; j++)
-	{
-	  CHECK_USER ();
-	  scroll_led_display ((chargen[text[i]].data >> j * 5) & 0x1f);
-	  wait_for (120*1000);
-	}
+  while (count++ < REPEAT_COUNT)
+    for (i = 0; i < len; i++)
+      {
+	for (j = 0; j < chargen[text[i]].width; j++)
+	  {
+	    if (user_button ())
+	      {
+		set_led_display (LED_FULL);
+		state = 1;
+	      }
+	    else if (state == 1)
+	      return 0;
+	    else
+	      scroll_led_display ((chargen[text[i]].data >> j * 5) & 0x1f);
+	    wait_for (120*1000);
+	  }
 
-      CHECK_USER ();
-      scroll_led_display (0);
-      wait_for (120*1000);
-    }
+	if (user_button ())
+	  {
+	    set_led_display (LED_FULL);
+	    state = 1;
+	  }
+	else if (state == 1)
+	  return 0;
+	else
+	  scroll_led_display (0);
+	wait_for (120*1000);
+      }
+
+  return 1;
 }
 
-
-#define REPEAT_COUNT 10
 
 static void setup_scr_sleepdeep (void);
 
@@ -322,7 +356,6 @@ main (int argc, const char *argv[])
 {
   chopstx_t led_thd;
   chopstx_t button_thd;
-  uint8_t count = 0;
   uint8_t happy = 1;
   (void)argc;
   (void)argv;
@@ -343,34 +376,24 @@ main (int argc, const char *argv[])
   chopstx_cond_signal (&cnd1);
   chopstx_mutex_unlock (&mtx);
 
-  if (get_button_sw ())
+  wait_for (100*1000);
+  if (user_button ())
     {
-      while (get_button_sw ());
+      /* Wait button release.  */
+      while (user_button ())
+	wait_for (100*1000);
+
       happy = 0;
-      state = 1;
+      goto do_text;
     }
 
   while (1)
     {
-      unsigned int i;
-      uint8_t state_prev = state;
-
-      if (state == 0)
-	for (i = 0; i < SIZE55 (l55); i++)
-	  {
-	    if (user_button ())
-	      state = 1;
-	    set_led_display (l55[i]);
-	    wait_for (350*1000);
-	  }
-      else if (state == 1)
-	text_display (happy);
-
-      if (state_prev != state)
-	count = 0;
-      else
-	if (++count > REPEAT_COUNT)
-	  break;
+      if (life_display ())
+	break;
+    do_text:
+      if (text_display (happy))
+	break;
     }
 
   main_finished = 1;
