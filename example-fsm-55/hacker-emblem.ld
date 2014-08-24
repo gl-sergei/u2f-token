@@ -88,7 +88,7 @@ SECTIONS
     {
         . = ALIGN(8);
         __vector_ram_addr__ = .;
-	KEEP(*(.data.startup.*))
+	KEEP(*(.bss.startup.*))
     } > ram
 
     .process_stack :

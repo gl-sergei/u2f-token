@@ -420,7 +420,7 @@ static void none (void)
 #define COMPOSE_STATEMENT(arg0,arg1,arg2)  C_S_SUB (arg0, arg1, arg2)
 
 #if MCU_STM32F0
-__attribute__ ((used,section(".data.startup.0")))
+__attribute__ ((used,section(".bss.startup.0")))
 uint32_t vectors_in_ram[48];
 #endif
 
