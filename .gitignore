@@ -1,7 +1,4 @@
-example-cdc/.dep
-example-cdc/board.h
-example-cdc/build
-example-led/.dep
-example-led/board.h
-example-led/build
+*/board.h
+*/build
+*/.dep
 doc/chopstx.info
