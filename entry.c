@@ -1,7 +1,7 @@
 /*
  * entry.c - Entry routine when reset and interrupt vectors.
  *
- * Copyright (C) 2013 Flying Stone Technology
+ * Copyright (C) 2013, 2014 Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * This file is a part of Chopstx, a thread library for embedded.
@@ -33,10 +33,13 @@
 #ifdef HAVE_SYS_H
 #define INLINE __attribute__ ((used))
 #include "sys.h"
+#include "board.h"
 #else
 #include "board.h"
 
+#define STM32_SW_HSI		(0 << 0)
 #define STM32_SW_PLL		(2 << 0)
+#define STM32_PLLSRC_HSI	(0 << 16)
 #define STM32_PLLSRC_HSE	(1 << 16)
 
 #define STM32_PLLXTPRE_DIV1	(0 << 17)
@@ -44,6 +47,7 @@
 
 #define STM32_HPRE_DIV1		(0 << 4)
 
+#define STM32_PPRE1_DIV1	(0 << 8)
 #define STM32_PPRE1_DIV2	(4 << 8)
 
 #define STM32_PPRE2_DIV1        (0 << 11)
@@ -56,26 +60,29 @@
 
 #define STM32_MCO_NOCLOCK	(0 << 24)
 
-#define STM32_SW		STM32_SW_PLL
-#define STM32_PLLSRC		STM32_PLLSRC_HSE
-#define STM32_HPRE		STM32_HPRE_DIV1
 #define STM32_PPRE1		STM32_PPRE1_DIV2
+#define STM32_PLLSRC		STM32_PLLSRC_HSE
+#define STM32_FLASHBITS		0x00000012
+#define STM32_PLLCLKIN		(STM32_HSECLK / 1)
+
+#define STM32_SW		STM32_SW_PLL
+#define STM32_HPRE		STM32_HPRE_DIV1
 #define STM32_PPRE2		STM32_PPRE2_DIV1
 #define STM32_ADCPRE		STM32_ADCPRE_DIV6
 #define STM32_MCOSEL		STM32_MCO_NOCLOCK
 #define STM32_USBPRE            STM32_USBPRE_DIV1P5
 
-#define STM32_PLLCLKIN		(STM32_HSECLK / 1)
 #define STM32_PLLMUL		((STM32_PLLMUL_VALUE - 2) << 18)
 #define STM32_PLLCLKOUT		(STM32_PLLCLKIN * STM32_PLLMUL_VALUE)
 #define STM32_SYSCLK		STM32_PLLCLKOUT
 #define STM32_HCLK		(STM32_SYSCLK / 1)
 
-#define STM32_FLASHBITS		0x00000012
 
 #define PERIPH_BASE	0x40000000
+#define APBPERIPH_BASE   PERIPH_BASE
 #define APB2PERIPH_BASE	(PERIPH_BASE + 0x10000)
 #define AHBPERIPH_BASE	(PERIPH_BASE + 0x20000)
+#define AHB2PERIPH_BASE	(PERIPH_BASE + 0x08000000)
 
 struct RCC {
   volatile uint32_t CR;
@@ -109,6 +116,18 @@ static struct RCC *const RCC = ((struct RCC *const)RCC_BASE);
 
 #define RCC_AHBENR_CRCEN        0x0040
 
+#define RCC_APB2RSTR_AFIORST	0x00000001
+#define RCC_APB2RSTR_IOPARST	0x00000004
+#define RCC_APB2RSTR_IOPBRST	0x00000008
+#define RCC_APB2RSTR_IOPCRST	0x00000010
+#define RCC_APB2RSTR_IOPDRST	0x00000020
+
+#define RCC_APB2ENR_AFIOEN	0x00000001
+#define RCC_APB2ENR_IOPAEN	0x00000004
+#define RCC_APB2ENR_IOPBEN	0x00000008
+#define RCC_APB2ENR_IOPCEN	0x00000010
+#define RCC_APB2ENR_IOPDEN	0x00000020
+
 struct FLASH {
   volatile uint32_t ACR;
   volatile uint32_t KEYR;
@@ -131,7 +150,8 @@ clock_init (void)
   RCC->CR |= RCC_CR_HSION;
   while (!(RCC->CR & RCC_CR_HSIRDY))
     ;
-  RCC->CR &= RCC_CR_HSITRIM | RCC_CR_HSION;
+  /* Reset HSEON, HSEBYP, CSSON, and PLLON, not touching RCC_CR_HSITRIM */
+  RCC->CR &= (RCC_CR_HSITRIM | RCC_CR_HSION);
   RCC->CFGR = 0;
   while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
     ;
@@ -151,6 +171,10 @@ clock_init (void)
   RCC->CFGR = STM32_MCOSEL | STM32_USBPRE | STM32_PLLMUL | STM32_PLLXTPRE
     | STM32_PLLSRC | STM32_ADCPRE | STM32_PPRE2 | STM32_PPRE1 | STM32_HPRE;
 
+  /*
+   * We don't touch RCC->CR2, RCC->CFGR2, RCC->CFGR3, and RCC->CIR.
+   */
+
   /* Flash setup */
   FLASH->ACR = STM32_FLASHBITS;
 
@@ -162,18 +186,6 @@ clock_init (void)
   while ((RCC->CFGR & RCC_CFGR_SWS) != (STM32_SW << 2))
     ;
 }
-
-#define RCC_APB2RSTR_AFIORST	0x00000001
-#define RCC_APB2RSTR_IOPARST	0x00000004
-#define RCC_APB2RSTR_IOPBRST	0x00000008
-#define RCC_APB2RSTR_IOPCRST	0x00000010
-#define RCC_APB2RSTR_IOPDRST	0x00000020
-
-#define RCC_APB2ENR_AFIOEN	0x00000001
-#define RCC_APB2ENR_IOPAEN	0x00000004
-#define RCC_APB2ENR_IOPBEN	0x00000008
-#define RCC_APB2ENR_IOPCEN	0x00000010
-#define RCC_APB2ENR_IOPDEN	0x00000020
 
 
 struct AFIO
@@ -213,8 +225,10 @@ struct GPIO {
 #define GPIOE_BASE	(APB2PERIPH_BASE + 0x1800)
 #define GPIOE		((struct GPIO *) GPIOE_BASE)
 
-static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
 static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
+#ifdef GPIO_USB_BASE
+static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
+#endif
 #ifdef GPIO_OTHER_BASE
 static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
 #endif
@@ -223,8 +237,8 @@ static void __attribute__((used))
 gpio_init (void)
 {
   /* Enable GPIO clock. */
-  RCC->APB2ENR |= RCC_APB2ENR_IOP_EN;
-  RCC->APB2RSTR = RCC_APB2RSTR_IOP_RST;
+  RCC->APB2ENR |= RCC_ENR_IOP_EN;
+  RCC->APB2RSTR = RCC_RSTR_IOP_RST;
   RCC->APB2RSTR = 0;
 
 #ifdef AFIO_MAPR_SOMETHING
@@ -249,6 +263,12 @@ gpio_init (void)
 }
 #endif
 
+
+extern uint8_t __main_stack_end__;
+extern void svc (void);
+extern void preempt (void);
+extern void chx_timer_expired (void);
+extern void chx_handle_intr (void);
 
 static void nmi (void)
 {
@@ -334,12 +354,6 @@ void entry (void)
 
 
 typedef void (*handler)(void);
-extern uint8_t __main_stack_end__;
-
-extern void svc (void);
-extern void preempt (void);
-extern void chx_timer_expired (void);
-extern void chx_handle_intr (void);
 
 handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   (handler)&__main_stack_end__,

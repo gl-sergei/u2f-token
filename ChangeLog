@@ -1,3 +1,23 @@
+2014-12-10  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.04.
+	* doc/chopstx.texi (VERSION): 0.04.
+
+	* board/*.h: Updated.
+
+	* example-cdc/sys.c: Copied from example-led.
+
+	* example-led/sys.c (clock_init, GPIO_USB): Follow the change of
+	entry.c.
+	(gpio_init): Use RCC_ENR_IOP_EN and RCC_RSTR_IOP_RST.
+	(reset): Use ldr instead of mov.w and movt.
+
+	* entry.c (GPIO_USB) [GPIO_USB_BASE]: Conditionally defined.
+
+	* chopstx.c (preempt): Add ! for stm.
+	(chx_exit): Make sure RETVAL is saved onto r8.
+	(chopstx_usec_wait_var): Make sure USEC_P is saved onto r8.
+
 2013-11-27  Niibe Yutaka  <gniibe@fsij.org>
 
 	* board/board-stbee-mini.h: New.

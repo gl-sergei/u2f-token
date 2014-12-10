@@ -1,6 +1,6 @@
 Chopstx - Threads and only Threads
-							Version 0.03
-							  2013-11-08
+							Version 0.04
+							  2014-12-10
 							Niibe Yutaka
 					     Flying Stone Technology
 
@@ -35,4 +35,13 @@ USB CDC-ACM function.  You can build it like:
    $ ln -s ../board/board-olimex-stm32-h103.h board.h
    $ make
 
+
+Future Works
+============
+
+We have a development branch for ARM Cortex-M0 and it works fine.
+It will be merged into mainline.
+
+Thread local storage and support of interface like poll/select would
+be next thing to be done.
 -- 

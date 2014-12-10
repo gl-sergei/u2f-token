@@ -2,7 +2,16 @@ NEWS - Noteworthy changes
 
 * Major changes in Chopstx 0.04
 
-  Released 2013-12-XX, by NIIBE Yutaka
+  Released 2014-12-10, by NIIBE Yutaka
+
+** new board.h macros and sys.c in example
+In board.h, RCC_APB2ENR_IOP_EN was renamed to RCC_ENR_IOP_EN and
+RCC_APB2RSTR_IOP_RST was renamed to RCC_RSTR_IOP_RST.  Example sys.c
+was changed accordingly.
+
+** Bug fix of chopstx_wakeup_usec_wait
+chopstx_usec_wait_var/chopstx_usec_wait won't be woken up
+by chopstx_wakeup_usec_wait.  This is now fixed in 0.04.
 
 ** Board support STBee and STBee Mini
 The board STBee and STBee Mini are now supported.

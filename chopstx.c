@@ -1,7 +1,7 @@
 /*
  * chopstx.c - Threads and only threads.
  *
- * Copyright (C) 2013 Flying Stone Technology
+ * Copyright (C) 2013, 2014 Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * This file is a part of Chopstx, a thread library for embedded.
@@ -449,7 +449,7 @@ preempt (void)
        "mov	r4, r10\n\t"
        "mov	r5, r11\n\t"
        "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
-       "stm	r1, {r2, r3, r4, r5, r6}"
+       "stm	r1!, {r2, r3, r4, r5, r6}"
        : "=r" (tp)
        : "r" (tp)
        : "r1", "r2", "r3", "r4", "r5", "r6", "cc", "memory");
@@ -502,7 +502,7 @@ svc (void)
        "mov	r4, r10\n\t"
        "mov	r5, r11\n\t"
        "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
-       "stm	r1, {r2, r3, r4, r5, r6}\n\t"
+       "stm	r1!, {r2, r3, r4, r5, r6}\n\t"
        "ldr	r1, [r6]"
        : "=r" (tp), "=r" (orig_r0)
        : /* no input */
@@ -777,8 +777,10 @@ chx_sched (uint32_t arg)
 static void __attribute__((noreturn))
 chx_exit (void *retval)
 {
-  register uint32_t r8 asm ("r8") = (uint32_t)retval;
+  register uint32_t r8 asm ("r8");
   struct chx_thread *q;
+
+  asm volatile ("mov	%0, %1" : "=r" (r8) : "r" (retval));
 
   chx_cpu_sched_lock ();
   if (running->flag_join_req)
@@ -917,14 +919,16 @@ chopstx_create (uint32_t flags_and_prio,
 void
 chopstx_usec_wait_var (uint32_t *var)
 {
-  register uint32_t *usec_p asm ("r8") = var;
+  register uint32_t *r8 asm ("r8");
+  uint32_t *usec_p = var;
   uint32_t usec;
   uint32_t usec0 = 0;
 
+  asm volatile ("mov	%0, %1" : "=r" (r8) : "r" (usec_p));
   while (1)
     {
       chx_cpu_sched_lock ();
-      if (!usec_p)		/* awakened */
+      if (!r8)		/* awakened */
 	break;
       *usec_p -= usec0;
       usec = *usec_p;
@@ -937,8 +941,9 @@ chopstx_usec_wait_var (uint32_t *var)
       running->state = THREAD_WAIT_TIME;
       chx_timer_insert (running, usec0);
       chx_spin_unlock (&q_timer.lock);
+      asm volatile ("mov	%0, %1" : "=r" (r8) : "r" (usec_p));
       chx_sched (CHX_SLEEP);
-      asm ("" : "=r" (usec_p) : "r" (usec_p));
+      asm ("" : "=r" (r8) : "r" (r8));
     }
 
   chx_cpu_sched_unlock ();
