@@ -379,8 +379,6 @@ static void nmi (void)
   for (;;);
 }
 
-extern void svc (void);
-
 static void hard_fault (void)
 {
 #if 1
