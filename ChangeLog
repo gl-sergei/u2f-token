@@ -4,6 +4,10 @@
 	(chopstx_main_init): New.
 	(chx_init): Use CHX_PRIO_MAIN_INIT.
 
+2015-04-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-maple-mini.h: New from Aidan Thornton.
+
 2015-03-17  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.04a.
