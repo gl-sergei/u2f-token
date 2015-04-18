@@ -34,8 +34,8 @@
 /*
  * Thread priority: higer has higher precedence.
  */
-#if !defined(CHX_PRIO_MAIN)
-#define CHX_PRIO_MAIN 1
+#if !defined(CHX_PRIO_MAIN_INIT)
+#define CHX_PRIO_MAIN_INIT 1
 #endif
 #if !defined(CHX_FLAGS_MAIN)
 #define CHX_FLAGS_MAIN 0
@@ -740,17 +740,39 @@ chx_init (struct chx_thread *tp)
   tp->flag_got_cancel = tp->flag_join_req = 0;
   tp->flag_sched_rr = (CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
-  tp->prio_orig = CHX_PRIO_MAIN;
+  tp->prio_orig = CHX_PRIO_MAIN_INIT;
   tp->prio = 0;
   tp->v = 0;
   running = tp;
 
-  if (CHX_PRIO_MAIN >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+  if (CHX_PRIO_MAIN_INIT >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
     chx_cpu_sched_lock ();
 
-  tp->prio = CHX_PRIO_MAIN;
+  tp->prio = CHX_PRIO_MAIN_INIT;
 
   chopstx_main = (chopstx_t)tp;
+}
+
+
+/**
+ * chopstx_main_init - initialize main thread
+ * @prio: priority
+ *
+ * Initialize main thread with @prio.
+ * The thread main is created with priority CHX_PRIO_MAIN_INIT,
+ * and it runs with that priority until this routine will is called.
+ */
+void
+chopstx_main_init (chopstx_prio_t prio)
+{
+  struct chx_thread *tp = (struct chx_thread *)chopstx_main;
+
+  tp->prio_orig = prio;
+
+  if (prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    chx_cpu_sched_lock ();
+
+  tp->prio = prio;
 }
 
 

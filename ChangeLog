@@ -1,3 +1,9 @@
+2015-04-17  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (CHX_PRIO_MAIN_INIT): New, removing CHX_PRIO_MAIN.
+	(chopstx_main_init): New.
+	(chx_init): Use CHX_PRIO_MAIN_INIT.
+
 2015-03-17  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.04a.

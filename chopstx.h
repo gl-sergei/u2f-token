@@ -31,6 +31,8 @@ typedef uint8_t chopstx_prio_t;
 
 extern chopstx_t chopstx_main;
 
+void chopstx_main_init (chopstx_prio_t);
+
 /* NOTE: This signature is different to PTHREAD's one.  */
 chopstx_t
 chopstx_create (uint32_t flags_and_prio,
