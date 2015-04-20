@@ -23,7 +23,6 @@
 #define USB_LP_CAN1_RX0_IRQn	 20
 #define STM32_USB_IRQ_PRIORITY   11
 
-
 #define STM32_SW_HSI		(0 << 0)
 #define STM32_SW_PLL		(2 << 0)
 #define STM32_PLLSRC_HSI	(0 << 16)
@@ -47,7 +46,7 @@
 
 #define STM32_MCO_NOCLOCK	(0 << 24)
 
-#if defined(MCU_STM32F0)
+#if MCU_STM32F0
 #define STM32_PPRE1		STM32_PPRE1_DIV1
 #define STM32_PLLSRC		STM32_PLLSRC_HSI
 #define STM32_FLASHBITS		0x00000011
@@ -118,7 +117,7 @@ struct RCC {
   volatile uint32_t APB1ENR;
   volatile uint32_t BDCR;
   volatile uint32_t CSR;
-#if defined(MCU_STM32F0)
+#if MCU_STM32F0
   volatile uint32_t AHBRSTR;
   volatile uint32_t CFGR2;
   volatile uint32_t CFGR3;
@@ -215,7 +214,7 @@ clock_init (void)
   while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI)
     ;
 
-#if !defined(MCU_STM32F0)
+#if !MCU_STM32F0
   /* HSE setup */
   RCC->CR |= RCC_CR_HSEON;
   while (!(RCC->CR & RCC_CR_HSERDY))
@@ -232,6 +231,11 @@ clock_init (void)
   RCC->CFGR = STM32_MCOSEL | STM32_USBPRE | STM32_PLLMUL | STM32_PLLXTPRE
     | STM32_PLLSRC | STM32_ADCPRE | STM32_PPRE2 | STM32_PPRE1 | STM32_HPRE;
 
+  /* Switching on the configured clock source. */
+  RCC->CFGR |= STM32_SW;
+  while ((RCC->CFGR & RCC_CFGR_SWS) != (STM32_SW << 2))
+    ;
+
   /*
    * We don't touch RCC->CR2, RCC->CFGR2, RCC->CFGR3, and RCC->CIR.
    */
@@ -242,12 +246,7 @@ clock_init (void)
   /* CRC */
   RCC->AHBENR |= RCC_AHBENR_CRCEN;
 
-  /* Switching on the configured clock source. */
-  RCC->CFGR |= STM32_SW;
-  while ((RCC->CFGR & RCC_CFGR_SWS) != (STM32_SW << 2))
-    ;
-
-#if defined(MCU_STM32F0)
+#if MCU_STM32F0
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   RCC->APB2RSTR = RCC_APB2RSTR_SYSCFGRST;
   RCC->APB2RSTR = 0;
@@ -258,7 +257,7 @@ clock_init (void)
 }
 
 
-#if defined(MCU_STM32F0)
+#if MCU_STM32F0
 struct GPIO {
   volatile uint32_t MODER;
   volatile uint16_t OTYPER;
@@ -303,7 +302,6 @@ static struct AFIO *const AFIO = (struct AFIO *const)AFIO_BASE;
 #define AFIO_MAPR_TIM3_REMAP_PARTIALREMAP 0x00000800
 #define AFIO_MAPR_SWJ_CFG_DISABLE         0x04000000
 
-
 struct GPIO {
   volatile uint32_t CRL;
   volatile uint32_t CRH;
@@ -338,7 +336,7 @@ static void
 gpio_init (void)
 {
   /* Enable GPIO clock. */
-#if defined(MCU_STM32F0)
+#if MCU_STM32F0
   RCC->AHBENR |= RCC_ENR_IOP_EN;
   RCC->AHBRSTR = RCC_RSTR_IOP_RST;
   RCC->AHBRSTR = 0;
@@ -693,13 +691,11 @@ nvic_system_reset (void)
 static void __attribute__ ((naked))
 reset (void)
 {
-  extern const unsigned long *FT0, *FT1, *FT2;
-
   /*
-   * This code may not be at the start of flash ROM, because of DFU.
+   * This code may not be at start of flash ROM, because of DFU.
    * So, we take the address from PC.
    */
-#if defined(__ARM_ARCH_6M__)
+#if __ARM_ARCH_6M__
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"ldr	r0, 1f\n\t"     /* r0 = RAM start */
 		"mov	r1, pc\n\t"	/* r1 = (PC + 0x0400) & ~0x03ff */
@@ -721,6 +717,7 @@ reset (void)
 	"1:	.word	0x20000000"
 		: /* no output */ : /* no input */ : "memory");
 #else
+  extern const unsigned long *FT0, *FT1, *FT2;
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"ldr	r0, 1f\n\t"     /* r0 = SCR */
 		"mov	r1, pc\n\t"	/* r1 = (PC + 0x1000) & ~0x0fff */
@@ -736,12 +733,11 @@ reset (void)
 		".align	2\n"
 	"1:	.word	0xe000ed00"
 		: /* no output */ : /* no input */ : "memory");
-#endif
-
-  /* Never reach here. */
   /* Artificial entry to refer FT0, FT1, and FT2.  */
   asm volatile (""
 		: : "r" (FT0), "r" (FT1), "r" (FT2));
+#endif
+  /* Never reach here. */
 }
 
 typedef void (*handler)(void);

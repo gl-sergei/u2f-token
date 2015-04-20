@@ -1,3 +1,27 @@
+2015-04-20  Niibe Yutaka  <gniibe@fsij.org>
+
+	Merge cortex-m0-support branch.
+
+	* example-led/sys.c (gpio_init): Support MCU_STM32F0.
+	(reset): Support __ARM_ARCH_6M__.
+	* example-led/sample.ld: Change for Cortex-M0.
+
+	* example-fsm-55/*: New example for FSM-55.
+
+	* entry.c (STM32_PPRE1, STM32_PLLSRC, STM32_FLASHBITS)
+	(STM32_PLLCLKIN): Support MCU_STM32F0.
+	(struct RCC, RCC_*): Support MCU_STM32F0.
+	(struct SYSCFG) [MCU_STM32F0]: New.
+	(struct GPIO, GPIO*): Support MCU_STM32F0.
+	(clock_init, gpio_init): Support MCU_STM32F0.
+	(hard_fault, vectors_in_ram, entry): Support Cortex-M0.
+
+	* chopstx.c (chx_cpu_sched_lock, chx_cpu_sched_unlock)
+	(sched, preempt, svc): Support Cortex-M0.
+
+	* board/board-fsm-55.h: New.
+	* board/board-stm32f0-discovery.h: New.
+
 2015-04-17  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (CHX_PRIO_MAIN_INIT): New, removing CHX_PRIO_MAIN.

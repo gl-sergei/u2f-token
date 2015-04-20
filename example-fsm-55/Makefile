@@ -1,10 +1,10 @@
-# Makefile for example application of Chopstx
+# Makefile for Hacker Emblem application of Chopstx
 
-PROJECT = sample
+PROJECT = hacker-emblem
 
 CHOPSTX = ..
-LDSCRIPT= sample.ld
-CSRC = sys.c aes-constant-ft.c sample.c
+LDSCRIPT= hacker-emblem.ld
+CSRC = sys.c hacker-emblem.c
 
 ###################################
 CROSS = arm-none-eabi-
@@ -12,11 +12,9 @@ CC   = $(CROSS)gcc
 LD   = $(CROSS)gcc
 OBJCOPY   = $(CROSS)objcopy
 
-# MCU   = cortex-m3
-MCU   = cortex-m0
+MCU   = cortex-m0 # -save-temps
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48
-# DEFS  = -DFREE_STANDING -DHAVE_SYS_H -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
+DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48 -DUSE_WFI_FOR_IDLE
 OPT   = -O3 -Os -g
 LIBS  =
 

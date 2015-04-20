@@ -1,5 +1,28 @@
 NEWS - Noteworthy changes
 
+* Major changes in Chopstx 0.05
+
+  Released 2015-04-20, by NIIBE Yutaka
+
+** New function: chopstx_main_init
+chopstx_main_init is the function to change the schedule priority of
+main thread.  This is useful to enter main loop after initialization
+of other threads.
+
+** The use of CHX_PRIO_MAIN
+CHX_PRIO_MAIN is deprecated.  Instead, please use the function
+chopstx_main_init.
+
+** Cortex-M0 support
+Cortex-M0 support has been added.
+
+** New board support: Maple mini
+It is contributed by Aidan Thornton.
+
+** New board support: FSM-55 and STM32F0 Discovery
+Those boards with STM32F0 (Cortex-M0) are now supported.
+
+
 * Major changes in Chopstx 0.04
 
   Released 2014-12-10, by NIIBE Yutaka
