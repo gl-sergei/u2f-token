@@ -1,3 +1,7 @@
+2015-06-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-stm32-primer2.h: New from Kaz Kojima.
+
 2015-04-20  Niibe Yutaka  <gniibe@fsij.org>
 
 	Merge cortex-m0-support branch.

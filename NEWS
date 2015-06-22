@@ -1,5 +1,14 @@
 NEWS - Noteworthy changes
 
+
+* Major changes in Chopstx 0.06
+
+  Released 2015-??-??
+
+** New board support: STM32 Primer2
+It is contributed by Kaz Kojima.
+
+
 * Major changes in Chopstx 0.05
 
   Released 2015-04-20, by NIIBE Yutaka
