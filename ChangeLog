@@ -1,5 +1,10 @@
 2015-06-22  Niibe Yutaka  <gniibe@fsij.org>
 
+	* clk_gpio_init.c: New, adding ports E/F/G.
+	* entry.c: Include clk_gpio.init.c if not HAVE_SYS_H.
+	* example-led/sys.c: Include clk_gpio_init.c.
+	* example-cdc/sys.c: Ditto.
+
 	* board/board-stm32-primer2.h: New from Kaz Kojima.
 
 2015-04-20  Niibe Yutaka  <gniibe@fsij.org>
