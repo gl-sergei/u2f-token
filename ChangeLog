@@ -1,7 +1,10 @@
 2015-06-29  Niibe Yutaka  <gniibe@fsij.org>
 
+	* board/board-cq-starm.h: New for CQ STARM.
+
 	* clk_gpio_init.c (gpio_init): LED is mandatory, but USB enabler
 	is optional.
+	* board/*.h: Update.
 
 2015-06-22  Niibe Yutaka  <gniibe@fsij.org>
 
