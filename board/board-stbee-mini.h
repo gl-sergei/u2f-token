@@ -4,8 +4,10 @@
 #define STM32_PLLMUL_VALUE              6
 #define STM32_HSECLK                    12000000
 
-#define GPIO_USB_SET_TO_ENABLE          14
+#define GPIO_LED_BASE           GPIOA_BASE
 #define GPIO_LED_CLEAR_TO_EMIT          13
+#define GPIO_USB_BASE           GPIOA_BASE
+#define GPIO_USB_SET_TO_ENABLE          14
 
 #if defined(PINPAD_CIR_SUPPORT) || defined(PINPAD_DIAL_SUPPORT)
 #define HAVE_7SEGLED	1
@@ -49,19 +51,20 @@
  * PA14 - Push pull output  (USB ENABLE 0:DISABLE 1:ENABLE)
  * PA15 - Open Drain output (LED2 0:ON 1:OFF)
  */
-#define VAL_GPIO_ODR            0xFFFFE77F
-#define VAL_GPIO_CRL            0x88888888      /*  PA7...PA0 */
-#define VAL_GPIO_CRH            0x63611888      /* PA15...PA8 */
+#define VAL_GPIOA_ODR            0xFFFFE77F
+#define VAL_GPIOA_CRL            0x88888888      /*  PA7...PA0 */
+#define VAL_GPIOA_CRH            0x63611888      /* PA15...PA8 */
 
+#define GPIO_OTHER_BASE          GPIOB_BASE
 /*
  * Port B setup.
  * PB0  - Push pull output   (LED 1:ON 0:OFF)
  * ------------------------ Default
  * PBx  - input with pull-up.
  */
-#define VAL_GPIO_LED_ODR            0xFFFFFFFF
-#define VAL_GPIO_LED_CRL            0x88888888      /*  PB7...PB0 */
-#define VAL_GPIO_LED_CRH            0x66666666      /* PB15...PB8 */
+#define VAL_GPIO_OTHER_ODR            0xFFFFFFFF
+#define VAL_GPIO_OTHER_CRL            0x88888888      /*  PB7...PB0 */
+#define VAL_GPIO_OTHER_CRH            0x66666666      /* PB15...PB8 */
 
 /* Port B setup. */
 #define GPIOB_CIR               0
@@ -93,17 +96,17 @@
  * PA14 - Push pull output  (USB ENABLE 0:DISABLE 1:ENABLE)
  * PA15 - Open Drain output (LED2 0:ON 1:OFF)
  */
-#define VAL_GPIO_ODR            0xFFFFE7FF
-#define VAL_GPIO_CRL            0x88888888      /*  PA7...PA0 */
-#define VAL_GPIO_CRH            0x63611888      /* PA15...PA8 */
+#define VAL_GPIO_LED_ODR            0xFFFFE7FF
+#define VAL_GPIO_LED_CRL            0x88888888      /*  PA7...PA0 */
+#define VAL_GPIO_LED_CRH            0x63611888      /* PA15...PA8 */
+
+#undef  GPIO_OTHER_BASE
 
 #define RCC_ENR_IOP_EN      (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN)
 #define RCC_RSTR_IOP_RST    (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_AFIORST)
 #endif
 
 
-#define GPIO_USB_BASE           GPIOA_BASE
-#define GPIO_LED_BASE           GPIOA_BASE
 #define AFIO_MAPR_SOMETHING     AFIO_MAPR_SWJ_CFG_DISABLE
 
 /* NeuG settings for ADC2.  */

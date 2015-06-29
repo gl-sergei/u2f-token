@@ -344,14 +344,16 @@ gpio_init (void)
   AFIO->MAPR |= AFIO_MAPR_SOMETHING;
 #endif
 
-  GPIO_USB->ODR = VAL_GPIO_ODR;
-  GPIO_USB->CRH = VAL_GPIO_CRH;
-  GPIO_USB->CRL = VAL_GPIO_CRL;
+  /* LED is mandatory.  If it's on an independent port, we configure it.  */
+  GPIO_LED->ODR = VAL_GPIO_ODR;
+  GPIO_LED->CRH = VAL_GPIO_CRH;
+  GPIO_LED->CRL = VAL_GPIO_CRL;
 
-#if GPIO_USB_BASE != GPIO_LED_BASE
-  GPIO_LED->ODR = VAL_GPIO_LED_ODR;
-  GPIO_LED->CRH = VAL_GPIO_LED_CRH;
-  GPIO_LED->CRL = VAL_GPIO_LED_CRL;
+  /* If there is USB enabler pin and it's independent, we configure it.  */
+#if defined(GPIO_USB_BASE) && GPIO_USB_BASE != GPIO_LED_BASE
+  GPIO_USB->ODR = VAL_GPIO_USB_ODR;
+  GPIO_USB->CRH = VAL_GPIO_USB_CRH;
+  GPIO_USB->CRL = VAL_GPIO_USB_CRL;
 #endif
 
 #ifdef GPIO_OTHER_BASE

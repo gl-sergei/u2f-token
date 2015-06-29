@@ -4,8 +4,11 @@
 #define STM32_PLLMUL_VALUE              6
 #define STM32_HSECLK                    12000000
 
-#define GPIO_USB_CLEAR_TO_ENABLE        3
+#define GPIO_LED_BASE   GPIOD_BASE
 #define GPIO_LED_CLEAR_TO_EMIT          4
+#define GPIO_USB_BASE   GPIOD_BASE
+#define GPIO_USB_CLEAR_TO_ENABLE        3
+#define GPIO_OTHER_BASE GPIOA_BASE
 
 /*
  * Port A setup.
@@ -25,13 +28,9 @@
  * PD3  - Push pull output  (USB_DISC 1:USB-DISABLE 0:USB-ENABLE) 2MHz
  * PD4  - Open Drain output 2MHz (LED1).
  */
-#define VAL_GPIO_ODR            0xFFFFFFFF
-#define VAL_GPIO_CRL            0x88862888      /*  PD7...PD0 */
-#define VAL_GPIO_CRH            0x88888888      /* PD15...PD8 */
-
-#define GPIO_USB_BASE   GPIOD_BASE
-#define GPIO_LED_BASE   GPIOD_BASE
-#define GPIO_OTHER_BASE GPIOA_BASE
+#define VAL_GPIO_LED_ODR            0xFFFFFFFF
+#define VAL_GPIO_LED_CRL            0x88862888      /*  PD7...PD0 */
+#define VAL_GPIO_LED_CRH            0x88888888      /* PD15...PD8 */
 
 /* NeuG settings for ADC2.  */
 #define NEUG_ADC_SETTING2_SMPR1 ADC_SMPR1_SMP_AN10(ADC_SAMPLE_1P5) \

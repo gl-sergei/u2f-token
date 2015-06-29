@@ -4,8 +4,11 @@
 #define STM32_PLLMUL_VALUE              6
 #define STM32_HSECLK                    12000000
 
-#define GPIO_USB_SET_TO_ENABLE          10
+#define GPIO_LED_BASE   GPIOB_BASE
 #define GPIO_LED_SET_TO_EMIT            0
+#define GPIO_USB_BASE   GPIOA_BASE
+#define GPIO_USB_SET_TO_ENABLE          10
+#undef  GPIO_OTHER_BASE
 
 /* For pin-cir settings of Gnuk */
 #define TIMx                  TIM2
@@ -40,9 +43,9 @@
  * PA14 - input with pull-up.
  * PA15 - input with pull-up.
  */
-#define VAL_GPIO_ODR            0xFFFFE7FD
-#define VAL_GPIO_CRL            0xBBB38888      /*  PA7...PA0 */
-#define VAL_GPIO_CRH            0x88811388      /* PA15...PA8 */
+#define VAL_GPIO_USB_ODR            0xFFFFE7FD
+#define VAL_GPIO_USB_CRL            0xBBB38888      /*  PA7...PA0 */
+#define VAL_GPIO_USB_CRH            0x88811388      /* PA15...PA8 */
 
 /*
  * Port B setup.
@@ -54,9 +57,6 @@
 #define VAL_GPIO_LED_ODR            0xFFFFFFFF
 #define VAL_GPIO_LED_CRL            0x88888883      /*  PA7...PA0 */
 #define VAL_GPIO_LED_CRH            0x88888888      /* PA15...PA8 */
-
-#define GPIO_USB_BASE   GPIOA_BASE
-#define GPIO_LED_BASE   GPIOB_BASE
 
 #define RCC_ENR_IOP_EN      (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN)
 #define RCC_RSTR_IOP_RST    (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPBRST)

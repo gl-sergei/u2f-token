@@ -1,3 +1,8 @@
+2015-06-29  Niibe Yutaka  <gniibe@fsij.org>
+
+	* clk_gpio_init.c (gpio_init): LED is mandatory, but USB enabler
+	is optional.
+
 2015-06-22  Niibe Yutaka  <gniibe@fsij.org>
 
 	* clk_gpio_init.c: New, adding ports E/F/G.

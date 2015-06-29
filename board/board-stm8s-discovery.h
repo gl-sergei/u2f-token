@@ -4,8 +4,11 @@
 #define STM32_PLLMUL_VALUE              9
 #define STM32_HSECLK                    8000000
 
-#undef  GPIO_USB_CLEAR_TO_ENABLE
+#define GPIO_LED_BASE   GPIOA_BASE
 #define GPIO_LED_SET_TO_EMIT            8
+#undef  GPIO_USB_BASE
+#undef  GPIO_USB_CLEAR_TO_ENABLE
+#define GPIO_OTHER_BASE GPIOB_BASE
 
 /* For pin-cir settings of Gnuk */
 #define TIMx                  TIM3
@@ -32,12 +35,9 @@
  * ------------------------ Default
  * PAx  - input with pull-up
  */
-#define VAL_GPIO_ODR            0xFFFFE7FF
-#define VAL_GPIO_CRL            0x88888888      /*  PA7...PA0 */
-#define VAL_GPIO_CRH            0x88811881      /* PA15...PA8 */
-
-#define GPIO_USB_BASE   GPIOA_BASE
-#define GPIO_LED_BASE   GPIOA_BASE
+#define VAL_GPIO_LED_ODR            0xFFFFE7FF
+#define VAL_GPIO_LED_CRL            0x88888888      /*  PA7...PA0 */
+#define VAL_GPIO_LED_CRH            0x88811881      /* PA15...PA8 */
 
 #define RCC_ENR_IOP_EN   \
   (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN | RCC_APB2ENR_AFIOEN)
@@ -46,7 +46,6 @@
 
 /* NeuG settings for ADC2 is default (PA0: Analog IN0, PA1: Analog IN1).  */
 
-#define GPIO_OTHER_BASE GPIOB_BASE
 /*
  * Port B setup.
  * PB4  - (TIM3_CH1) input with pull-up
