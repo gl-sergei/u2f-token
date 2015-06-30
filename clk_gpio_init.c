@@ -345,9 +345,9 @@ gpio_init (void)
 #endif
 
   /* LED is mandatory.  If it's on an independent port, we configure it.  */
-  GPIO_LED->ODR = VAL_GPIO_ODR;
-  GPIO_LED->CRH = VAL_GPIO_CRH;
-  GPIO_LED->CRL = VAL_GPIO_CRL;
+  GPIO_LED->ODR = VAL_GPIO_LED_ODR;
+  GPIO_LED->CRH = VAL_GPIO_LED_CRH;
+  GPIO_LED->CRL = VAL_GPIO_LED_CRL;
 
   /* If there is USB enabler pin and it's independent, we configure it.  */
 #if defined(GPIO_USB_BASE) && GPIO_USB_BASE != GPIO_LED_BASE
