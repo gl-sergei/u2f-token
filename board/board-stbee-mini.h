@@ -51,9 +51,9 @@
  * PA14 - Push pull output  (USB ENABLE 0:DISABLE 1:ENABLE)
  * PA15 - Open Drain output (LED2 0:ON 1:OFF)
  */
-#define VAL_GPIOA_ODR            0xFFFFE77F
-#define VAL_GPIOA_CRL            0x88888888      /*  PA7...PA0 */
-#define VAL_GPIOA_CRH            0x63611888      /* PA15...PA8 */
+#define VAL_GPIO_LED_ODR            0xFFFFE77F
+#define VAL_GPIO_LED_CRL            0x88888888      /*  PA7...PA0 */
+#define VAL_GPIO_LED_CRH            0x63611888      /* PA15...PA8 */
 
 #define GPIO_OTHER_BASE          GPIOB_BASE
 /*
