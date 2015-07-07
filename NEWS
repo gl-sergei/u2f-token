@@ -3,10 +3,17 @@ NEWS - Noteworthy changes
 
 * Major changes in Chopstx 0.06
 
-  Released 2015-??-??
+  Released 2015-07-08
+
+** New file: clk_gpio_init.c
+To avoid duplication of code, clock and GPIO initialization code
+is now in this file.
 
 ** New board support: STM32 Primer2
 It is contributed by Kaz Kojima.
+
+** New board support: CQ STARM
+The old board which was "published" by CQ Publishing in 2008 is added.
 
 
 * Major changes in Chopstx 0.05

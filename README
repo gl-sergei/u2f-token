@@ -1,6 +1,6 @@
 Chopstx - Threads and only Threads
-							Version 0.05
-							  2015-04-20
+							Version 0.06
+							  2015-07-08
 							Niibe Yutaka
 					     Flying Stone Technology
 
@@ -34,6 +34,9 @@ USB CDC-ACM function.  You can build it like:
    $ cd example-cdc
    $ ln -s ../board/board-olimex-stm32-h103.h board.h
    $ make
+
+For a specific board named FSM-55, an example of LED matrix dynamic
+driver is provided.  See the directory: example-fsm-55.
 
 
 Future Works

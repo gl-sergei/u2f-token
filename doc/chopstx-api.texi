@@ -7,6 +7,16 @@ When it detects a coding error, this function will be called to
 stop further execution of code.  It never returns.
 @end deftypefun
 
+@subheading chopstx_main_init
+@anchor{chopstx_main_init}
+@deftypefun {void} {chopstx_main_init} (chopstx_prio_t @var{prio})
+@var{prio}: priority
+
+Initialize main thread with @var{prio}.
+The thread main is created with priority CHX_PRIO_MAIN_INIT,
+and it runs with that priority until this routine will is called.
+@end deftypefun
+
 @subheading chopstx_create
 @anchor{chopstx_create}
 @deftypefun {chopstx_t} {chopstx_create} (uint32_t @var{flags_and_prio}, uint32_t @var{stack_addr}, size_t @var{stack_size}, voidfunc @var{thread_entry}, void * @var{arg})
@@ -28,8 +38,8 @@ Create a thread.
 @deftypefun {void} {chopstx_usec_wait_var} (uint32_t * @var{var})
 @var{var}: Pointer to usec
 
-Sleep for micro second specified by @var{var}.
-Another thread can clear @var{var} on condition (to avoid this thread going into sleep).
+Sleep for micro seconds, specified by @var{var}.
+Another thread can clear @var{var} to stop the caller going into sleep.
 @end deftypefun
 
 @subheading chopstx_usec_wait
@@ -95,7 +105,7 @@ Wake up a thread waiting on @var{cond}.
 @deftypefun {void} {chopstx_cond_broadcast} (chopstx_cond_t * @var{cond})
 @var{cond}: Condition Variable
 
-Wake up all thread winting on @var{cond}.
+Wake up all threads waiting on @var{cond}.
 @end deftypefun
 
 @subheading chopstx_claim_irq
@@ -167,7 +177,7 @@ Waits for the thread of @var{thd} to terminate.
 @deftypefun {void} {chopstx_wakeup_usec_wait} (chopstx_t @var{thd})
 @var{thd}: Thread to be awakened
 
-Canceling the timer, wakup the sleeping thread for it.
+Canceling the timer, wake up the sleeping thread.
 No return value.
 @end deftypefun
 
@@ -176,7 +186,7 @@ No return value.
 @deftypefun {void} {chopstx_cancel} (chopstx_t @var{thd})
 @var{thd}: Thread to be canceled
 
-This function requests a cancellation th the thread @var{thd}.
+This function requests a cancellation of a thread @var{thd}.
 No return value.
 @end deftypefun
 
