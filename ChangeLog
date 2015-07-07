@@ -1,3 +1,9 @@
+2015-07-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/sys.c: Include clk_gpio_init.c.
+	* board/board-stm32f0-discovery.h, board/board-fsm-55.h: Update.
+	* clk_gpio_init.c (gpio_init): Use VAL_GPIO_LED_*.
+
 2015-06-29  Niibe Yutaka  <gniibe@fsij.org>
 
 	* board/board-cq-starm.h: New for CQ STARM.
@@ -18,6 +24,8 @@
 2015-04-20  Niibe Yutaka  <gniibe@fsij.org>
 
 	Merge cortex-m0-support branch.
+
+	* VERSION: 0.05.
 
 	* example-led/sys.c (gpio_init): Support MCU_STM32F0.
 	(reset): Support __ARM_ARCH_6M__.
