@@ -415,7 +415,10 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
 
 const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
   3*2+2,	     /* bLength */
-  0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE*/
+  0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE */
   /* sys version: "2.0" */
   '2', 0, '.', 0, '0', 0,
 };
+
+const uint8_t __attribute__((section(".sys.board")))
+sys_board[] = BOARD_NAME;

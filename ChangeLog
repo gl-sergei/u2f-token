@@ -1,3 +1,17 @@
+2015-07-13  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
+
+	* board/board-stm32-primer2.h: Update.
+	* entry.c (vector_table): Less or more.
+
+2015-07-13  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-*.h (BOARD_NAME): New.
+	(STM32F10X_MD): Define for medium-density devices.
+	* example-led/sys.c, sample.ld: Update.
+	* example-fsm-55/sys.c, hacker-emblem.ld: Update.
+	* example-cdc/sys.c (sys_board): New.
+	* example-cdc/sample.ld: Update.
+
 2015-07-08  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.06.

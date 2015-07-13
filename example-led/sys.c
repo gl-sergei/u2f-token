@@ -363,8 +363,6 @@ nvic_system_reset (void)
 static void __attribute__ ((naked))
 reset (void)
 {
-  extern const unsigned long *FT0, *FT1, *FT2;
-
   /*
    * This code may not be at the start of flash ROM, because of DFU.
    * So, we take the address from PC.
@@ -391,6 +389,7 @@ reset (void)
 	"1:	.word	0x20000000"
 		: /* no output */ : /* no input */ : "memory");
 #else
+  extern const unsigned long *FT0, *FT1, *FT2;
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"ldr	r0, 1f\n\t"     /* r0 = SCR */
 		"mov	r1, pc\n\t"	/* r1 = (PC + 0x1000) & ~0x0fff */
@@ -406,12 +405,11 @@ reset (void)
 		".align	2\n"
 	"1:	.word	0xe000ed00"
 		: /* no output */ : /* no input */ : "memory");
-#endif
-
-  /* Never reach here. */
   /* Artificial entry to refer FT0, FT1, and FT2.  */
   asm volatile (""
 		: : "r" (FT0), "r" (FT1), "r" (FT2));
+#endif
+  /* Never reach here. */
 }
 
 typedef void (*handler)(void);

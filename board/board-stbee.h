@@ -1,3 +1,5 @@
+#define BOARD_NAME "STBee"
+
 #define FLASH_PAGE_SIZE 2048
 
 #define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1

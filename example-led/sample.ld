@@ -29,12 +29,13 @@ SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(16) SUBALIGN(16)
+    .sys : ALIGN(16) SUBALIGN(8)
     {
         _sys = .;
         KEEP(*(.vectors))
 	. = ALIGN(16);
-	*(.sys.version)
+	KEEP(*(.sys.version))
+	KEEP(*(.sys.board))
 	build/sys.o(.text)
 	build/sys.o(.text.*)
         build/sys.o(.rodata)

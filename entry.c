@@ -196,8 +196,20 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   /* ... and more.  CAN, EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
-  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,
+#if !defined(__ARM_ARCH_6M__)
+  /* STM32F0 doesn't have more.  */
+  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,
+#endif
+#if !defined(STM32F10X_MD)
+  /* High-density chips have more; RTCAlarm, USBWakeup, ... , DMA2_Channel4_5 */
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+#endif
 };

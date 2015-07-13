@@ -364,10 +364,10 @@ static void __attribute__ ((naked))
 reset (void)
 {
   /*
-   * This code may not be at start of flash ROM, because of DFU.
+   * This code may not be at the start of flash ROM, because of DFU.
    * So, we take the address from PC.
    */
-#if __ARM_ARCH_6M__
+#if defined(__ARM_ARCH_6M__)
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"ldr	r0, 1f\n\t"     /* r0 = RAM start */
 		"mov	r1, pc\n\t"	/* r1 = (PC + 0x0400) & ~0x03ff */

@@ -25,15 +25,16 @@ SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(16) SUBALIGN(16)
+    .sys : ALIGN(16) SUBALIGN(8)
     {
-        _sys = .;
-        KEEP(*(.vectors))
+	_sys = .;
+	KEEP(*(.vectors))
 	. = ALIGN(16);
-	*(.sys.version)
+	KEEP(*(.sys.version))
+	KEEP(*(.sys.board))
 	build/sys.o(.text)
 	build/sys.o(.text.*)
-        build/sys.o(.rodata)
+	build/sys.o(.rodata)
 	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
 	*(.sys.0)
@@ -59,6 +60,7 @@ SECTIONS
         *(.glue_7t)
         *(.glue_7)
         *(.gcc*)
+	. = ALIGN(8);
     } > flash
 
     .ARM.extab : {*(.ARM.extab* .gnu.linkonce.armextab.*)} > flash
