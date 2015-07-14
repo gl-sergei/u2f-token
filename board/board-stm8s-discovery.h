@@ -48,8 +48,6 @@
 #define RCC_RSTR_IOP_RST \
   (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPBRST | RCC_APB2RSTR_AFIORST)
 
-/* NeuG settings for ADC2 is default (PA0: Analog IN0, PA1: Analog IN1).  */
-
 /*
  * Port B setup.
  * PB4  - (TIM3_CH1) input with pull-up

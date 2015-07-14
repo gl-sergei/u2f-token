@@ -34,11 +34,3 @@
 #define VAL_GPIO_LED_ODR            0xFFFFFFFF
 #define VAL_GPIO_LED_CRL            0x88862888      /*  PD7...PD0 */
 #define VAL_GPIO_LED_CRH            0x88888888      /* PD15...PD8 */
-
-/* NeuG settings for ADC2.  */
-#define NEUG_ADC_SETTING2_SMPR1 ADC_SMPR1_SMP_AN10(ADC_SAMPLE_1P5) \
-                              | ADC_SMPR1_SMP_AN11(ADC_SAMPLE_1P5)
-#define NEUG_ADC_SETTING2_SMPR2 0
-#define NEUG_ADC_SETTING2_SQR3  ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10)   \
-                              | ADC_SQR3_SQ2_N(ADC_CHANNEL_IN11)
-#define NEUG_ADC_SETTING2_NUM_CHANNELS 2

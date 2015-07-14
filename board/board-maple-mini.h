@@ -40,5 +40,3 @@
 
 #define RCC_ENR_IOP_EN      (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN)
 #define RCC_RSTR_IOP_RST    (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPBRST)
-
-/* NeuG settings for ADC2 is default (PA0: Analog IN0, PA1: Analog IN1).  */

@@ -1,0 +1,22 @@
+Aidan Thornton:
+    Added Maple Mini support.
+	board/board-maple-mini.h
+
+Kaz Kojima:
+    Added STM32 Primer2 support.
+	board/board-stm32-primer2.h
+
+NIIBE Yutaka:
+    Write the library:
+	chopstx.c, eventflag.c, entry.c, clk_gpio_init.c
+        chopstx.h, eventflag.h
+    Draw the logo:
+	chopstx.svg, chopstx.png
+    Write examples:
+        example-led, example-cdc, example-fsm-55
+    Write board:
+        board-fst-01.h, board-fst-01-00.h,
+	board-olimex-stm32-h103.h, board-stm8s-discovery.h
+	board-cq-starm.h, board-stbee-mini.h, board-stbee.h,
+
+	board-stm32f0-discovery.h, board-fsm-55.h
