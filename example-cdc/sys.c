@@ -253,7 +253,7 @@ static int
 flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
 {
   int status;
-  uint32_t flash_end = FLASH_START + (*FLASH_SIZE_REG)*1024;
+  uint32_t flash_end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
 
   if (dst_addr < FLASH_START || dst_addr + len > flash_end)
     return 0;
@@ -309,7 +309,7 @@ static void __attribute__((naked))
 flash_erase_all_and_exec (void (*entry)(void))
 {
   uint32_t addr = FLASH_START;
-  uint32_t end = FLASH_START + (*FLASH_SIZE_REG)*1024;
+  uint32_t end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
   uint32_t page_size = 1024;
   int r;
 
