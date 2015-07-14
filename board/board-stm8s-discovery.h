@@ -1,4 +1,5 @@
 #define BOARD_NAME "STM8S Discovery"
+#define BOARD_ID    0x2f0976bb
 
 #define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */

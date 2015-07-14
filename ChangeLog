@@ -1,3 +1,12 @@
+2015-07-14  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-*.h (BOARD_ID): New.
+	* example-cdc/sys.c (sys_board_id): New.
+	* example-cdc/sample.ld (.sys.board_id): New.
+	(__flash_start__, __flash_end__): Remove.
+	* entry.c [HAVE_SYS_H] (vector_table): By undefining STM32F10X_MD,
+	prepare for high density device even compiled for MD device.
+
 2015-07-13  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
 
 	* board/board-stm32-primer2.h: Update.
@@ -9,7 +18,7 @@
 	(STM32F10X_MD): Define for medium-density devices.
 	* example-led/sys.c, sample.ld: Update.
 	* example-fsm-55/sys.c, hacker-emblem.ld: Update.
-	* example-cdc/sys.c (sys_board): New.
+	* example-cdc/sys.c (sys_board_name): New.
 	* example-cdc/sample.ld: Update.
 
 2015-07-08  Niibe Yutaka  <gniibe@fsij.org>

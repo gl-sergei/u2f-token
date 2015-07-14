@@ -34,6 +34,7 @@
 #define INLINE __attribute__ ((used))
 #include "sys.h"
 #include "board.h"
+#undef STM32F10X_MD		/* Prepare for high density device, too.  */
 #else
 #include "board.h"
 #include "clk_gpio_init.c"
@@ -192,17 +193,18 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   chx_handle_intr /* DMA1 CH6 */, chx_handle_intr /* DMA1 CH7 */,
   chx_handle_intr /* ADC1_2 */,   chx_handle_intr /* USB HP */,
   /* 0x90 */
-  chx_handle_intr,		/* USB LP */
-  /* ... and more.  CAN, EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
+  chx_handle_intr /* USB LP */,   chx_handle_intr /* CAN */, 
+  /* ... and more.  EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
+  chx_handle_intr,                chx_handle_intr,
+  /* 0xA0 */
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
-  chx_handle_intr,  chx_handle_intr,
+  /* 0xc0 */
 #if !defined(__ARM_ARCH_6M__)
   /* STM32F0 doesn't have more.  */
-  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
-  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
 #endif
 #if !defined(STM32F10X_MD)
   /* High-density chips have more; RTCAlarm, USBWakeup, ... , DMA2_Channel4_5 */

@@ -1,4 +1,5 @@
 #define BOARD_NAME "STBee Mini"
+#define BOARD_ID    0x1f341961
 
 #define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */

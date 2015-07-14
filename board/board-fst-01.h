@@ -1,4 +1,6 @@
 #define BOARD_NAME "FST-01"
+#define BOARD_ID    0x696886af
+/* echo -n "FST-01" | sha256sum | sed -e 's/^.*\(........\)  -$/\1/' */
 
 #define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */

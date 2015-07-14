@@ -1,4 +1,5 @@
 #define BOARD_NAME "CQ STARM"
+#define BOARD_ID    0xc5480875
 
 #define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */

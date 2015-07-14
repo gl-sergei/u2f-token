@@ -1,4 +1,5 @@
 #define BOARD_NAME "STM32 Primer2"
+#define BOARD_ID    0x21e5798d
 
 #define FLASH_PAGE_SIZE 2048
 

@@ -14,9 +14,6 @@ MEMORY
     ram : org = 0x20000000, len = 20k
 }
 
-__flash_start__ = 0x08001000;
-__flash_end__   = 0x08020000;
-
 __ram_start__           = ORIGIN(ram);
 __ram_size__            = 20k;
 __ram_end__             = __ram_start__ + __ram_size__;
@@ -25,13 +22,14 @@ SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(16) SUBALIGN(8)
+    .sys : ALIGN(4) SUBALIGN(4)
     {
 	_sys = .;
 	KEEP(*(.vectors))
 	. = ALIGN(16);
 	KEEP(*(.sys.version))
-	KEEP(*(.sys.board))
+	KEEP(*(.sys.board_id))
+	KEEP(*(.sys.board_name))
 	build/sys.o(.text)
 	build/sys.o(.text.*)
 	build/sys.o(.rodata)

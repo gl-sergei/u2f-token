@@ -1,4 +1,5 @@
 #define BOARD_NAME "STBee"
+#define BOARD_ID    0x945c37e8
 
 #define FLASH_PAGE_SIZE 2048
 

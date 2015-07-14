@@ -1,4 +1,5 @@
 #define BOARD_NAME "FST-01-00"
+#define BOARD_ID    0x613870a9
 
 #define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */

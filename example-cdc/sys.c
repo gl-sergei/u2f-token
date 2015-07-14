@@ -243,16 +243,19 @@ flash_check_blank (const uint8_t *p_start, size_t size)
   return 1;
 }
 
-extern uint8_t __flash_start__, __flash_end__;
+#define FLASH_START_ADDR 0x08000000 /* Fixed for all STM32F1.  */
+#define FLASH_OFFSET     0x1000     /* First pages are not-writable.  */
+#define FLASH_START      (FLASH_START_ADDR+FLASH_OFFSET)
+#define CHIP_ID_REG      ((uint32_t *)0xe0042000)
+#define FLASH_SIZE_REG   ((uint16_t *)0x1ffff7e0)
 
 static int
 flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
 {
   int status;
-  uint32_t flash_start = (uint32_t)&__flash_start__;
-  uint32_t flash_end = (uint32_t)&__flash_end__;
+  uint32_t flash_end = FLASH_START + (*FLASH_SIZE_REG)*1024;
 
-  if (dst_addr < flash_start || dst_addr + len > flash_end)
+  if (dst_addr < FLASH_START || dst_addr + len > flash_end)
     return 0;
 
   while (len)
@@ -305,9 +308,13 @@ flash_protect (void)
 static void __attribute__((naked))
 flash_erase_all_and_exec (void (*entry)(void))
 {
-  uint32_t addr = (uint32_t)&__flash_start__;
-  uint32_t end = (uint32_t)&__flash_end__;
+  uint32_t addr = FLASH_START;
+  uint32_t end = FLASH_START + (*FLASH_SIZE_REG)*1024;
+  uint32_t page_size = 1024;
   int r;
+
+  if (((*CHIP_ID_REG) & 0xfff) == 0x0414)
+    page_size = 2048;
 
   while (addr < end)
     {
@@ -315,7 +322,7 @@ flash_erase_all_and_exec (void (*entry)(void))
       if (r != 0)
 	break;
 
-      addr += FLASH_PAGE_SIZE;
+      addr += page_size;
     }
 
   if (addr >= end)
@@ -416,9 +423,12 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
 const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
   3*2+2,	     /* bLength */
   0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE */
-  /* sys version: "2.0" */
-  '2', 0, '.', 0, '0', 0,
+  /* sys version: "2.1" */
+  '2', 0, '.', 0, '1', 0,
 };
 
-const uint8_t __attribute__((section(".sys.board")))
-sys_board[] = BOARD_NAME;
+const uint32_t __attribute__((section(".sys.board_id")))
+sys_board_id = BOARD_ID;
+
+const uint8_t __attribute__((section(".sys.board_name")))
+sys_board_name[] = BOARD_NAME;
