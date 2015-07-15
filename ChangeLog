@@ -1,3 +1,8 @@
+2015-07-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.07.
+	* doc/chopstx.texi (VERSION): 0.07.
+
 2015-07-14  Niibe Yutaka  <gniibe@fsij.org>
 
 	* board/board-*.h (BOARD_ID): New.

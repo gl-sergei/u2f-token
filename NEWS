@@ -1,6 +1,19 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.07
+
+  Released 2015-07-15
+
+** New Board macro definitions
+Each board-*.h should have BOARD_ID and BOARD_NAME now.
+FLASH_PAGE_SIZE and NEUG_ADC_SETTING2_* are deprecated.
+
+** New sys.c (2.1)
+Flash memory size is probed at runtime now.  System
+service flash pages now include sys_board_id and sys_board_name.
+
+
 * Major changes in Chopstx 0.06
 
   Released 2015-07-08
