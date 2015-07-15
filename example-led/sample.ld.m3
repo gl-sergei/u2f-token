@@ -1,5 +1,5 @@
 /*
- * ST32F0 memory setup.
+ * ST32F103 memory setup.
  */
 __main_stack_size__     = 0x0100;  /* Exception handlers     */
 __process0_stack_size__  = 0x0100; /* Main program           */
@@ -35,12 +35,10 @@ SECTIONS
 	build/sys.o(.rodata)
 	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
-/*
 	*(.sys.0)
 	*(.sys.1)
 	*(.sys.2)
-*/
-    } > flash0 =0xffffffff
+    } > flash0
 
     _text = .;
 
@@ -79,13 +77,6 @@ SECTIONS
 
     _etext = .;
     _textdata = _etext;
-
-    .vectors_in_ram :
-    {
-        . = ALIGN(8);
-        __vector_ram_addr__ = .;
-	KEEP(*(.bss.startup.*))
-    } > ram
 
     .process_stack :
     {
