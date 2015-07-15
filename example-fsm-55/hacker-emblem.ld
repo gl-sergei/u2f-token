@@ -1,25 +1,18 @@
 /*
- * ST32F103 memory setup.
+ * ST32F0 memory setup.
  */
 __main_stack_size__     = 0x0100;  /* Exception handlers     */
-__process0_stack_size__  = 0x0100;  /* Main program           */
+__process0_stack_size__  = 0x0100; /* Main program           */
 __process1_stack_size__  = 0x0100; /* first thread program */
 __process2_stack_size__  = 0x0100; /* second thread program */
 __process3_stack_size__  = 0x0100; /* third thread program */
 
 MEMORY
 {
-/*
     flash0 : org = 0x08000000, len = 4k
     flash  : org = 0x08000000+0x1000, len = 60k
-*/
-    flash0 : org = 0x08000000, len = 1k
-    flash  : org = 0x08000000+0x0400, len = 60k
     ram : org = 0x20000000, len = 20k
 }
-
-__flash_start__ = 0x08001000;
-__flash_end__   = 0x08020000;
 
 __ram_start__           = ORIGIN(ram);
 __ram_size__            = 20k;
@@ -29,24 +22,20 @@ SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(16) SUBALIGN(8)
+    .sys : ALIGN(4) SUBALIGN(4)
     {
-        _sys = .;
-        KEEP(*(.vectors))
+	_sys = .;
+	KEEP(*(.vectors))
 	. = ALIGN(16);
 	KEEP(*(.sys.version))
-	KEEP(*(.sys.board))
+	KEEP(*(.sys.board_id))
+	KEEP(*(.sys.board_name))
 	build/sys.o(.text)
 	build/sys.o(.text.*)
-        build/sys.o(.rodata)
+	build/sys.o(.rodata)
 	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
-/*
-	*(.sys.0)
-	*(.sys.1)
-	*(.sys.2)
-*/
-    } > flash0
+    } > flash0 =0xffffffff
 
     _text = .;
 
@@ -66,6 +55,7 @@ SECTIONS
         *(.glue_7t)
         *(.glue_7)
         *(.gcc*)
+	. = ALIGN(8);
     } > flash
 
     .ARM.extab : {*(.ARM.extab* .gnu.linkonce.armextab.*)} > flash
@@ -98,15 +88,15 @@ SECTIONS
         __process3_stack_base__ = .;
         . += __process3_stack_size__;
         . = ALIGN(8);
-        __process_stack3_end__ = .;
+        __process3_stack_end__ = .;
         __process2_stack_base__ = .;
         . += __process2_stack_size__;
         . = ALIGN(8);
-        __process_stack2_end__ = .;
+        __process2_stack_end__ = .;
         __process1_stack_base__ = .;
         . += __process1_stack_size__;
         . = ALIGN(8);
-        __process_stack1_end__ = .;
+        __process1_stack_end__ = .;
         __process0_stack_base__ = .;
         . += __process0_stack_size__;
         . = ALIGN(8);

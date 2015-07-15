@@ -1,4 +1,21 @@
+#if defined(__ARM_ARCH_6M__)
+#define BOARD_ID_STM32F0_DISCOVERY 0xde4b4bc1
+#define BOARD_ID_FSM_55            0x83433c76
+#else
+#define BOARD_ID_CQ_STARM          0xc5480875
+#define BOARD_ID_FST_01_00         0x613870a9
+#define BOARD_ID_FST_01            0x696886af
+#define BOARD_ID_MAPLE_MINI        0x7a445272
+#define BOARD_ID_OLIMEX_STM32_H103 0xf92bb594
+#define BOARD_ID_STBEE_MINI        0x1f341961
+#define BOARD_ID_STBEE             0x945c37e8
+#define BOARD_ID_STM32_PRIMER2     0x21e5798d
+#define BOARD_ID_STM8S_DISCOVERY   0x2f0976bb
+#endif
+
 extern const uint8_t sys_version[8];
+extern const uint32_t sys_board_id;
+extern const uint8_t sys_board_name[];
 
 typedef void (*handler)(void);
 extern handler vector[16];
