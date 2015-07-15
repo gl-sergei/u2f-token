@@ -1,3 +1,6 @@
+#define BOARD_NAME "STM32F0 Discovery"
+#define BOARD_ID    0xde4b4bc1
+
 /*
  * Running at 48MHz with HSI as clock source.
  * 

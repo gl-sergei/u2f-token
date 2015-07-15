@@ -1,3 +1,6 @@
+#define BOARD_NAME "FSM-55"
+#define BOARD_ID    0x83433c76
+
 /*
  * Running at 48MHz with HSI as clock source.
  * 
