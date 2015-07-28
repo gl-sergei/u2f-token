@@ -36,7 +36,7 @@ static const uint8_t vcom_device_desc[18] = {
 };
 
 /* Configuration Descriptor tree for a CDC.*/
-static const uint8_t vcom_configuration_desc[67] = {
+static const uint8_t vcom_config_desc[67] = {
   9,
   USB_CONFIGURATION_DESCRIPTOR_TYPE, /* bDescriptorType: Configuration */
   /* Configuration Descriptor.*/
@@ -167,7 +167,7 @@ usb_cb_device_reset (void)
   usb_lld_set_configuration (0);
 
   /* Current Feature initialization */
-  usb_lld_set_feature (vcom_configuration_desc[7]);
+  usb_lld_set_feature (vcom_config_desc[7]);
 
   usb_lld_reset ();
 
@@ -177,14 +177,12 @@ usb_cb_device_reset (void)
 
 
 void
-usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value,
-			  uint16_t index, uint16_t len)
+usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value)
 {
   uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
 
   if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT)
-      && index == 0 && USB_SETUP_SET (req) && len == 0
-      && req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
+      && USB_SETUP_SET (req) && req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
     {
       /* Open/close the connection.  */
       chopstx_mutex_lock (&usb_mtx);
@@ -211,22 +209,17 @@ static struct line_coding line_coding = {
 
 
 static int
-vcom_port_data_setup (uint8_t req, uint8_t req_no, uint16_t value, uint16_t len)
+vcom_port_data_setup (uint8_t req, uint8_t req_no, struct control_info *detail)
 {
-  (void)value;
   if (USB_SETUP_GET (req))
     {
-      if (req_no == USB_CDC_REQ_GET_LINE_CODING
-	  && len == sizeof (line_coding))
-	{
-	  usb_lld_set_data_to_send (&line_coding, sizeof (line_coding));
-	  return USB_SUCCESS;
-	}
+      if (req_no == USB_CDC_REQ_GET_LINE_CODING)
+	return usb_lld_reply_request (&line_coding, sizeof(line_coding), detail);
     }
   else  /* USB_SETUP_SET (req) */
     {
       if (req_no == USB_CDC_REQ_SET_LINE_CODING
-	  && len == sizeof (line_coding))
+	  && detail->len == sizeof (line_coding))
 	{
 	  usb_lld_set_data_to_recv (&line_coding, sizeof (line_coding));
 	  return USB_SUCCESS;
@@ -239,38 +232,29 @@ vcom_port_data_setup (uint8_t req, uint8_t req_no, uint16_t value, uint16_t len)
 }
 
 int
-usb_cb_setup (uint8_t req, uint8_t req_no,
-	       uint16_t value, uint16_t index, uint16_t len)
+usb_cb_setup (uint8_t req, uint8_t req_no, struct control_info *detail)
 {
   uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
 
-  (void)len;
-  if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT))
-    if (index == 0)
-      return vcom_port_data_setup (req, req_no, value, len);
+  if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT) && detail->index == 0)
+    return vcom_port_data_setup (req, req_no, detail);
 
   return USB_UNSUPPORT;
 }
 
 int
 usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
-		       uint16_t index)
+		       struct control_info *detail)
 {
-  (void)index;
   if (rcp != DEVICE_RECIPIENT)
     return USB_UNSUPPORT;
 
   if (desc_type == DEVICE_DESCRIPTOR)
-    {
-      usb_lld_set_data_to_send (vcom_device_desc, sizeof (vcom_device_desc));
-      return USB_SUCCESS;
-    }
+    return usb_lld_reply_request (vcom_device_desc, sizeof (vcom_device_desc),
+				  detail);
   else if (desc_type == CONFIG_DESCRIPTOR)
-    {
-      usb_lld_set_data_to_send (vcom_configuration_desc,
-				sizeof (vcom_configuration_desc));
-      return USB_SUCCESS;
-    }
+    return usb_lld_reply_request (vcom_config_desc, sizeof (vcom_config_desc),
+				  detail);
   else if (desc_type == STRING_DESCRIPTOR)
     {
       const uint8_t *str;
@@ -298,8 +282,7 @@ usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
 	  return USB_UNSUPPORT;
 	}
 
-      usb_lld_set_data_to_send (str, size);
-      return USB_SUCCESS;
+      return usb_lld_reply_request (str, size, detail);
     }
 
   return USB_UNSUPPORT;
@@ -374,9 +357,11 @@ int usb_cb_handle_event (uint8_t event_type, uint16_t value)
 }
 
 
-int usb_cb_interface (uint8_t cmd, uint16_t interface, uint16_t alt)
+int usb_cb_interface (uint8_t cmd, struct control_info *detail)
 {
-  static uint8_t zero = 0;
+  const uint8_t zero = 0;
+  uint16_t interface = detail->index;
+  uint16_t alt = detail->value;
 
   if (interface >= NUM_INTERFACES)
     return USB_UNSUPPORT;
@@ -393,8 +378,7 @@ int usb_cb_interface (uint8_t cmd, uint16_t interface, uint16_t alt)
 	}
 
     case USB_GET_INTERFACE:
-      usb_lld_set_data_to_send (&zero, 1);
-      return USB_SUCCESS;
+      return usb_lld_reply_request (&zero, 1, detail);
 
     default:
     case USB_QUERY_INTERFACE:
