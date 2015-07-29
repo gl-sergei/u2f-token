@@ -6,6 +6,10 @@ Kaz Kojima:
     Added STM32 Primer2 support.
 	board/board-stm32-primer2.h
 
+Kenji Rikitake:
+    Added ST Dongle support.
+	board/board-st-dongle.h
+
 NIIBE Yutaka:
     Write the library:
 	chopstx.c, eventflag.c, entry.c, clk_gpio_init.c

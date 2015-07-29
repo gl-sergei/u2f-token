@@ -1,7 +1,6 @@
 #define BOARD_NAME "Maple Mini"
 #define BOARD_ID    0x7a445272
 
-#define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */
 
 #define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1

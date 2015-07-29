@@ -1,7 +1,6 @@
 #define BOARD_NAME "CQ STARM"
 #define BOARD_ID    0xc5480875
 
-#define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */
 
 #define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1
@@ -10,8 +9,7 @@
 
 #define GPIO_LED_BASE   GPIOC_BASE
 #define GPIO_LED_SET_TO_EMIT            6
-#undef  GPIO_USB_BASE
-#undef  GPIO_USB_CLEAR_TO_ENABLE
+#undef  GPIO_USB_BASE		/* No external DISCONNECT/RENUM circuit.  */
 #define GPIO_OTHER_BASE GPIOA_BASE
 
 /*

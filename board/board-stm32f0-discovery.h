@@ -9,8 +9,6 @@
 /* __ARM_ARCH_6M__ */
 
 
-#define FLASH_PAGE_SIZE 1024
-
 #define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1
 #define STM32_PLLMUL_VALUE              12
 #define STM32_HSICLK                    8000000

@@ -1,7 +1,6 @@
 #define BOARD_NAME "Olimex STM32-H103"
 #define BOARD_ID    0xf92bb594
 
-#define FLASH_PAGE_SIZE 1024
 #define STM32F10X_MD		/* Medium-density device */
 
 #define STM32_PLLXTPRE                  STM32_PLLXTPRE_DIV1
