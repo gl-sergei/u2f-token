@@ -9,6 +9,8 @@ Kaz Kojima:
 Kenji Rikitake:
     Added ST Dongle support.
 	board/board-st-dongle.h
+    Added ST Nucleo F103 support.
+	board/board-st-nucleo-f103.h
 
 NIIBE Yutaka:
     Write the library:

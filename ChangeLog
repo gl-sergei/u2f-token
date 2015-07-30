@@ -1,6 +1,11 @@
+2015-07-30  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-st-nucleo-f103.h: New.  Contributed by Kenji
+	Rikitake.
+
 2015-07-29  Niibe Yutaka  <gniibe@fsij.org>
 
-	* board/board-st-dongle.h: New.
+	* board/board-st-dongle.h: New.  Contributed by Kenji Rikitake.
 
 	* board/board-*.h (FLASH_PAGE_SIZE): Remove.
 

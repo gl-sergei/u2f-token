@@ -3,6 +3,18 @@ NEWS - Noteworthy changes
 
 * Major changes in Chopstx 0.07
 
+  Released 2015-07-31
+
+** New board support: ST Nucleo F103
+It is contributed by Kenji Rikitake.
+
+** New board support: ST Dongle
+It is contributed by Kenji Rikitake.
+It's the ST-Link/V2-1 part of ST Nucleo F103.
+
+
+* Major changes in Chopstx 0.07
+
   Released 2015-07-15
 
 ** New Board macro definitions
