@@ -1,5 +1,8 @@
 2015-07-31  Niibe Yutaka  <gniibe@fsij.org>
 
+	* VERSION: 0.08.
+	* doc/chopstx.texi (VERSION): 0.08.
+
 	* example-fsm-55/Makefile (DEFS): Remove HAVE_SYS_H.
 	Add MAKE_ENTRY_PUBLIC.
 	* example-fsm-55/hacker-emblem.ld: Put vectors on ROM.
