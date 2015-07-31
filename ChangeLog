@@ -1,3 +1,12 @@
+2015-07-31  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/Makefile (DEFS): Remove HAVE_SYS_H.
+	Add MAKE_ENTRY_PUBLIC.
+	* example-fsm-55/hacker-emblem.ld: Put vectors on ROM.
+	* example-fsm-55/sys.c: No system services.
+	* entry.c (entry): Can be public.
+	* clk_gpio_init.c [MCU_STM32F0] (clock_init): Don't change CFGR1.
+
 2015-07-30  Niibe Yutaka  <gniibe@fsij.org>
 
 	* board/board-st-nucleo-f103.h: New.  Contributed by Kenji

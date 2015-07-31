@@ -231,8 +231,10 @@ clock_init (void)
   RCC->APB2RSTR = RCC_APB2RSTR_SYSCFGRST;
   RCC->APB2RSTR = 0;
   
+# if defined(HAVE_SYS_H)
   /* Use vectors on RAM */
   SYSCFG->CFGR1 = (SYSCFG->CFGR1 & ~SYSCFG_CFGR1_MEM_MODE) | 3;
+# endif
 #endif
 }
 

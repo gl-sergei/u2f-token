@@ -12,6 +12,10 @@ Kenji Rikitake:
     Added ST Nucleo F103 support.
 	board/board-st-nucleo-f103.h
 
+Kiwamu Okabe:
+    Wrote an OpenOCD scirpt:
+        example-fsm-55/stlink-v2.cfg
+
 NIIBE Yutaka:
     Write the library:
 	chopstx.c, eventflag.c, entry.c, clk_gpio_init.c

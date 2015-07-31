@@ -9,44 +9,24 @@ __process3_stack_size__  = 0x0100; /* third thread program */
 
 MEMORY
 {
-    flash0 : org = 0x08000000, len = 4k
-    flash  : org = 0x08000000+0x1000, len = 60k
-    ram : org = 0x20000000, len = 20k
+    flash  : org = 0x08000000, len = 16k
+    ram : org = 0x20000000, len = 4k
 }
 
 __ram_start__           = ORIGIN(ram);
-__ram_size__            = 20k;
+__ram_size__            = 4k;
 __ram_end__             = __ram_start__ + __ram_size__;
 
 SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(4) SUBALIGN(4)
-    {
-	_sys = .;
-	KEEP(*(.vectors))
-	. = ALIGN(16);
-	KEEP(*(.sys.version))
-	KEEP(*(.sys.board_id))
-	KEEP(*(.sys.board_name))
-	build/sys.o(.text)
-	build/sys.o(.text.*)
-	build/sys.o(.rodata)
-	build/sys.o(.rodata.*)
-	. = ALIGN(1024);
-    } > flash0 =0xffffffff
-
     _text = .;
-
-    .startup : ALIGN(128) SUBALIGN(128)
-    {
-        KEEP(*(.startup.vectors))
-        . = ALIGN (16);
-    } > flash =0xffffffff
 
     .text : ALIGN(16) SUBALIGN(16)
     {
+	KEEP(*(.vectors))
+	. = ALIGN(16);
         *(.text.startup.*)
         *(.text)
         *(.text.*)
@@ -57,6 +37,12 @@ SECTIONS
         *(.gcc*)
 	. = ALIGN(8);
     } > flash
+
+    /DISCARD/ :
+    {
+        *(.startup.vectors)
+        *(.bss.startup.0)
+    }
 
     .ARM.extab : {*(.ARM.extab* .gnu.linkonce.armextab.*)} > flash
 
@@ -74,13 +60,6 @@ SECTIONS
 
     _etext = .;
     _textdata = _etext;
-
-    .vectors_in_ram :
-    {
-        . = ALIGN(8);
-        __vector_ram_addr__ = .;
-	KEEP(*(.bss.startup.*))
-    } > ram
 
     .process_stack :
     {

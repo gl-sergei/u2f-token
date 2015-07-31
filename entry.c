@@ -41,6 +41,12 @@
 #endif
 
 
+#ifdef MAKE_ENTRY_PUBLIC
+#define STATIC_ENTRY
+#else
+#define STATIC_ENTRY static
+#endif
+
 extern uint8_t __main_stack_end__;
 extern void svc (void);
 extern void preempt (void);
@@ -98,7 +104,7 @@ uint32_t vectors_in_ram[48];
 /*
  * This routine only changes PSP and not MSP.
  */
-static __attribute__ ((naked,section(".text.startup.0")))
+STATIC_ENTRY __attribute__ ((naked,section(".text.startup.0")))
 void entry (void)
 {
   asm volatile ("bl	clock_init\n\t"
