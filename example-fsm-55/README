@@ -3,6 +3,11 @@ Display.  Please see the product page:
 
     http://www.seeedstudio.com/depot/FSM55-LED-Matrix-Display-p-2121.html
 
+There are three demonstrations and default is Hacker Emblem and "Happy
+Hacking!".  Please edit CSRC variable in the Makefile to select other
+applications.
+
+
 The file stlink-v2.cfg can be used for ST-Link/V2 with OpenOCD.  You
 can flash by typing:
 

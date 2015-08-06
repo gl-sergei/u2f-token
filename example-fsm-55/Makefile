@@ -4,7 +4,17 @@ PROJECT = hacker-emblem
 
 CHOPSTX = ..
 LDSCRIPT= hacker-emblem.ld
-CSRC = sys.c hiroshi-ayumi.c # hacker-emblem.c
+
+CSRC = sys.c hh.c
+
+# Hacker Emblem and "Happy Hacking!" demonstration
+# CSRC = sys.c hh.c
+
+# Debian logo demonstration
+# CSRC = sys.c debian-logo.c
+
+# "Hiroshi & Ayumi with Tulip" demonstration
+# CSRC = sys.c hiroshi-ayumi.c
 
 ###################################
 CROSS = arm-none-eabi-
