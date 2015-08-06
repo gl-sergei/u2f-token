@@ -4,7 +4,7 @@ PROJECT = hacker-emblem
 
 CHOPSTX = ..
 LDSCRIPT= hacker-emblem.ld
-CSRC = sys.c hacker-emblem.c
+CSRC = sys.c hiroshi-ayumi.c # hacker-emblem.c
 
 ###################################
 CROSS = arm-none-eabi-

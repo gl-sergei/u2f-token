@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <chopstx.h>
 
 #include "board.h"
@@ -32,11 +33,13 @@ struct GPIO {
 #define GPIOF_BASE	(AHB2PERIPH_BASE + 0x1400)
 #define GPIOF		((struct GPIO *) GPIOF_BASE)
 
+#define GPIO_SPEAKER_PIN    1
+
 static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
 static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
 
 static chopstx_mutex_t mtx;
-static chopstx_cond_t cnd0;
+static chopstx_cond_t cnd;
 
 static uint8_t
 user_button (void)
@@ -82,13 +85,21 @@ led_enable_column (uint8_t col)
   GPIO_LED->BRR = (1 << col);
 }
 
+
+#define PRIO_LED 3
+
+extern uint8_t __process1_stack_base__, __process1_stack_size__;
+
+const uint32_t stackaddr_led = (uint32_t)&__process1_stack_base__;
+const size_t stacksize_led = (size_t)&__process1_stack_size__;
+
 static void *
 led (void *arg)
 {
   (void)arg;
 
   chopstx_mutex_lock (&mtx);
-  chopstx_cond_wait (&cnd0, &mtx);
+  chopstx_cond_wait (&cnd, &mtx);
   chopstx_mutex_unlock (&mtx);
 
   while (1)
@@ -106,12 +117,168 @@ led (void *arg)
   return NULL;
 }
 
-#define PRIO_LED 3
 
-extern uint8_t __process1_stack_base__, __process1_stack_size__;
+#define PRIO_SPK 4
+extern uint8_t __process2_stack_base__, __process2_stack_size__;
 
-const uint32_t __stackaddr_led = (uint32_t)&__process1_stack_base__;
-const size_t __stacksize_led = (size_t)&__process1_stack_size__;
+const uint32_t stackaddr_spk = (uint32_t)&__process2_stack_base__;
+const size_t stacksize_spk = (size_t)&__process2_stack_size__;
+
+static chopstx_mutex_t spk_mtx;
+static chopstx_cond_t spk_cnd;
+static chopstx_cond_t spk_cnd_no_tone;
+
+static uint8_t tone;
+#define NO_TONE 255
+
+
+static uint16_t tone_table[] = {
+  568, /* a = 880Hz */
+  /* 536, */
+  506, /* b */
+  478, /* c */
+  /* 451, */
+  426, /* d */
+  /* 402, */
+  379, /* e */
+  358, /* f*/
+  /* 338, */
+  319, /* g */
+  /* 301, */
+  284, /* A = 1760Hz */
+  /* 268 */
+  253, /* B */
+  239, /* C */
+};
+
+static void
+change_tone (uint8_t t)
+{
+  chopstx_mutex_lock (&spk_mtx);
+  tone = t;
+  chopstx_cond_signal (&spk_cnd_no_tone);
+  chopstx_cond_wait (&spk_cnd, &spk_mtx);
+  chopstx_mutex_unlock (&spk_mtx);
+}
+
+static void *
+spk (void *arg)
+{
+  (void)arg;
+
+  while (1)
+    {
+      uint8_t t;
+      uint16_t w;
+
+      chopstx_mutex_lock (&spk_mtx);
+      t = tone;
+      chopstx_cond_signal (&spk_cnd);
+      if (t == NO_TONE)
+	{
+	  chopstx_cond_wait (&spk_cnd_no_tone, &spk_mtx);
+	  t = tone;
+	}
+      chopstx_mutex_unlock (&spk_mtx);
+
+      w = tone_table[t];
+      GPIO_OTHER->BSRR = (1 << GPIO_SPEAKER_PIN);
+      wait_for (w);
+      GPIO_OTHER->BRR = (1 << GPIO_SPEAKER_PIN);
+      wait_for (w);
+    }
+
+  return NULL;
+}
+
+
+#define PRIO_MUSIC 2
+extern uint8_t __process3_stack_base__, __process3_stack_size__;
+
+const uint32_t stackaddr_music = (uint32_t)&__process3_stack_base__;
+const size_t stacksize_music = (size_t)&__process3_stack_size__;
+
+#define C 0
+#define D 1
+#define E 2
+#define F 3
+#define G 4
+#define A 5
+#define B 6
+
+#if 0 /* twinkle stars */
+static const char *musical_score = 
+  "c4c4g4g4A4A4g2f4f4e4e4d4d4c2"
+  "g4g4f4f4e4e4d2g4g4f4f4e4e4d2"
+  "c4c4g4g4A4A4g2f4f4e4e4d4d4c2";
+#else /* tulip */
+static const char *musical_score = 
+  "c4d4e2c4d4e2g4e4d4c4d4e4d2"
+  "c4d4e2c4d4e2g4e4d4c4d4e4c2"
+  "g4g4e4g4a4a4g2e4e4d4d4c2";
+#endif
+
+static int get_t_and_l (char *tp, char *lp)
+{
+  static unsigned int i = 0;
+  char tl, ll;
+
+  tl = musical_score[i++];
+  ll = musical_score[i++];
+
+  if (tl >= 'a')
+    *tp = tl - 'a';
+  else
+    *tp = tl - 'A' + 7;
+
+  *lp = ll - '0';
+
+  if (i >= strlen (musical_score))
+    {
+      i = 0;
+      return 0;
+    }
+  else
+    return 1;
+}
+
+#define WAIT_FOR_NO_TONE (1000*20)
+#define WAIT_FOR_TONE (1000000*3/2)
+
+static void *
+music (void *arg)
+{
+  (void)arg;
+
+  chopstx_mutex_init (&spk_mtx);
+  chopstx_cond_init (&spk_cnd);
+  chopstx_cond_init (&spk_cnd_no_tone);
+
+  chopstx_create (PRIO_SPK, stackaddr_spk, stacksize_spk, spk, NULL);
+
+  while (1)
+    {
+      char t, l;
+      int r;
+
+      r = get_t_and_l (&t, &l);
+
+      change_tone (NO_TONE);
+      wait_for (WAIT_FOR_NO_TONE);
+      change_tone (t);
+      wait_for (WAIT_FOR_TONE / l);
+
+      if (!r)
+	{
+	  change_tone (NO_TONE);
+	  wait_for (WAIT_FOR_TONE * 3);
+	}
+    }
+
+  return NULL;
+}
+
+
 
 #define DATA55(x0,x1,x2,x3,x4) (x0<<20)|(x1<<15)|(x2<<10)|(x3<< 5)|(x4<< 0)
 #define SIZE55(img) (sizeof (img) / sizeof (uint32_t))
@@ -181,14 +348,15 @@ main (int argc, const char *argv[])
   (void)argv;
 
   chopstx_mutex_init (&mtx);
-  chopstx_cond_init (&cnd0);
+  chopstx_cond_init (&cnd);
 
-  chopstx_create (PRIO_LED, __stackaddr_led, __stacksize_led, led, NULL);
+  chopstx_create (PRIO_LED, stackaddr_led, stacksize_led, led, NULL);
+  chopstx_create (PRIO_MUSIC, stackaddr_music, stacksize_music, music, NULL);
 
   chopstx_usec_wait (200*1000);
 
   chopstx_mutex_lock (&mtx);
-  chopstx_cond_signal (&cnd0);
+  chopstx_cond_signal (&cnd);
   chopstx_mutex_unlock (&mtx);
 
   while (1)
@@ -196,19 +364,19 @@ main (int argc, const char *argv[])
       unsigned int i;
 
       if (state)
-	for (i = 0; i < SIZE55 (image0); i++)
-	  {
-	    if (user_button ())
-	      state = 0;
-	    set_led_display (image0[i]);
-	    wait_for (200*1000);
-	  }
-      else
 	for (i = 0; i < SIZE55 (image1); i++)
 	  {
 	    if (user_button ())
-	      state = 1;
+	      state = 0;
 	    set_led_display (image1[i]);
+	    wait_for (200*1000);
+	  }
+      else
+	for (i = 0; i < SIZE55 (image0); i++)
+	  {
+	    if (user_button ())
+	      state = 1;
+	    set_led_display (image0[i]);
 	    wait_for (200*1000);
 	  }
     }

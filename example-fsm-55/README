@@ -6,7 +6,7 @@ Display.  Please see the product page:
 The file stlink-v2.cfg can be used for ST-Link/V2 with OpenOCD.  You
 can flash by typing:
 
-    $ openocd -f ./stlink-v2.cfg -c "program build/hacker-emblem.elf"
+    $ openocd -f ./stlink-v2.cfg -c "program build/hacker-emblem.elf; reset run; shutdown"
 
 Thanks to Kiwamu Okabe who kindly tested OpenOCD and wrote the
 configuration.

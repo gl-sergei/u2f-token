@@ -31,13 +31,12 @@
 #define RCC_ENR_IOP_EN   (RCC_AHBENR_IOPAEN | RCC_AHBENR_IOPFEN)
 #define RCC_RSTR_IOP_RST (RCC_AHBRSTR_IOPARST | RCC_AHBRSTR_IOPFRST)
 
-/* ??? NeuG settings for ADC2 is default (PA0: Analog IN0, PA1: Analog IN1).  */
-
 /*
  * Port F setup.
  * PF0  - USER Button
+ * PF1  - SPEAKER
  */
-#define VAL_GPIO_OTHER_MODER   0x00000000 /* Input Pin0 */
-#define VAL_GPIO_OTHER_OTYPER  0x00000000
+#define VAL_GPIO_OTHER_MODER   0x00000004 /* Input Pin0, Output Pin1 */
+#define VAL_GPIO_OTHER_OTYPER  0x00000000 /* Push-Pull Pin1 */
 #define VAL_GPIO_OTHER_OSPEEDR 0x00000000
-#define VAL_GPIO_OTHER_PUPDR   0x00000001 /* Pull-up Pin0 */
+#define VAL_GPIO_OTHER_PUPDR   0x00000009 /* Pull-up Pin0, Pull-down Pin1 */
