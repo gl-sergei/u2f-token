@@ -181,7 +181,7 @@ spk (void *arg)
 	}
       chopstx_mutex_unlock (&spk_mtx);
 
-      w = tone_table[t];
+      w = tone_table[t]*5/3;
       GPIO_OTHER->BSRR = (1 << GPIO_SPEAKER_PIN);
       wait_for (w);
       GPIO_OTHER->BRR = (1 << GPIO_SPEAKER_PIN);
@@ -215,7 +215,7 @@ static const char *musical_score =
 static const char *musical_score = 
   "c4d4e2c4d4e2g4e4d4c4d4e4d2"
   "c4d4e2c4d4e2g4e4d4c4d4e4c2"
-  "g4g4e4g4a4a4g2e4e4d4d4c2";
+  "g4g4e4g4A4A4g2e4e4d4d4c2";
 #endif
 
 static int get_t_and_l (char *tp, char *lp)
