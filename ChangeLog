@@ -1,5 +1,6 @@
 2015-09-04  Niibe Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/sys.h (BOARD_ID_NITROKEY_START): New.
 	* board/board-nitrokey-start.h (BOARD_ID): Fix the value.
 	* clk_gpio_init.c (AFIO_MAPR_SWJ_CFG_JTAGDISABLE): New.
 

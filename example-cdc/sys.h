@@ -9,6 +9,7 @@
 #define BOARD_ID_STM8S_DISCOVERY   0x2f0976bb
 #define BOARD_ID_ST_DONGLE         0x2cd4e471
 #define BOARD_ID_ST_NUCLEO_F103    0x9b87c16d
+#define BOARD_ID_NITROKEY_START    0xad1e7ebd
 
 extern const uint8_t sys_version[8];
 extern const uint32_t sys_board_id;
