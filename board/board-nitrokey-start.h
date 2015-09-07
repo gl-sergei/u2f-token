@@ -15,8 +15,8 @@
 
 /*
  * Port A setup.
- * PA0 - input with pull-up (TIM2_CH1): AN0 for NeuG
- * PA1 - floating input
+ * PA0 - input with pull-up: AN0 for NeuG
+ * PA1 - input with pull-up: AN1 for NeuG
  * PA2 - floating input
  * PA3 - floating input
  * PA4 - floating input
@@ -37,14 +37,13 @@
  * PA14 - input with pull-up.
  * PA15 - Push pull output   (USB 1:ON 0:OFF)
  */
-#define VAL_GPIO_USB_ODR            0xFFFFE7FD
-#define VAL_GPIO_USB_CRL            0x34444448      /*  PA7...PA0 */
+#define VAL_GPIO_USB_ODR            0xFFFFE7FF
+#define VAL_GPIO_USB_CRL            0x34444488      /*  PA7...PA0 */
 #define VAL_GPIO_USB_CRH            0x38811444      /* PA15...PA8 */
 
 /*
  * Port B setup.
  * PB0  - Push pull output   (LED2 1:ON 0:OFF)
- * PB1  - input with pull-up: AN9 for NeuG
  * ------------------------ Default
  * PBx  - input with pull-up.
  */
