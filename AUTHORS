@@ -5,6 +5,7 @@ Aidan Thornton:
 Kaz Kojima:
     Added STM32 Primer2 support.
 	board/board-stm32-primer2.h
+	example-primer2
 
 Kenji Rikitake:
     Added ST Dongle support.
@@ -15,6 +16,10 @@ Kenji Rikitake:
 Kiwamu Okabe:
     Wrote an OpenOCD scirpt:
         example-fsm-55/stlink-v2.cfg
+
+Mateusz Zalega:
+    Added Nitrokey-Start support.
+	board/board-nitrokey-start.h
 
 NIIBE Yutaka:
     Write the library:

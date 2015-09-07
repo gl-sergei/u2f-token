@@ -1,5 +1,7 @@
 2015-09-07  Niibe Yutaka  <gniibe@fsij.org>
 
+	* example-primer2: New from Kazumoto Kojima.
+
 	* board/board-nitrokey-start.h (VAL_GPIO_USB_ODR)
 	(VAL_GPIO_USB_CRL): Fix the values for NeuG settings.
 
@@ -8,6 +10,10 @@
 	* example-cdc/sys.h (BOARD_ID_NITROKEY_START): New.
 	* board/board-nitrokey-start.h (BOARD_ID): Fix the value.
 	* clk_gpio_init.c (AFIO_MAPR_SWJ_CFG_JTAGDISABLE): New.
+
+2015-08-07  Mateusz Zalega <mateusz@nitrokey.com>
+
+	* board/board-nitrokey-start.h: New.
 
 2015-08-06  Niibe Yutaka  <gniibe@fsij.org>
 
