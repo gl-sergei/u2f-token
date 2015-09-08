@@ -196,7 +196,7 @@ static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
 static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
 static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
 
-#ifndef MHZ 
+#ifndef MHZ
 #define MHZ 72
 #endif
 
@@ -300,7 +300,7 @@ ll_pop (void *head)
 static void
 ll_prio_push (struct chx_thread *tp0, void *head)
 {
-  struct chx_thread *l = (struct chx_thread *)head; 
+  struct chx_thread *l = (struct chx_thread *)head;
   struct chx_thread *tp;
 
   for (tp = l->next; tp != l; tp = tp->next)
@@ -332,7 +332,7 @@ enum  {
   THREAD_READY,
   THREAD_WAIT_MTX,
   THREAD_WAIT_CND,
-  THREAD_WAIT_TIME, 
+  THREAD_WAIT_TIME,
   THREAD_WAIT_INT,
   THREAD_JOIN,
   /**/
@@ -973,7 +973,7 @@ chopstx_create (uint32_t flags_and_prio,
 
   if (stack_size < sizeof (struct chx_thread) + 8 * sizeof (uint32_t))
     chx_fatal (CHOPSTX_ERR_THREAD_CREATE);
-  
+
   stack = (void *)(stack_addr + stack_size - sizeof (struct chx_thread)
 		   - sizeof (struct chx_stack_regs));
   memset (stack, 0, sizeof (struct chx_stack_regs));
@@ -1430,7 +1430,7 @@ chopstx_exit (void *retval)
     {
       clp->routine (clp->arg);
       clp = clp->next;
-    }      
+    }
 
   /* Release all mutexes this thread still holds.  */
   for (m = running->mutex_list; m; m = m_next)
@@ -1571,7 +1571,7 @@ chopstx_cancel (chopstx_t thd)
 
 /**
  * chopstx_testcancel - catch pending cancellation request
- * 
+ *
  * Calling chopstx_testcancel creates a cancellation point.
  * No return value.  If the thread is canceled, this function
  * does not return.

@@ -199,7 +199,7 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   chx_handle_intr /* DMA1 CH6 */, chx_handle_intr /* DMA1 CH7 */,
   chx_handle_intr /* ADC1_2 */,   chx_handle_intr /* USB HP */,
   /* 0x90 */
-  chx_handle_intr /* USB LP */,   chx_handle_intr /* CAN */, 
+  chx_handle_intr /* USB LP */,   chx_handle_intr /* CAN */,
   /* ... and more.  EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
   chx_handle_intr,                chx_handle_intr,
   /* 0xA0 */
