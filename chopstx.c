@@ -124,7 +124,7 @@ static struct chx_queue q_join;
 
 
 /* Forward declaration(s). */
-static void chx_request_preemption (void);
+static void chx_request_preemption (uint16_t prio);
 static void chx_timer_dequeue (struct chx_thread *tp);
 static void chx_timer_insert (struct chx_thread *tp, uint32_t usec);
 
@@ -706,8 +706,7 @@ chx_timer_expired (void)
 	}
     }
 
-  if (running == NULL || (uint16_t)running->prio < prio)
-    chx_request_preemption ();
+  chx_request_preemption (prio);
   chx_spin_unlock (&q_timer.lock);
 }
 
@@ -765,8 +764,7 @@ chx_handle_intr (void)
       if (intr->tp != running && intr->tp->state == THREAD_WAIT_INT)
 	{
 	  chx_ready_enqueue (intr->tp);
-	  if (running == NULL || running->prio < intr->tp->prio)
-	    chx_request_preemption ();
+	  chx_request_preemption (intr->tp->prio);
 	}
     }
   chx_spin_unlock (&intr_lock);
@@ -852,10 +850,13 @@ chopstx_main_init (chopstx_prio_t prio)
 
 
 static void
-chx_request_preemption (void)
+chx_request_preemption (uint16_t prio)
 {
-  *ICSR = (1 << 28);
-  asm volatile ("" : : : "memory");
+  if (running == NULL || (uint16_t)running->prio < prio)
+    {
+      *ICSR = (1 << 28);
+      asm volatile ("" : : : "memory");
+    }
 }
 
 #define CHX_SLEEP 0
@@ -976,13 +977,13 @@ chopstx_create (uint32_t flags_and_prio,
   stack = (void *)(stack_addr + stack_size - sizeof (struct chx_thread)
 		   - sizeof (struct chx_stack_regs));
   memset (stack, 0, sizeof (struct chx_stack_regs));
+  tp = (struct chx_thread *)(stack + sizeof (struct chx_stack_regs));
   p = (struct chx_stack_regs *)stack;
   p->reg[REG_R0] = (uint32_t)arg;
   p->reg[REG_LR] = (uint32_t)chopstx_exit;
   p->reg[REG_PC] = (uint32_t)thread_entry;
   p->reg[REG_XPSR] = INITIAL_XPSR;
 
-  tp = (struct chx_thread *)(stack + sizeof (struct chx_stack_regs));
   memset (&tp->tc, 0, sizeof (tp->tc));
   tp->tc.reg[REG_SP] = (uint32_t)stack;
   tp->next = tp->prev = tp;
