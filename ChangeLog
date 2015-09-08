@@ -1,3 +1,8 @@
+2015-09-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (intr_lock): New variable.
+	* chopstx.h (chx_intr): Remove member LOCK.
+
 2015-09-07  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-primer2: New from Kazumoto Kojima.

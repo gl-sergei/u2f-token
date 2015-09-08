@@ -741,6 +741,7 @@ chx_set_intr_prio (uint8_t n)
 }
 
 static chopstx_intr_t *intr_top;
+static struct chx_spinlock intr_lock;
 static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
 
 void
@@ -753,6 +754,7 @@ chx_handle_intr (void)
 		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
 		: "=r" (irq_num) : /* no input */ : "memory");
   chx_disable_intr (irq_num);
+  chx_spin_lock (&intr_lock);
   for (intr = intr_top; intr; intr = intr->next)
     if (intr->irq_num == irq_num)
       break;
@@ -767,6 +769,7 @@ chx_handle_intr (void)
 	    chx_request_preemption ();
 	}
     }
+  chx_spin_unlock (&intr_lock);
 }
 
 void
@@ -1285,8 +1288,10 @@ chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
   chx_cpu_sched_lock ();
   chx_disable_intr (irq_num);
   chx_set_intr_prio (irq_num);
+  chx_spin_lock (&intr_lock);
   intr->next = intr_top;
   intr_top = intr;
+  chx_spin_unlock (&intr_lock);
   chx_cpu_sched_unlock ();
 }
 
@@ -1304,6 +1309,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
 
   chx_cpu_sched_lock ();
   chx_enable_intr (intr0->irq_num);
+  chx_spin_lock (&intr_lock);
   intr_prev = intr_top;
   for (intr = intr_top; intr; intr = intr->next)
     if (intr == intr0)
@@ -1313,6 +1319,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
     intr_top = intr_top->next;
   else
     intr_prev->next = intr->next;
+  chx_spin_unlock (&intr_lock);
   chx_cpu_sched_unlock ();
 }
 
