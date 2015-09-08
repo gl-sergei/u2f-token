@@ -4,6 +4,8 @@
 	the condition inside.
 	(chx_timer_expired, chx_handle_intr): Call unconditionally.
 	(intr_lock): New variable.
+	(chx_handle_intr, chopstx_claim_irq, chopstx_release_irq)
+	(chopstx_release_irq_thread): Add spin lock with intr_lock.
 
 	* chopstx.h (chx_intr): Remove member LOCK.
 

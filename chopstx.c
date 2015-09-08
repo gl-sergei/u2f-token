@@ -1331,6 +1331,7 @@ chopstx_release_irq_thread (struct chx_thread *tp)
   chopstx_intr_t *intr, *intr_prev;
 
   chx_cpu_sched_lock ();
+  chx_spin_lock (&intr_lock);
   intr_prev = intr_top;
   for (intr = intr_top; intr; intr = intr->next)
     if (intr->tp == tp)
@@ -1344,6 +1345,7 @@ chopstx_release_irq_thread (struct chx_thread *tp)
       else
 	intr_prev->next = intr->next;
     }
+  chx_spin_unlock (&intr_lock);
   chx_cpu_sched_unlock ();
 }
 
