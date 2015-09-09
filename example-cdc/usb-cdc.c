@@ -173,8 +173,16 @@ usb_cb_device_reset (void)
 
   /* Initialize Endpoint 0 */
   usb_lld_setup_endpoint (ENDP0, EP_CONTROL, 0, ENDP0_RXADDR, ENDP0_TXADDR, 64);
+
+  chopstx_mutex_lock (&usb_mtx);
+  connected = 0;
+  bDeviceState = ATTACHED;
+  chopstx_cond_signal (&cnd_usb);
+  chopstx_mutex_unlock (&usb_mtx);
 }
 
+
+#define CDC_CTRL_DTR            0x0001
 
 void
 usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value)
@@ -186,7 +194,7 @@ usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value)
     {
       /* Open/close the connection.  */
       chopstx_mutex_lock (&usb_mtx);
-      connected = (value != 0)? 1 : 0;
+      connected = ((value & CDC_CTRL_DTR) != 0)? 1 : 0;
       chopstx_cond_signal (&cnd_usb);
       chopstx_mutex_unlock (&usb_mtx);
     }

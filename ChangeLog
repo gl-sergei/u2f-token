@@ -1,5 +1,13 @@
 2015-09-09  Niibe Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/usb-cdc.c (usb_cb_ctrl_write_finish): Distinguish
+	DTR signal.
+	(usb_cb_device_reset): Fix USB reset handling.
+
+	* chopstx.c (chopstx_usec_wait_var, chopstx_cond_wait)
+	(chopstx_intr_wait): Call chopstx_testcancel.
+	(chopstx_setcancelstate): New.
+
 	* chopstx.c (chx_systick_reset, chx_systick_reload)
 	(chx_systick_get): Factor out systick functions.
 	(chx_prio_init): Factor out.

@@ -118,6 +118,7 @@ enum {
 
 void chopstx_cancel (chopstx_t thd);
 void chopstx_testcancel (void);
+int chopstx_setcancelstate (int);
 
 struct chx_cleanup {
   struct chx_cleanup *next;

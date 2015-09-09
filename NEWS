@@ -1,6 +1,17 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.09
+
+  Released 2015-09-??
+
+** New board support: Nitrokey-Start
+It is contributed by Mateusz Zalega.
+
+** Thread cancellation
+Add new API: chopstx_setcancelstate.
+
+
 * Major changes in Chopstx 0.08
 
   Released 2015-07-31

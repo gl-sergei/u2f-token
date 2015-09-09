@@ -290,7 +290,8 @@ struct chx_thread {
   uint32_t flag_got_cancel  : 1;
   uint32_t flag_join_req    : 1;
   uint32_t flag_sched_rr    : 1;
-  uint32_t                  : 8;
+  uint32_t flag_cancelable  : 1;
+  uint32_t                  : 7;
   uint32_t prio_orig        : 8;
   uint32_t prio             : 8;
   uint32_t v;
@@ -636,7 +637,7 @@ chx_init (struct chx_thread *tp)
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_RUNNING;
-  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_got_cancel = tp->flag_join_req = tp->flag_cancelable = 0;
   tp->flag_sched_rr = (CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = CHX_PRIO_MAIN_INIT;
@@ -782,7 +783,7 @@ extern void cause_link_time_error_unexpected_size_of_struct_chx_thread (void);
  * @thread_entry: Entry function of new thread
  * @arg: Argument to the thread entry function
  *
- * Create a thread.
+ * Create a thread.  Returns thread ID.
  */
 chopstx_t
 chopstx_create (uint32_t flags_and_prio,
@@ -816,7 +817,7 @@ chopstx_create (uint32_t flags_and_prio,
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_EXITED;
-  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_got_cancel = tp->flag_join_req = tp->flag_cancelable = 0;
   tp->flag_sched_rr = (flags_and_prio & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (flags_and_prio & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = tp->prio = prio;
@@ -851,6 +852,7 @@ chopstx_usec_wait_var (uint32_t *var)
   asm volatile ("mov	%0, %1" : "=r" (r8) : "r" (usec_p));
   while (1)
     {
+      chopstx_testcancel ();
       chx_cpu_sched_lock ();
       if (!r8)		/* awakened */
 	break;
@@ -1019,6 +1021,7 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
   struct chx_thread *tp = running;
 
+  chopstx_testcancel ();
   chx_cpu_sched_lock ();
 
   if (mutex)
@@ -1185,6 +1188,7 @@ chopstx_release_irq_thread (struct chx_thread *tp)
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
 {
+  chopstx_testcancel ();
   chx_cpu_sched_lock ();
   if (intr->ready == 0)
     {
@@ -1369,6 +1373,12 @@ chopstx_cancel (chopstx_t thd)
   /* Assume it's UP, it's *never*: tp->state==RUNNING on SMP??? */
   chx_cpu_sched_lock ();
   tp->flag_got_cancel = 1;
+  if (!tp->flag_cancelable)
+    {
+      chx_cpu_sched_unlock ();
+      return;
+    }
+
   /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
   if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_INT
       || tp->state == THREAD_WAIT_TIME)
@@ -1405,8 +1415,27 @@ chopstx_cancel (chopstx_t thd)
 void
 chopstx_testcancel (void)
 {
-  if (running->flag_got_cancel)
+  if (running->flag_cancelable && running->flag_got_cancel)
     chopstx_exit ((void *)CHOPSTX_EXIT_CANCELED_IN_SYNC);
+}
+
+
+/**
+ * chopstx_setcancelstate - set cancelability state
+ * @cancel_disable: 0 to enable cancelation, otherwise disabled.
+ * 
+ * Calling chopstx_setcancelstate sets cancelability state.
+ *
+ * Returns old state which is 0 when it was enabled.
+ */
+int
+chopstx_setcancelstate (int cancel_disable)
+{
+  int old_state = !running->flag_cancelable;
+
+  running->flag_cancelable = (cancel_disable == 0);
+  chopstx_testcancel ();
+  return old_state;
 }
 
 /*
