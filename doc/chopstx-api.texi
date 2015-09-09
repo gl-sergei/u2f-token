@@ -30,7 +30,7 @@ and it runs with that priority until this routine will is called.
 
 @var{arg}: Argument to the thread entry function
 
-Create a thread.
+Create a thread.  Returns thread ID.
 @end deftypefun
 
 @subheading chopstx_usec_wait_var
@@ -197,5 +197,15 @@ No return value.
 Calling chopstx_testcancel creates a cancellation point.
 No return value.  If the thread is canceled, this function
 does not return.
+@end deftypefun
+
+@subheading chopstx_setcancelstate
+@anchor{chopstx_setcancelstate}
+@deftypefun {int} {chopstx_setcancelstate} (int @var{cancel_disable})
+@var{cancel_disable}: 0 to enable cancelation, otherwise disabled.
+
+Calling chopstx_setcancelstate sets cancelability state.
+
+Returns old state which is 0 when it was enabled.
 @end deftypefun
 
