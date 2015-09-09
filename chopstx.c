@@ -80,7 +80,42 @@
 #else
 #error "no support for this arch"
 #endif
+
+/*
+ * Lower layer architecture specific functions.
+ *
+ * system tick, interrupt, and exception handlings.
+ */
 
+/*
+ * SysTick registers.
+ */
+static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
+static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
+static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
+
+static void
+chx_systick_reset (void)
+{
+  *SYST_RVR = 0;
+  *SYST_CVR = 0;
+  *SYST_CSR = 7;
+}
+
+static void
+chx_systick_reload (uint32_t ticks)
+{
+  *SYST_RVR = ticks;
+  *SYST_CVR = 0;  /* write (any) to clear the counter to reload.  */
+  *SYST_RVR = 0;
+}
+
+static uint32_t
+chx_systick_get (void)
+{
+  return *SYST_CVR;
+}
+
 /**
  * chx_fatal - Fatal error point.
  * @err_code: Error code
@@ -188,13 +223,6 @@ static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
 #define NVIC_IPR(n)	(NVIC->IPR[n >> 2])
 
 #define USB_LP_CAN1_RX0_IRQn	 20
-
-/*
- * SysTick registers.
- */
-static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
-static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
-static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
 
 #ifndef MHZ
 #define MHZ 72
@@ -597,11 +625,7 @@ static void
 chx_set_timer (struct chx_thread *q, uint32_t ticks)
 {
   if (q == (struct chx_thread *)&q_timer)
-    {
-      *SYST_RVR = ticks;
-      *SYST_CVR = 0;  /* write (any) to clear the counter to reload.  */
-      *SYST_RVR = 0;
-    }
+    chx_systick_reload (ticks);
   else
     q->v = ticks;
 }
@@ -610,7 +634,7 @@ static void
 chx_timer_insert (struct chx_thread *tp, uint32_t usec)
 {
   uint32_t ticks = usec_to_ticks (usec);
-  uint32_t next_ticks = *SYST_CVR;
+  uint32_t next_ticks = chx_systick_get ();
   struct chx_thread *q;
 
   for (q = q_timer.next; q != (struct chx_thread *)&q_timer; q = q->next)
@@ -651,7 +675,7 @@ chx_timer_dequeue (struct chx_thread *tp)
 	chx_set_timer (tp_prev, 0); /* Cancel timer*/
       else
 	{			/* Update timer.  */
-	  uint32_t next_ticks = *SYST_CVR + tp->v;
+	  uint32_t next_ticks = chx_systick_get () + tp->v;
 
 	  chx_set_timer (tp_prev, next_ticks);
 	}
@@ -773,9 +797,7 @@ chx_handle_intr (void)
 void
 chx_systick_init (void)
 {
-  *SYST_RVR = 0;
-  *SYST_CVR = 0;
-  *SYST_CSR = 7;
+  chx_systic_reset ();
 
   if ((CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR))
     {
