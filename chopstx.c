@@ -88,8 +88,9 @@
  */
 
 /*
- * SysTick registers.
+ * System tick
  */
+/* SysTick registers.  */
 static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
 static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
 static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
@@ -114,6 +115,84 @@ static uint32_t
 chx_systick_get (void)
 {
   return *SYST_CVR;
+}
+
+#ifndef MHZ
+#define MHZ 72
+#endif
+
+static uint32_t usec_to_ticks (uint32_t usec)
+{
+  return usec * MHZ;
+}
+
+/*
+ * Interrupt Handling
+ */
+
+/* NVIC: Nested Vectored Interrupt Controller.  */
+struct NVIC {
+  uint32_t ISER[8];
+  uint32_t unused1[24];
+  uint32_t ICER[8];
+  uint32_t unused2[24];
+  uint32_t ISPR[8];
+  uint32_t unused3[24];
+  uint32_t ICPR[8];
+  uint32_t unused4[24];
+  uint32_t IABR[8];
+  uint32_t unused5[56];
+  uint32_t IPR[60];
+};
+
+static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
+#define NVIC_ISER(n)	(NVIC->ISER[n >> 5])
+#define NVIC_ICER(n)	(NVIC->ICER[n >> 5])
+#define NVIC_ICPR(n)	(NVIC->ICPR[n >> 5])
+#define NVIC_IPR(n)	(NVIC->IPR[n >> 2])
+
+#define USB_LP_CAN1_RX0_IRQn	 20
+
+
+static void
+chx_enable_intr (uint8_t irq_num)
+{
+  NVIC_ISER (irq_num) = 1 << (irq_num & 0x1f);
+}
+
+static void
+chx_clr_intr (uint8_t irq_num)
+{				/* Clear pending interrupt.  */
+  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f);
+}
+
+static void
+chx_disable_intr (uint8_t irq_num)
+{
+  NVIC_ICER (irq_num) = 1 << (irq_num & 0x1f);
+}
+
+static void
+chx_set_intr_prio (uint8_t n)
+{
+  unsigned int sh = (n & 3) << 3;
+
+  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh))
+    | (CPU_EXCEPTION_PRIORITY_INTERRUPT << sh);
+}
+
+/* Priority control.  */
+static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
+static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
+static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
+
+static void
+chx_prio_init (void)
+{
+  *AIRCR = 0x05FA0000 | ( 5 << 8); /* PRIGROUP = 5, 2-bit:2-bit. */
+  *SHPR2 = (CPU_EXCEPTION_PRIORITY_SVC << 24);
+  *SHPR3 = ((CPU_EXCEPTION_PRIORITY_SYSTICK << 24)
+	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16));
 }
 
 /**
@@ -199,39 +278,6 @@ struct chx_stack_regs {
 
 #define INITIAL_XPSR 0x01000000	/* T=1 */
 
-/*
- * NVIC: Nested Vectored Interrupt Controller
- */
-struct NVIC {
-  uint32_t ISER[8];
-  uint32_t unused1[24];
-  uint32_t ICER[8];
-  uint32_t unused2[24];
-  uint32_t ISPR[8];
-  uint32_t unused3[24];
-  uint32_t ICPR[8];
-  uint32_t unused4[24];
-  uint32_t IABR[8];
-  uint32_t unused5[56];
-  uint32_t IPR[60];
-};
-
-static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
-#define NVIC_ISER(n)	(NVIC->ISER[n >> 5])
-#define NVIC_ICER(n)	(NVIC->ICER[n >> 5])
-#define NVIC_ICPR(n)	(NVIC->ICPR[n >> 5])
-#define NVIC_IPR(n)	(NVIC->IPR[n >> 2])
-
-#define USB_LP_CAN1_RX0_IRQn	 20
-
-#ifndef MHZ
-#define MHZ 72
-#endif
-
-static uint32_t usec_to_ticks (uint32_t usec)
-{
-  return usec * MHZ;
-}
 /**************/
 
 struct chx_thread {
@@ -633,9 +679,9 @@ chx_set_timer (struct chx_thread *q, uint32_t ticks)
 static void
 chx_timer_insert (struct chx_thread *tp, uint32_t usec)
 {
+  struct chx_thread *q;
   uint32_t ticks = usec_to_ticks (usec);
   uint32_t next_ticks = chx_systick_get ();
-  struct chx_thread *q;
 
   for (q = q_timer.next; q != (struct chx_thread *)&q_timer; q = q->next)
     {
@@ -734,35 +780,6 @@ chx_timer_expired (void)
   chx_spin_unlock (&q_timer.lock);
 }
 
-
-static void
-chx_enable_intr (uint8_t irq_num)
-{
-  NVIC_ISER (irq_num) = 1 << (irq_num & 0x1f);
-}
-
-static void
-chx_clr_intr (uint8_t irq_num)
-{				/* Clear pending interrupt.  */
-  NVIC_ICPR (irq_num) = 1 << (irq_num & 0x1f);
-}
-
-static void
-chx_disable_intr (uint8_t irq_num)
-{
-  NVIC_ICER (irq_num) = 1 << (irq_num & 0x1f);
-}
-
-
-static void
-chx_set_intr_prio (uint8_t n)
-{
-  unsigned int sh = (n & 3) << 3;
-
-  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh))
-    | (CPU_EXCEPTION_PRIORITY_INTERRUPT << sh);
-}
-
 static chopstx_intr_t *intr_top;
 static struct chx_spinlock intr_lock;
 static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
@@ -809,20 +826,12 @@ chx_systick_init (void)
     }
 }
 
-static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
-static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
-static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
-
 chopstx_t chopstx_main;
 
 void
 chx_init (struct chx_thread *tp)
 {
-  *AIRCR = 0x05FA0000 | ( 5 << 8); /* PRIGROUP = 5, 2-bit:2-bit. */
-  *SHPR2 = (CPU_EXCEPTION_PRIORITY_SVC << 24);
-  *SHPR3 = ((CPU_EXCEPTION_PRIORITY_SYSTICK << 24)
-	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16));
-
+  chx_prio_init ();
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
   q_timer.next = q_timer.prev = (struct chx_thread *)&q_timer;

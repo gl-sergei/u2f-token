@@ -2,6 +2,7 @@
 
 	* chopstx.c (chx_systick_reset, chx_systick_reload)
 	(chx_systick_get): Factor out systick functions.
+	(chx_prio_init): Factor out.
 
 2015-09-08  Niibe Yutaka  <gniibe@fsij.org>
 
