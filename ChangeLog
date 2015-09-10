@@ -1,3 +1,10 @@
+2015-09-10  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.09.
+	* doc/chopstx.texi (VERSION): 0.09.
+
+	* chopstx.c (chx_release_irq_thread): Rename.
+
 2015-09-09  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/usb-cdc.c (usb_cb_ctrl_write_finish): Distinguish

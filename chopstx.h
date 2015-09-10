@@ -118,6 +118,8 @@ enum {
 
 void chopstx_cancel (chopstx_t thd);
 void chopstx_testcancel (void);
+
+/* NOTE: This signature is different to PTHREAD's one.  */
 int chopstx_setcancelstate (int);
 
 struct chx_cleanup {

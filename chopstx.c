@@ -1155,7 +1155,7 @@ chopstx_release_irq (chopstx_intr_t *intr0)
 
 
 static void
-chopstx_release_irq_thread (struct chx_thread *tp)
+chx_release_irq_thread (struct chx_thread *tp)
 {
   chopstx_intr_t *intr, *intr_prev;
 
@@ -1274,7 +1274,7 @@ chopstx_exit (void *retval)
       chx_cpu_sched_unlock ();
     }
 
-  chopstx_release_irq_thread (running);
+  chx_release_irq_thread (running);
   chx_exit (retval);
 }
 

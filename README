@@ -1,6 +1,6 @@
 Chopstx - Threads and only Threads
-							Version 0.08
-							  2015-07-31
+							Version 0.09
+							  2015-09-10
 							Niibe Yutaka
 					     Flying Stone Technology
 
@@ -28,15 +28,18 @@ EXCEPTION.
 Example code
 ============
 
-We have two examples in this distribution, LED blinker and
-USB CDC-ACM function.  You can build it like:
+We have some examples in this distribution; Useful ones are LED
+blinker and USB CDC-ACM function.  For STM32F103, you can build it
+USB CDC-ACM demo by:
 
    $ cd example-cdc
-   $ ln -s ../board/board-olimex-stm32-h103.h board.h
+   $ ln -sf ../board/board-olimex-stm32-h103.h board.h
    $ make
 
 For a specific board named FSM-55, an example of LED matrix dynamic
 driver is provided.  See the directory: example-fsm-55.
+
+For STM32 Primer2, see the directory: example-primer2.
 
 
 Future Works

@@ -1,7 +1,7 @@
 \input texinfo                      @c -*-texinfo-*-
 @c %**start of header
 @setfilename chopstx.info
-@set VERSION 0.08
+@set VERSION 0.09
 @settitle Chopstx Reference Manual
 @c Unify some of the indices.
 @syncodeindex tp fn
@@ -11,7 +11,7 @@
 This manual is for Chopstx (version @value{VERSION}).
 
 @noindent
-Copyright @copyright{} 2013 Flying Stone Technology @*
+Copyright @copyright{} 2013, 2015 Flying Stone Technology @*
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -83,8 +83,8 @@ Indexes
 @node Introduction
 @chapter Introduction
 
-Chopstx is an RT thread library for ARM Cortex-M3, specifically,
-STM32F103.
+Chopstx is an RT thread library for ARM Cortex-M0 and Cortex-M3.
+Specifically, it is used for STM32F030 and STM32F103.
 
 While most RTOSes come with many features, drivers, and stacks,
 Chopstx just offers a RT thread library.
