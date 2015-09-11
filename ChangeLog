@@ -1,3 +1,8 @@
+2015-09-11  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_init, chopstx_create): Fix the initial value
+	of flag_cancelable.
+
 2015-09-10  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.09.

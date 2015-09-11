@@ -637,7 +637,8 @@ chx_init (struct chx_thread *tp)
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_RUNNING;
-  tp->flag_got_cancel = tp->flag_join_req = tp->flag_cancelable = 0;
+  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_cancelable = 1;
   tp->flag_sched_rr = (CHX_FLAGS_MAIN & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = CHX_PRIO_MAIN_INIT;
@@ -817,7 +818,8 @@ chopstx_create (uint32_t flags_and_prio,
   tp->mutex_list = NULL;
   tp->clp = NULL;
   tp->state = THREAD_EXITED;
-  tp->flag_got_cancel = tp->flag_join_req = tp->flag_cancelable = 0;
+  tp->flag_got_cancel = tp->flag_join_req = 0;
+  tp->flag_cancelable = 1;
   tp->flag_sched_rr = (flags_and_prio & CHOPSTX_SCHED_RR)? 1 : 0;
   tp->flag_detached = (flags_and_prio & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = tp->prio = prio;
