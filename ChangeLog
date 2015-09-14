@@ -1,3 +1,9 @@
+2015-09-14  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (q_exit): Remove.
+	(chx_init, chx_exit): Remove access to Q_EXIT.
+	(chx_release_irq_thread): Fix removing form the list.
+
 2015-09-11  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_init, chopstx_create): Fix the initial value
