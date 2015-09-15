@@ -1,6 +1,19 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.10
+
+  Released 2015-09-15
+
+** Thread cancellation bug fix
+Thread cancellation didn't work well with 0.09 because
+of initial configuration mistake.  It's fixed.
+
+** Interrupt handler bug fix
+Interrupt handler wasn't unregistered on exit well.
+It's fixed.
+
+
 * Major changes in Chopstx 0.09
 
   Released 2015-09-10

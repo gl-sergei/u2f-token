@@ -727,7 +727,7 @@ static int std_set_interface (uint8_t req, struct control_info *detail)
 
   if ((req & REQUEST_DIR) == 1 || rcp != INTERFACE_RECIPIENT
       || detail->len != 0 || (detail->index >> 8) != 0
-      || (detail->value >> 8) != 0 || dev_p->current_configuration != 0)
+      || (detail->value >> 8) != 0 || dev_p->current_configuration == 0)
     return USB_UNSUPPORT;
 
   return usb_cb_interface (USB_SET_INTERFACE, detail);

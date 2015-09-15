@@ -1,3 +1,10 @@
+2015-09-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.10.
+	* doc/chopstx.texi (VERSION): 0.10.
+
+	* example-cdc/usb_stm32f103.c: Update from Gnuk.
+
 2015-09-14  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (q_exit): Remove.
