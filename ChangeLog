@@ -1,3 +1,7 @@
+2015-11-05  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sample.c: Enhanced to be echo service.
+
 2015-09-15  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.10.

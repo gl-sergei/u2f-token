@@ -3,14 +3,13 @@
 #include <string.h>
 #include <chopstx.h>
 #include "sys.h" /* for set_led */
-#include "usb_lld.h" /* for set_led */
+#include "usb_lld.h"
+#include "stream.h"
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
 static chopstx_cond_t cnd1;
 
-chopstx_mutex_t usb_mtx;
-chopstx_cond_t cnd_usb;
 
 static uint8_t u, v;
 static uint8_t m;		/* 0..100 */
@@ -128,6 +127,7 @@ static char hexchar (uint8_t x)
 int
 main (int argc, const char *argv[])
 {
+  struct stream *st;
   uint8_t count;
 
   (void)argc;
@@ -137,8 +137,7 @@ main (int argc, const char *argv[])
   chopstx_cond_init (&cnd0);
   chopstx_cond_init (&cnd1);
 
-  chopstx_mutex_init (&usb_mtx);
-  chopstx_cond_init (&cnd_usb);
+  st = stream_open ();
 
   m = 10;
 
@@ -154,41 +153,38 @@ main (int argc, const char *argv[])
   chopstx_cond_signal (&cnd1);
   chopstx_mutex_unlock (&mtx);
 
+  count= 0;
   while (1)
     {
-      extern uint8_t connected;
-
-      count= 0;
+      uint8_t s[64];
       u = 1;
-      /* waiting USB connection */
-      chopstx_mutex_lock (&usb_mtx);
-      if (!connected)
-	chopstx_cond_wait (&cnd_usb, &usb_mtx);
-      chopstx_mutex_unlock (&usb_mtx);
+
+      if (stream_wait_connection (st) < 0)
+	{
+	  chopstx_usec_wait (1000*1000);
+	  continue;
+	}
+
+      memcpy (s, "xx: Hello, World with Chopstx!\r\n\000", 32);
+      s[0] = hexchar (count >> 4);
+      s[1] = hexchar (count & 0x0f);
+      count++;
+
+      if (stream_send (st, s, 32) < 0)
+	continue;
 
       while (1)
 	{
-	  char s[32];
+	  int size = stream_recv (st, s);
+
+	  if (size < 0)
+	    break;
+
+	  if (stream_send (st, s, size) < 0)
+	    break;
 
 	  u ^= 1;
-	  chopstx_usec_wait (200*1000*6);
-
-	  memcpy (s, "xx: Hello, World with Chopstx!\r\n", 32);
-	  s[0] = hexchar (count >> 4);
-	  s[1] = hexchar (count & 0x0f);
-	  count++;
-
-	  chopstx_mutex_lock (&usb_mtx);
-	  if (connected)
-	    {
-	      usb_lld_write (ENDP1, s, 32);
-	      chopstx_cond_wait (&cnd_usb, &usb_mtx);
-	    }
-	  else
-	    break;
-	  chopstx_mutex_unlock (&usb_mtx);
 	}
-      chopstx_mutex_unlock (&usb_mtx);
     }
 
   return 0;
