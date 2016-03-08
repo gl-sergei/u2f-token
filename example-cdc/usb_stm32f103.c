@@ -62,6 +62,8 @@ struct DEVICE_INFO
   uint8_t bRequest;
   /**/
   uint16_t value;
+  uint16_t index;
+  uint16_t len;
 };
 
 static struct DEVICE_INFO device_info;
@@ -462,26 +464,26 @@ static void handle_datastage_in (void)
   st103_ep_set_tx_status (ENDP0, EP_TX_VALID);
 }
 
-typedef int (*HANDLER) (uint8_t req, struct control_info *detail);
+typedef int (*HANDLER) (uint8_t req, struct req_args *arg);
 
-static int std_none (uint8_t req, struct control_info *detail)
+static int std_none (uint8_t req, struct req_args *arg)
 {
-  (void)req; (void)detail;
+  (void)req; (void)arg;
   return USB_UNSUPPORT;
 }
 
-static int std_get_status (uint8_t req, struct control_info *detail)
+static int std_get_status (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
   uint16_t status_info = 0;
 
-  if (detail->value != 0 || detail->len != 2 || (detail->index >> 8) != 0
+  if (arg->value != 0 || arg->len != 2 || (arg->index >> 8) != 0
       || (req & REQUEST_DIR) == 0)
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
     {
-      if (detail->index == 0)
+      if (arg->index == 0)
 	{
 	  /* Get Device Status */
 	  uint8_t feature = dev_p->current_feature;
@@ -498,7 +500,7 @@ static int std_get_status (uint8_t req, struct control_info *detail)
 	  else /* Self-powered */
 	    status_info &= ~1;
 
-	  return usb_lld_reply_request (&status_info, 2, detail);
+	  return usb_lld_reply_request (&status_info, 2, arg);
 	}
     }
   else if (rcp == INTERFACE_RECIPIENT)
@@ -508,21 +510,21 @@ static int std_get_status (uint8_t req, struct control_info *detail)
       if (dev_p->current_configuration == 0)
 	return USB_UNSUPPORT;
 
-      r = usb_cb_interface (USB_QUERY_INTERFACE, detail);
+      r = usb_cb_interface (USB_QUERY_INTERFACE, arg);
       if (r != USB_SUCCESS)
 	return USB_UNSUPPORT;
 
-      return usb_lld_reply_request (&status_info, 2, detail);
+      return usb_lld_reply_request (&status_info, 2, arg);
     }
   else if (rcp == ENDPOINT_RECIPIENT)
     {
-      uint8_t endpoint = (detail->index & 0x0f);
+      uint8_t endpoint = (arg->index & 0x0f);
       uint16_t status;
 
-      if ((detail->index & 0x70) || endpoint == ENDP0)
+      if ((arg->index & 0x70) || endpoint == ENDP0)
 	return USB_UNSUPPORT;
 
-      if ((detail->index & 0x80))
+      if ((arg->index & 0x80))
 	{
 	  status = st103_ep_get_tx_status (endpoint);
 	  if (status == 0)		/* Disabled */
@@ -539,13 +541,13 @@ static int std_get_status (uint8_t req, struct control_info *detail)
 	    status_info |= 1; /* OUT Endpoint stalled */
 	}
 
-      return usb_lld_reply_request (&status_info, 2, detail);
+      return usb_lld_reply_request (&status_info, 2, arg);
     }
 
   return USB_UNSUPPORT;
 }
 
-static int std_clear_feature (uint8_t req, struct control_info *detail)
+static int std_clear_feature (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
@@ -554,10 +556,10 @@ static int std_clear_feature (uint8_t req, struct control_info *detail)
 
   if (rcp == DEVICE_RECIPIENT)
     {
-      if (detail->len != 0 || detail->index != 0)
+      if (arg->len != 0 || arg->index != 0)
 	return USB_UNSUPPORT;
 
-      if (detail->value == DEVICE_REMOTE_WAKEUP)
+      if (arg->value == DEVICE_REMOTE_WAKEUP)
 	{
 	  dev_p->current_feature &= ~(1 << 5);
 	  return USB_SUCCESS;
@@ -565,17 +567,17 @@ static int std_clear_feature (uint8_t req, struct control_info *detail)
     }
   else if (rcp == ENDPOINT_RECIPIENT)
     {
-      uint8_t endpoint = (detail->index & 0x0f);
+      uint8_t endpoint = (arg->index & 0x0f);
       uint16_t status;
 
       if (dev_p->current_configuration == 0)
 	return USB_UNSUPPORT;
 
-      if (detail->len != 0 || (detail->index >> 8) != 0
-	  || detail->value != ENDPOINT_STALL || endpoint == ENDP0)
+      if (arg->len != 0 || (arg->index >> 8) != 0
+	  || arg->value != ENDPOINT_STALL || endpoint == ENDP0)
 	return USB_UNSUPPORT;
 
-      if ((detail->index & 0x80))
+      if ((arg->index & 0x80))
 	status = st103_ep_get_tx_status (endpoint);
       else
 	status = st103_ep_get_rx_status (endpoint);
@@ -583,7 +585,7 @@ static int std_clear_feature (uint8_t req, struct control_info *detail)
       if (status == 0)		/* Disabled */
 	return USB_UNSUPPORT;
 
-      if (detail->index & 0x80)		/* IN endpoint */
+      if (arg->index & 0x80)		/* IN endpoint */
 	st103_ep_clear_dtog_tx (endpoint);
       else			/* OUT endpoint */
 	st103_ep_clear_dtog_rx (endpoint);
@@ -595,7 +597,7 @@ static int std_clear_feature (uint8_t req, struct control_info *detail)
   return USB_UNSUPPORT;
 }
 
-static int std_set_feature (uint8_t req, struct control_info *detail)
+static int std_set_feature (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
@@ -604,10 +606,10 @@ static int std_set_feature (uint8_t req, struct control_info *detail)
 
   if (rcp == DEVICE_RECIPIENT)
     {
-      if (detail->len != 0 || detail->index != 0)
+      if (arg->len != 0 || arg->index != 0)
 	return USB_UNSUPPORT;
 
-      if (detail->value == DEVICE_REMOTE_WAKEUP)
+      if (arg->value == DEVICE_REMOTE_WAKEUP)
 	{
 	  dev_p->current_feature |= 1 << 5;
 	  // event??
@@ -616,17 +618,17 @@ static int std_set_feature (uint8_t req, struct control_info *detail)
     }
   else if (rcp == ENDPOINT_RECIPIENT)
     {
-      uint8_t endpoint = (detail->index & 0x0f);
+      uint8_t endpoint = (arg->index & 0x0f);
       uint32_t status;
 
       if (dev_p->current_configuration == 0)
 	return USB_UNSUPPORT;
 
-      if (detail->len != 0 || (detail->index >> 8) != 0
-	  || detail->value != 0 || endpoint == ENDP0)
+      if (arg->len != 0 || (arg->index >> 8) != 0
+	  || arg->value != 0 || endpoint == ENDP0)
 	return USB_UNSUPPORT;
 
-      if ((detail->index & 0x80))
+      if ((arg->index & 0x80))
 	status = st103_ep_get_tx_status (endpoint);
       else
 	status = st103_ep_get_rx_status (endpoint);
@@ -634,7 +636,7 @@ static int std_set_feature (uint8_t req, struct control_info *detail)
       if (status == 0)		/* Disabled */
 	return USB_UNSUPPORT;
 
-      if (detail->index & 0x80)
+      if (arg->index & 0x80)
 	/* IN endpoint */
 	st103_ep_set_tx_status (endpoint, EP_TX_STALL);
       else
@@ -648,59 +650,58 @@ static int std_set_feature (uint8_t req, struct control_info *detail)
   return USB_UNSUPPORT;
 }
 
-static int std_set_address (uint8_t req, struct control_info *detail)
+static int std_set_address (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
   if ((req & REQUEST_DIR) == 1)
     return USB_UNSUPPORT;
 
-  if (rcp == DEVICE_RECIPIENT && detail->len == 0 && detail->value <= 127
-      && detail->index == 0 && dev_p->current_configuration == 0)
+  if (rcp == DEVICE_RECIPIENT && arg->len == 0 && arg->value <= 127
+      && arg->index == 0 && dev_p->current_configuration == 0)
     return USB_SUCCESS;
 
   return USB_UNSUPPORT;
 }
 
-static int std_get_descriptor (uint8_t req, struct control_info *detail)
+static int std_get_descriptor (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
   if ((req & REQUEST_DIR) == 0)
     return USB_UNSUPPORT;
 
-  return usb_cb_get_descriptor (rcp, (detail->value >> 8),
-				(detail->value & 0xff), detail);
+  return usb_cb_get_descriptor (rcp, (arg->value >> 8),
+				(arg->value & 0xff), arg);
 }
 
-static int std_get_configuration (uint8_t req,  struct control_info *detail)
+static int std_get_configuration (uint8_t req,  struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  (void)detail;
   if ((req & REQUEST_DIR) == 0)
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
-    return usb_lld_reply_request (&dev_p->current_configuration, 1, detail);
+    return usb_lld_reply_request (&dev_p->current_configuration, 1, arg);
 
   return USB_UNSUPPORT;
 }
 
-static int std_set_configuration (uint8_t req, struct control_info *detail)
+static int std_set_configuration (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
   if ((req & REQUEST_DIR) == 1)
     return USB_UNSUPPORT;
 
-  if (rcp == DEVICE_RECIPIENT && detail->index == 0 && detail->len == 0)
-    return usb_cb_handle_event (USB_EVENT_CONFIG, detail->value);
+  if (rcp == DEVICE_RECIPIENT && arg->index == 0 && arg->len == 0)
+    return usb_cb_handle_event (USB_EVENT_CONFIG, arg->value);
 
   return USB_UNSUPPORT;
 }
 
-static int std_get_interface (uint8_t req, struct control_info *detail)
+static int std_get_interface (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
@@ -709,35 +710,34 @@ static int std_get_interface (uint8_t req, struct control_info *detail)
 
   if (rcp == INTERFACE_RECIPIENT)
     {
-      if (detail->value != 0 || (detail->index >> 8) != 0 || detail->len != 1)
+      if (arg->value != 0 || (arg->index >> 8) != 0 || arg->len != 1)
 	return USB_UNSUPPORT;
 
       if (dev_p->current_configuration == 0)
 	return USB_UNSUPPORT;
 
-      return usb_cb_interface (USB_GET_INTERFACE, detail);
+      return usb_cb_interface (USB_GET_INTERFACE, arg);
     }
 
   return USB_UNSUPPORT;
 }
 
-static int std_set_interface (uint8_t req, struct control_info *detail)
+static int std_set_interface (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
   if ((req & REQUEST_DIR) == 1 || rcp != INTERFACE_RECIPIENT
-      || detail->len != 0 || (detail->index >> 8) != 0
-      || (detail->value >> 8) != 0 || dev_p->current_configuration == 0)
+      || arg->len != 0 || (arg->index >> 8) != 0
+      || (arg->value >> 8) != 0 || dev_p->current_configuration == 0)
     return USB_UNSUPPORT;
 
-  return usb_cb_interface (USB_SET_INTERFACE, detail);
+  return usb_cb_interface (USB_SET_INTERFACE, arg);
 }
 
 
 static void handle_setup0 (void)
 {
   const uint16_t *pw;
-  struct control_info ctrl;
   uint16_t w;
   uint8_t req_no;
   int r = USB_UNSUPPORT;
@@ -749,11 +749,11 @@ static void handle_setup0 (void)
   dev_p->bmRequestType = w & 0xff;
   dev_p->bRequest = req_no = w >> 8;
   pw++;
-  ctrl.value = *pw++;
+  dev_p->value = *pw++;
   pw++;
-  ctrl.index  = *pw++;
+  dev_p->index = *pw++;
   pw++;
-  ctrl.len = *pw;
+  dev_p->len = *pw;
 
   data_p->addr = NULL;
   data_p->len = 0;
@@ -777,11 +777,13 @@ static void handle_setup0 (void)
 	    default: handler = std_none;  break;
 	    }
 
-	  r = (*handler) (dev_p->bmRequestType, &ctrl);
+	  r = (*handler) (dev_p->bmRequestType,
+			  (struct req_args *)&dev_p->value);
 	}
     }
   else
-    r = usb_cb_setup (dev_p->bmRequestType, req_no, &ctrl);
+    r = usb_cb_setup (dev_p->bmRequestType, req_no,
+		      (struct req_args *)&dev_p->value);
 
   if (r != USB_SUCCESS)
     dev_p->state = STALLED;
@@ -789,8 +791,7 @@ static void handle_setup0 (void)
     {
       if (USB_SETUP_SET (dev_p->bmRequestType))
 	{
-	  dev_p->value = ctrl.value;
-	  if (ctrl.len == 0)
+	  if (dev_p->len == 0)
 	    {
 	      dev_p->state = WAIT_STATUS_IN;
 	      st103_set_tx_count (ENDP0, 0);
@@ -819,8 +820,8 @@ static void handle_in0 (void)
 	  usb_cb_handle_event (USB_EVENT_ADDRESS, dev_p->value);
 	}
       else
-	usb_cb_ctrl_write_finish  (dev_p->bmRequestType, dev_p->bRequest,
-				   dev_p->value);
+	usb_cb_ctrl_write_finish (dev_p->bmRequestType, dev_p->bRequest,
+				  (struct req_args *)&dev_p->value);
 
       dev_p->state = STALLED;
     }
@@ -1042,9 +1043,9 @@ void usb_lld_set_feature (uint8_t feature)
   dev_p->current_feature = feature;
 }
 
-void usb_lld_set_data_to_recv (const void *p, size_t len)
+void usb_lld_set_data_to_recv (void *p, size_t len)
 {
-  data_p->addr = (uint8_t *)p;
+  data_p->addr = p;
   data_p->len = len;
 }
 
@@ -1129,7 +1130,7 @@ void usb_lld_from_pmabuf (void *dst, uint16_t addr, size_t n)
  * BUFLEN: size of the data.
  */
 int
-usb_lld_reply_request (const void *buf, size_t buflen, struct control_info *ctl)
+usb_lld_reply_request (const void *buf, size_t buflen, struct req_args *ctl)
 {
   uint32_t len_asked = ctl->len;
   uint32_t len;

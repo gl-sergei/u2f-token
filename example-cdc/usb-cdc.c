@@ -20,7 +20,7 @@ static struct stream stream;
 /* USB Device Descriptor */
 static const uint8_t vcom_device_desc[18] = {
   18,   /* bLength */
-  USB_DEVICE_DESCRIPTOR_TYPE,	/* bDescriptorType */
+  DEVICE_DESCRIPTOR,		/* bDescriptorType */
   0x10, 0x01,			/* bcdUSB = 1.1 */
   0x02,				/* bDeviceClass (CDC).              */
   0x00,				/* bDeviceSubClass.                 */
@@ -38,7 +38,7 @@ static const uint8_t vcom_device_desc[18] = {
 /* Configuration Descriptor tree for a CDC.*/
 static const uint8_t vcom_config_desc[67] = {
   9,
-  USB_CONFIGURATION_DESCRIPTOR_TYPE, /* bDescriptorType: Configuration */
+  CONFIG_DESCRIPTOR,		/* bDescriptorType: Configuration */
   /* Configuration Descriptor.*/
   67, 0x00,			/* wTotalLength.                    */
   0x02,				/* bNumInterfaces.                  */
@@ -48,7 +48,7 @@ static const uint8_t vcom_config_desc[67] = {
   50,				/* bMaxPower (100mA).               */
   /* Interface Descriptor.*/
   9,
-  USB_INTERFACE_DESCRIPTOR_TYPE,
+  INTERFACE_DESCRIPTOR,
   0x00,		   /* bInterfaceNumber.                */
   0x00,		   /* bAlternateSetting.               */
   0x01,		   /* bNumEndpoints.                   */
@@ -87,14 +87,14 @@ static const uint8_t vcom_config_desc[67] = {
   0x01,         /* bSlaveInterface0 (Data Class Interface).  */
   /* Endpoint 2 Descriptor.*/
   7,
-  USB_ENDPOINT_DESCRIPTOR_TYPE,
+  ENDPOINT_DESCRIPTOR,
   ENDP2|0x80,    /* bEndpointAddress.    */
   0x03,          /* bmAttributes (Interrupt).        */
   0x08, 0x00,	 /* wMaxPacketSize.                  */
   0xFF,		 /* bInterval.                       */
   /* Interface Descriptor.*/
   9,
-  USB_INTERFACE_DESCRIPTOR_TYPE, /* bDescriptorType: */
+  INTERFACE_DESCRIPTOR, /* bDescriptorType: */
   0x01,          /* bInterfaceNumber.                */
   0x00,          /* bAlternateSetting.               */
   0x02,          /* bNumEndpoints.                   */
@@ -104,14 +104,14 @@ static const uint8_t vcom_config_desc[67] = {
   0x00,		 /* iInterface.                      */
   /* Endpoint 3 Descriptor.*/
   7,
-  USB_ENDPOINT_DESCRIPTOR_TYPE,	/* bDescriptorType: Endpoint */
+  ENDPOINT_DESCRIPTOR,		/* bDescriptorType: Endpoint */
   ENDP3,    /* bEndpointAddress. */
   0x02,				/* bmAttributes (Bulk).             */
   0x40, 0x00,			/* wMaxPacketSize.                  */
   0x00,				/* bInterval.                       */
   /* Endpoint 1 Descriptor.*/
   7,
-  USB_ENDPOINT_DESCRIPTOR_TYPE,	/* bDescriptorType: Endpoint */
+  ENDPOINT_DESCRIPTOR,		/* bDescriptorType: Endpoint */
   ENDP1|0x80,			/* bEndpointAddress. */
   0x02,				/* bmAttributes (Bulk).             */
   0x40, 0x00,			/* wMaxPacketSize.                  */
@@ -124,13 +124,13 @@ static const uint8_t vcom_config_desc[67] = {
  */
 static const uint8_t vcom_string0[4] = {
   4,				/* bLength */
-  USB_STRING_DESCRIPTOR_TYPE,
+  STRING_DESCRIPTOR,
   0x09, 0x04			/* LangID = 0x0409: US-English */
 };
 
 static const uint8_t vcom_string1[] = {
   23*2+2,			/* bLength */
-  USB_STRING_DESCRIPTOR_TYPE,	/* bDescriptorType */
+  STRING_DESCRIPTOR,		/* bDescriptorType */
   /* Manufacturer: "Flying Stone Technology" */
   'F', 0, 'l', 0, 'y', 0, 'i', 0, 'n', 0, 'g', 0, ' ', 0, 'S', 0,
   't', 0, 'o', 0, 'n', 0, 'e', 0, ' ', 0, 'T', 0, 'e', 0, 'c', 0,
@@ -139,7 +139,7 @@ static const uint8_t vcom_string1[] = {
 
 static const uint8_t vcom_string2[] = {
   14*2+2,			/* bLength */
-  USB_STRING_DESCRIPTOR_TYPE,	/* bDescriptorType */
+  STRING_DESCRIPTOR,		/* bDescriptorType */
   /* Product name: "Chopstx Sample" */
   'C', 0, 'h', 0, 'o', 0, 'p', 0, 's', 0, 't', 0, 'x', 0, ' ', 0,
   'S', 0, 'a', 0, 'm', 0, 'p', 0, 'l', 0, 'e', 0,
@@ -150,7 +150,7 @@ static const uint8_t vcom_string2[] = {
  */
 static const uint8_t vcom_string3[28] = {
   28,				    /* bLength */
-  USB_STRING_DESCRIPTOR_TYPE,	    /* bDescriptorType */
+  STRING_DESCRIPTOR,		    /* bDescriptorType */
   '0', 0,  '.', 0,  '0', 0, '0', 0, /* Version number */
 };
 
@@ -184,7 +184,7 @@ usb_cb_device_reset (void)
 #define CDC_CTRL_DTR            0x0001
 
 void
-usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value)
+usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, struct req_args *arg)
 {
   uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
 
@@ -194,7 +194,7 @@ usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, uint16_t value)
       /* Open/close the connection.  */
       chopstx_mutex_lock (&stream.mtx);
       stream.flags &= ~FLAG_CONNECTED;
-      stream.flags |= ((value & CDC_CTRL_DTR) != 0)? FLAG_CONNECTED : 0;
+      stream.flags |= ((arg->value & CDC_CTRL_DTR) != 0)? FLAG_CONNECTED : 0;
       chopstx_cond_signal (&stream.cnd);
       chopstx_mutex_unlock (&stream.mtx);
     }
@@ -217,17 +217,17 @@ static struct line_coding line_coding = {
 
 
 static int
-vcom_port_data_setup (uint8_t req, uint8_t req_no, struct control_info *detail)
+vcom_port_data_setup (uint8_t req, uint8_t req_no, struct req_args *arg)
 {
   if (USB_SETUP_GET (req))
     {
       if (req_no == USB_CDC_REQ_GET_LINE_CODING)
-	return usb_lld_reply_request (&line_coding, sizeof(line_coding), detail);
+	return usb_lld_reply_request (&line_coding, sizeof(line_coding), arg);
     }
   else  /* USB_SETUP_SET (req) */
     {
       if (req_no == USB_CDC_REQ_SET_LINE_CODING
-	  && detail->len == sizeof (line_coding))
+	  && arg->len == sizeof (line_coding))
 	{
 	  usb_lld_set_data_to_recv (&line_coding, sizeof (line_coding));
 	  return USB_SUCCESS;
@@ -240,29 +240,29 @@ vcom_port_data_setup (uint8_t req, uint8_t req_no, struct control_info *detail)
 }
 
 int
-usb_cb_setup (uint8_t req, uint8_t req_no, struct control_info *detail)
+usb_cb_setup (uint8_t req, uint8_t req_no, struct req_args *arg)
 {
   uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
 
-  if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT) && detail->index == 0)
-    return vcom_port_data_setup (req, req_no, detail);
+  if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT) && arg->index == 0)
+    return vcom_port_data_setup (req, req_no, arg);
 
   return USB_UNSUPPORT;
 }
 
 int
 usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
-		       struct control_info *detail)
+		       struct req_args *arg)
 {
   if (rcp != DEVICE_RECIPIENT)
     return USB_UNSUPPORT;
 
   if (desc_type == DEVICE_DESCRIPTOR)
     return usb_lld_reply_request (vcom_device_desc, sizeof (vcom_device_desc),
-				  detail);
+				  arg);
   else if (desc_type == CONFIG_DESCRIPTOR)
     return usb_lld_reply_request (vcom_config_desc, sizeof (vcom_config_desc),
-				  detail);
+				  arg);
   else if (desc_type == STRING_DESCRIPTOR)
     {
       const uint8_t *str;
@@ -290,7 +290,7 @@ usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
 	  return USB_UNSUPPORT;
 	}
 
-      return usb_lld_reply_request (str, size, detail);
+      return usb_lld_reply_request (str, size, arg);
     }
 
   return USB_UNSUPPORT;
@@ -369,11 +369,11 @@ usb_cb_handle_event (uint8_t event_type, uint16_t value)
 
 
 int
-usb_cb_interface (uint8_t cmd, struct control_info *detail)
+usb_cb_interface (uint8_t cmd, struct req_args *arg)
 {
   const uint8_t zero = 0;
-  uint16_t interface = detail->index;
-  uint16_t alt = detail->value;
+  uint16_t interface = arg->index;
+  uint16_t alt = arg->value;
 
   if (interface >= NUM_INTERFACES)
     return USB_UNSUPPORT;
@@ -390,7 +390,7 @@ usb_cb_interface (uint8_t cmd, struct control_info *detail)
 	}
 
     case USB_GET_INTERFACE:
-      return usb_lld_reply_request (&zero, 1, detail);
+      return usb_lld_reply_request (&zero, 1, arg);
 
     default:
     case USB_QUERY_INTERFACE:
