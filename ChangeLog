@@ -1,3 +1,13 @@
+2016-03-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (CHOPSTX_THREAD_SIZE): Align by 8.
+	* chopstx.c (struct chx_thread): Add W field to align.  This is to
+	comply AAPCS (ARM Architecture Procedure Call Standard).
+	(chx_init): Initialize W.
+
+	* example-cdc/{usb_stm32f103.c,usb_lld.h}: Update from Gnuk.
+	* example-cdc/usb-cdc.c: Update.
+
 2015-11-05  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/sample.c: Enhanced to be echo service.

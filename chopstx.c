@@ -1,7 +1,8 @@
 /*
  * chopstx.c - Threads and only threads.
  *
- * Copyright (C) 2013, 2014, 2015  Flying Stone Technology
+ * Copyright (C) 2013, 2014, 2015, 2016
+ *               Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * This file is a part of Chopstx, a thread library for embedded.
@@ -291,7 +292,7 @@ struct chx_thread {
   uint32_t                  : 7;
   uint32_t prio_orig        : 8;
   uint32_t prio             : 8;
-  uint32_t v;
+  uint32_t v, w;
   struct chx_mtx *mutex_list;
   struct chx_cleanup *clp;
 };
@@ -639,7 +640,7 @@ chx_init (struct chx_thread *tp)
   tp->flag_detached = (CHX_FLAGS_MAIN & CHOPSTX_DETACHED)? 1 : 0;
   tp->prio_orig = CHX_PRIO_MAIN_INIT;
   tp->prio = 0;
-  tp->v = 0;
+  tp->v = tp->w = 0;
   running = tp;
 
   if (CHX_PRIO_MAIN_INIT >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
