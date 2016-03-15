@@ -478,7 +478,7 @@ static int std_get_status (uint8_t req, struct req_args *arg)
   uint16_t status_info = 0;
 
   if (arg->value != 0 || arg->len != 2 || (arg->index >> 8) != 0
-      || (req & REQUEST_DIR) == 0)
+      || USB_SETUP_SET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
@@ -551,7 +551,7 @@ static int std_clear_feature (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 1)
+  if (USB_SETUP_GET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
@@ -601,7 +601,7 @@ static int std_set_feature (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 1)
+  if (USB_SETUP_GET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
@@ -654,7 +654,7 @@ static int std_set_address (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 1)
+  if (USB_SETUP_GET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT && arg->len == 0 && arg->value <= 127
@@ -668,7 +668,7 @@ static int std_get_descriptor (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 0)
+  if (USB_SETUP_SET (req))
     return USB_UNSUPPORT;
 
   return usb_cb_get_descriptor (rcp, (arg->value >> 8),
@@ -679,7 +679,7 @@ static int std_get_configuration (uint8_t req,  struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 0)
+  if (USB_SETUP_SET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT)
@@ -692,7 +692,7 @@ static int std_set_configuration (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 1)
+  if (USB_SETUP_GET (req))
     return USB_UNSUPPORT;
 
   if (rcp == DEVICE_RECIPIENT && arg->index == 0 && arg->len == 0)
@@ -705,7 +705,7 @@ static int std_get_interface (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 0)
+  if (USB_SETUP_SET (req))
     return USB_UNSUPPORT;
 
   if (rcp == INTERFACE_RECIPIENT)
@@ -726,7 +726,7 @@ static int std_set_interface (uint8_t req, struct req_args *arg)
 {
   uint8_t rcp = req & RECIPIENT;
 
-  if ((req & REQUEST_DIR) == 1 || rcp != INTERFACE_RECIPIENT
+  if (USB_SETUP_GET (req) || rcp != INTERFACE_RECIPIENT
       || arg->len != 0 || (arg->index >> 8) != 0
       || (arg->value >> 8) != 0 || dev_p->current_configuration == 0)
     return USB_UNSUPPORT;
