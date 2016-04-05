@@ -133,17 +133,17 @@ static uint32_t usec_to_ticks (uint32_t usec)
 
 /* NVIC: Nested Vectored Interrupt Controller.  */
 struct NVIC {
-  uint32_t ISER[8];
+  volatile uint32_t ISER[8];
   uint32_t unused1[24];
-  uint32_t ICER[8];
+  volatile uint32_t ICER[8];
   uint32_t unused2[24];
-  uint32_t ISPR[8];
+  volatile uint32_t ISPR[8];
   uint32_t unused3[24];
-  uint32_t ICPR[8];
+  volatile uint32_t ICPR[8];
   uint32_t unused4[24];
-  uint32_t IABR[8];
+  volatile uint32_t IABR[8];
   uint32_t unused5[56];
-  uint32_t IPR[60];
+  volatile uint32_t IPR[60];
 };
 
 static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;

@@ -1,3 +1,7 @@
+2016-04-05  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct NVIC): Add volatile qualifier to members.
+
 2016-03-08  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.h (CHOPSTX_THREAD_SIZE): Align by 8.
