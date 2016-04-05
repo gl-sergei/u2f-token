@@ -245,6 +245,11 @@ static void chx_timer_insert (struct chx_thread *tp, uint32_t usec);
 
 
 /**************/
+static void chx_spin_init (struct chx_spinlock *lk)
+{
+  (void)lk;
+}
+
 static void chx_spin_lock (struct chx_spinlock *lk)
 {
   (void)lk;
@@ -625,11 +630,15 @@ chopstx_t chopstx_main;
 void
 chx_init (struct chx_thread *tp)
 {
+  chx_spin_init (&intr_lock);
   chx_prio_init ();
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.next = q_ready.prev = (struct chx_thread *)&q_ready;
+  chx_spin_init (&q_ready.lock);
   q_timer.next = q_timer.prev = (struct chx_thread *)&q_timer;
+  chx_spin_init (&q_timer.lock);
   q_join.next = q_join.prev = (struct chx_thread *)&q_join;
+  chx_spin_init (&q_join.lock);
   tp->next = tp->prev = tp;
   tp->mutex_list = NULL;
   tp->clp = NULL;
@@ -894,6 +903,7 @@ chopstx_usec_wait (uint32_t usec)
 void
 chopstx_mutex_init (chopstx_mutex_t *mutex)
 {
+  chx_spin_init (&mutex->lock);
   mutex->q.next = mutex->q.prev = (struct chx_thread *)mutex;
   mutex->list = NULL;
 }
@@ -1001,6 +1011,7 @@ chopstx_mutex_unlock (chopstx_mutex_t *mutex)
 void
 chopstx_cond_init (chopstx_cond_t *cond)
 {
+  chx_spin_init (&cond->lock);
   cond->q.next = cond->q.prev = (struct chx_thread *)cond;
 }
 

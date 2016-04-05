@@ -1,6 +1,10 @@
 2016-04-05  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (struct NVIC): Add volatile qualifier to members.
+	(chx_spin_init): New.
+	(chopstx_mutex_init, chopstx_cond_init): Call chx_spin_init.
+	(chx_init): Initialize the spinlocks for INTR_LOCK, Q_READY,
+	Q_TIMER, and Q_JOIN.
 
 2016-03-08  Niibe Yutaka  <gniibe@fsij.org>
 
