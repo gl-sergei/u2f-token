@@ -48,7 +48,6 @@
 #endif
 
 extern uint8_t __main_stack_end__;
-extern void svc (void);
 extern void preempt (void);
 extern void chx_timer_expired (void);
 extern void chx_handle_intr (void);
@@ -60,18 +59,7 @@ static void nmi (void)
 
 static void hard_fault (void)
 {
-#if defined(__ARM_ARCH_6M__)
-  register uint32_t primask;
-
-  asm ("mrs	%0, PRIMASK" : "=r" (primask));
-
-  if (primask)
-    asm volatile ("b	svc");
-  else
-    for (;;);
-#else
   for (;;);
-#endif
 }
 
 static void mem_manage (void)
@@ -180,7 +168,7 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   none,
   /* 0x20 */
   none, none, none,		/* reserved */
-  svc,				/* SVCall */
+  none,				/* SVCall */
   none,				/* Debug */
   none,				/* reserved */
   preempt,			/* PendSV */
