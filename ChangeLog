@@ -1,5 +1,23 @@
 2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (struct chx_pq): New struct for priority queue.
+	(struct chx_px): New struct for proxy.
+	(struct chx_thread): New member FLAG_IS_PROXY.
+	(ll_dequeue, ll_insert, ll_pop, ll_prio_push, ll_prio_enqueue)
+	Change API.
+	(THREAD_WAIT_POLL): New thread status.
+	(chx_ready_pop, chx_ready_push, chx_ready_enqueue): Type coercion.
+	(chx_timer_insert, chx_timer_dequeue, chx_timer_expired): Use
+	chx_pq.
+	(chx_handle_intr, chopstx_cancel): Handle THREAD_WAIT_POLL.
+	(chx_init): Type coercion.
+	(chx_exit): Handle proxy for join.
+	(chopstx_create): Initialize the member FLAG_IS_PROXY.
+	(chopstx_cond_signal) Handle proxy.
+	(chx_proxy_init, chopstx_poll): New.
+
+2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
+
 	* chopstx.h (struct chx_qh): New struct.
 
 	* chopstx.c (struct chx_queue): Use chx_qh.
