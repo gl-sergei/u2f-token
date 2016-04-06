@@ -1,5 +1,26 @@
 2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.h (struct chx_qh): New struct.
+
+	* chopstx.c (struct chx_queue): Use chx_qh.
+	(struct chx_thread): New member PARENT.
+	(ll_empty): Use chx_qh.
+	(ll_prio_push, ll_prio_enqueue): Set the member PARENT.
+	(chx_ready_pop, chx_ready_push, chx_ready_enqueue): Use the
+	member Q.
+	(chx_timer_insert): Return TP.
+	(chx_timer_dequeue, chx_timer_expired): Use the member Q.
+	(chx_init): Initialize change for Q_READY, Q_TIMER, Q_JOIN.
+	(chx_sched, preempt): Handle return value of chx_timer_insert.
+	(chx_exit, chopstx_mutex_init, chopstx_cond_init): Use the member Q.
+	(chx_mutex_unlock): Type coercion to CHX_THREAD.
+	(chopstx_create): Initialize PARENT field.
+	(chopstx_mutex_lock): Use the PARENT field.
+	(chopstx_join): Use ll_prio_enqueue, instead of ll_insert.
+	(chopstx_wakeup_usec_wait): Set REG_R0 on the stack.
+
+2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
+
 	* chopstx.c (struct chx_thread): Move tcontext field.
 	(chx_cpu_sched_lock, chx_cpu_sched_unlock): Use CPSID/CPSIE.
 	(chx_sched): Don't use SVC.  Return integer value.

@@ -26,6 +26,10 @@
  *
  */
 
+struct chx_qh {
+  struct chx_pq *next, *prev;
+};
+
 typedef uint32_t chopstx_t;
 typedef uint8_t chopstx_prio_t;
 
@@ -53,9 +57,7 @@ struct chx_spinlock {
 };
 
 typedef struct chx_mtx {
-  struct {
-    struct chx_thread *next, *prev;
-  } q;
+  struct chx_qh q;
   struct chx_spinlock lock;
   struct chx_thread *owner;
   struct chx_mtx *list;
@@ -69,9 +71,7 @@ void chopstx_mutex_lock (chopstx_mutex_t *mutex);
 void chopstx_mutex_unlock (chopstx_mutex_t *mutex);
 
 typedef struct chx_cond {
-  struct {
-    struct chx_thread *next, *prev;
-  } q;
+  struct chx_qh q;
   struct chx_spinlock lock;
 } chopstx_cond_t;
 
