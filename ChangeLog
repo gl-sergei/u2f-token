@@ -1,3 +1,11 @@
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* entry.c (vector_table): Since IDLE thread runs with PSP now, use
+	different value for MSP.
+
+	* chopstx.c (chx_sched): Push LR value to PC slot on stack, so
+	that it returns directly to caller.
+
 2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (struct chx_pq): New struct for priority queue.

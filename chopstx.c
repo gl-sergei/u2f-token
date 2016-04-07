@@ -720,26 +720,28 @@ chx_sched (uint32_t yield)
 
   /* Build stack data as if it were an exception entry.  */
   /*
-   * r0:  YIELD                 scratch
-   * r1:  .L_SCHED_RETURN       scratch
+   * r0:  0                     scratch
+   * r1:  0                     scratch
    * r2:  0                     scratch
-   * r3:  YIELD                 scratch
+   * r3:  0                     scratch
    * r12: 0                     scratch
-   * lr
-   * pc: .L_SCHED_RETURN+1
+   * lr   as-is
+   * pc:  return address (= lr)
    * psr: INITIAL_XPSR          scratch
    */
-  asm ("ldr	r1, =.L_SCHED_RETURN\n\t"
-       "add	r1, #1\n\t"	/* Thumb-mode */
-       "mov	r2, #128\n\t"
-       "lsl	r2, #17\n\t"
-       "push	{r1, r2}\n\t"
-       "mov	r2, #0\n\t"
-       "push	{r0, r2, lr}\n\t"
-       "push	{%0, r1, r2}"
+  asm ("mov	r1, lr\n\t"
+       "mov	r2, r1\n\t"
+       "mov	r3, #128\n\t"
+       "lsl	r3, #17\n\t"
+       "push	{r1, r2, r3}\n\t"
+       "mov	r1, #0\n\t"
+       "mov	r2, r1\n\t"
+       "mov	r3, r1\n\t"
+       "push	{r1, r2, r3}\n\t"
+       "push	{r1, r2}"
        : /* no output*/
        : "r" (yield)
-       : "r1", "r2", "memory");
+       : "r1", "r2", "r3", "memory");
 
   /* Save registers onto CHX_THREAD struct.  */
   asm ("mov	r1, r0\n\t"
@@ -863,9 +865,7 @@ chx_sched (uint32_t yield)
 		"mov	r12, r0\n\t"
 		"pop	{r0, r1, r2, r3}\n\t"
 		"add	sp, #12\n\t"
-		"pop	{pc}\n"
-	".L_SCHED_RETURN:\n\t"
-		"bx	lr"
+		"pop	{pc}"
 		: /* no output */
 		: "r" (tp)
 		: "memory");

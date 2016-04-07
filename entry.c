@@ -1,7 +1,8 @@
 /*
  * entry.c - Entry routine when reset and interrupt vectors.
  *
- * Copyright (C) 2013, 2014, 2015  Flying Stone Technology
+ * Copyright (C) 2013, 2014, 2015, 2016
+ *               Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * This file is a part of Chopstx, a thread library for embedded.
@@ -93,7 +94,8 @@ uint32_t vectors_in_ram[48];
  * This routine only changes PSP and not MSP.
  */
 STATIC_ENTRY __attribute__ ((naked,section(".text.startup.0")))
-void entry (void)
+void
+entry (void)
 {
   asm volatile ("bl	clock_init\n\t"
 		/* Clear BSS section.  */
@@ -157,7 +159,7 @@ void entry (void)
 typedef void (*handler)(void);
 
 handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
-  (handler)&__main_stack_end__,
+  (handler)(&__main_stack_end__ - 32),
   entry,
   nmi,		/* nmi */
   hard_fault,		/* hard fault */
