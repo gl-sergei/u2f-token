@@ -1,5 +1,12 @@
 2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chx_cpu_sched_lock, chx_cpu_sched_unlock): Use SVC
+	for Cortex-M3, because of ICI/IT of ESPR.
+	(chx_sched): Invoke svc for Cortex-M3.
+	(preempt, svc): Change back for Cortex-M3.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
 	* entry.c (vector_table): Since IDLE thread runs with PSP now, use
 	different value for MSP.
 

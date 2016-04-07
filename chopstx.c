@@ -53,19 +53,46 @@
 /*
  * Exception priority: lower has higher precedence.
  *
+ * Cortex-M3
+ * =====================================
+ * Prio 0x30: svc
+ * ---------------------
+ * Prio 0x40: thread temporarily inhibiting schedule for critical region
+ * ...
+ * Prio 0xb0: systick, external interrupt
+ * Prio 0xc0: pendsv
+ * =====================================
+ *
+ * Cortex-M0
+ * =====================================
  * Prio 0x00: thread temporarily inhibiting schedule for critical region
  * ...
  * Prio 0x40: systick, external interrupt
  * Prio 0x80: pendsv
  * Prio 0x80: svc
+ * =====================================
  */
 
+#define CPU_EXCEPTION_PRIORITY_CLEAR         0
+
+#if defined(__ARM_ARCH_6M__)
 #define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x00
 /* ... */
 #define CPU_EXCEPTION_PRIORITY_SYSTICK       CPU_EXCEPTION_PRIORITY_INTERRUPT
 #define CPU_EXCEPTION_PRIORITY_INTERRUPT     0x40
 #define CPU_EXCEPTION_PRIORITY_PENDSV        0x80
-#define CPU_EXCEPTION_PRIORITY_SVC           0x80
+#define CPU_EXCEPTION_PRIORITY_SVC           0x80 /* No use in this arch */
+#elif defined(__ARM_ARCH_7M__)
+#define CPU_EXCEPTION_PRIORITY_SVC           0x30
+
+#define CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED 0x40
+/* ... */
+#define CPU_EXCEPTION_PRIORITY_SYSTICK       CPU_EXCEPTION_PRIORITY_INTERRUPT
+#define CPU_EXCEPTION_PRIORITY_INTERRUPT     0xb0
+#define CPU_EXCEPTION_PRIORITY_PENDSV        0xc0
+#else
+#error "no support for this arch"
+#endif
 
 /*
  * Lower layer architecture specific functions.
@@ -314,14 +341,28 @@ static void
 chx_cpu_sched_lock (void)
 {
   if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    asm volatile ("cpsid	i" : : : "memory");
+    {
+#if defined(__ARM_ARCH_6M__)
+      asm volatile ("cpsid	i" : : : "memory");
+#else
+      register uint32_t tmp = CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED;
+      asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+#endif
+    }
 }
 
 static void
 chx_cpu_sched_unlock (void)
 {
   if (running->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    asm volatile ("cpsie	i" : : : "memory");
+    {
+#if defined(__ARM_ARCH_6M__)
+      asm volatile ("cpsie	i" : : : "memory");
+#else
+      register uint32_t tmp = CPU_EXCEPTION_PRIORITY_CLEAR;
+      asm volatile ("msr	BASEPRI, %0" : : "r" (tmp) : "memory");
+#endif
+    }
 }
 
 
@@ -708,14 +749,23 @@ chx_request_preemption (uint16_t prio)
  *   YIELD=1 (YIELD): Current RUNNING thread is active,
  *                    it is needed to be enqueued to READY queue.
  *
- * This should be AAPCS-compliant function entry, so we put "noinline"
- * attribute.  AAPCS: ARM Architecture Procedure Call Standard
+ * For Cortex-M0, this should be AAPCS-compliant function entry, so we
+ * put "noinline" attribute.
+ *
+ * 	AAPCS: ARM Architecture Procedure Call Standard
  *
  */
 static int __attribute__ ((naked, noinline))
 chx_sched (uint32_t yield)
 {
   register struct chx_thread *tp asm ("r0");
+
+#if defined(__ARM_ARCH_7M__)
+  asm volatile (
+	"svc	#0\n\t"
+	"bx	lr"
+	: "=r" (tp) : "0" (yield): "memory");
+#else
   register uint32_t arg_yield asm ("r1");
 
   /* Build stack data as if it were an exception entry.  */
@@ -765,7 +815,6 @@ chx_sched (uint32_t yield)
       if (tp->flag_sched_rr)
 	chx_timer_dequeue (tp);
       chx_ready_enqueue (tp);
-      running = NULL;
     }
 
   tp = chx_ready_pop ();
@@ -798,7 +847,6 @@ chx_sched (uint32_t yield)
 		/**/
 		"add	r0, #20\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
-#if defined(__ARM_ARCH_6M__)
 		"ldm	r0!, {r1, r2, r3}\n\t"
 		"mov	r8, r1\n\t"
 		"mov	r9, r2\n\t"
@@ -806,14 +854,6 @@ chx_sched (uint32_t yield)
 		"ldm	r0!, {r1, r2}\n\t"
 		"mov	r11, r1\n\t"
 		"mov	sp, r2\n\t"
-#else
-		"ldr	r8, [r0], #4\n\t"
-		"ldr	r9, [r0], #4\n\t"
-		"ldr	r10, [r0], #4\n\t"
-		"ldr	r11, [r0], #4\n\t"
-		"ldr	r1, [r0], #4\n\t"
-		"mov	sp, r1\n\t"
-#endif
 		"sub	r0, #45\n\t"
 		"ldrb	r1, [r0]\n\t" /* ->PRIO field.  */
 		"cmp	r1, #247\n\t"
@@ -866,11 +906,12 @@ chx_sched (uint32_t yield)
 		"pop	{r0, r1, r2, r3}\n\t"
 		"add	sp, #12\n\t"
 		"pop	{pc}"
-		: /* no output */
-		: "r" (tp)
+		: "=r" (tp)		/* Return value in R0 */
+		: "0" (tp)
 		: "memory");
+#endif
 
-  return 0;
+  return (uint32_t)tp;
 }
 
 
@@ -1724,13 +1765,19 @@ preempt (void)
   register struct chx_thread *tp asm ("r0");
   register struct chx_thread *cur asm ("r1");
 
-  asm volatile ("cpsid	i\n\t"
-		"ldr	r2, =running\n\t"
-		"ldr	r0, [r2]\n\t"
-		"mov	r1, r0"
-		: "=r" (tp), "=r" (cur)
-		: /* no input */
-		: "r2");
+  asm volatile (
+#if defined(__ARM_ARCH_6M__)
+	"cpsid	i\n\t"
+#else
+	"msr	BASEPRI, r0\n\t"
+#endif
+	"ldr	r2, =running\n\t"
+	"ldr	r0, [r2]\n\t"
+	"mov	r1, r0"
+	: "=r" (tp), "=r" (cur)
+	: /* no input */
+	: "r2");
+
   if (!cur)
     /* It's idle thread.  It's ok to clobber registers.  */
     ;
@@ -1785,73 +1832,130 @@ preempt (void)
       chx_spin_unlock (&q_timer.lock);
     }
 
-  asm volatile (/* Now, r0 points to the thread to be switched.  */
-		/* Put it to *running.  */
-		"ldr	r1, =running\n\t"
-		/* Update running.  */
-		"str	r0, [r1]\n\t"
+  asm volatile (
+    ".L_CONTEXT_SWITCH:\n\t"
+	/* Now, r0 points to the thread to be switched.  */
+	/* Put it to *running.  */
+	"ldr	r1, =running\n\t"
+	/* Update running.  */
+	"str	r0, [r1]\n\t"
 #if defined(__ARM_ARCH_6M__)
-		"cmp	r0, #0\n\t"
-		"beq	1f\n\t"
+	"cmp	r0, #0\n\t"
+	"beq	1f\n\t"
 #else
-		"cbz	r0, 1f\n\t"
+	"cbz	r0, 1f\n\t"
 #endif
-		/**/
-		"add	r0, #20\n\t"
-		"ldm	r0!, {r4, r5, r6, r7}\n\t"
+	/**/
+	"add	r0, #20\n\t"
+	"ldm	r0!, {r4, r5, r6, r7}\n\t"
 #if defined(__ARM_ARCH_6M__)
-		"ldm	r0!, {r1, r2, r3}\n\t"
-		"mov	r8, r1\n\t"
-		"mov	r9, r2\n\t"
-		"mov	r10, r3\n\t"
-		"ldm	r0!, {r1, r2}\n\t"
-		"mov	r11, r1\n\t"
-		"msr	PSP, r2\n\t"
+	"ldm	r0!, {r1, r2, r3}\n\t"
+	"mov	r8, r1\n\t"
+	"mov	r9, r2\n\t"
+	"mov	r10, r3\n\t"
+	"ldm	r0!, {r1, r2}\n\t"
+	"mov	r11, r1\n\t"
+	"msr	PSP, r2\n\t"
 #else
-		"ldr	r8, [r0], #4\n\t"
-		"ldr	r9, [r0], #4\n\t"
-		"ldr	r10, [r0], #4\n\t"
-		"ldr	r11, [r0], #4\n\t"
-		"ldr	r1, [r0], #4\n\t"
-		"msr	PSP, r1\n\t"
+	"ldr	r8, [r0], #4\n\t"
+	"ldr	r9, [r0], #4\n\t"
+	"ldr	r10, [r0], #4\n\t"
+	"ldr	r11, [r0], #4\n\t"
+	"ldr	r1, [r0], #4\n\t"
+	"msr	PSP, r1\n\t"
 #endif
-		"sub	r0, #45\n\t"
-		"ldrb	r1, [r0]\n\t" /* ->PRIO field.  */
-		"cmp	r1, #247\n\t"
-		"bhi	0f\n\t"	/* Leave interrupt disabled if >= 248 */
-		/**/
-		/* Unmask interrupts.  */
-		"cpsie	i\n"
-		/**/
-	"0:\n\t"
-		"mov	r0, #0\n\t"
-		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
-		"bx	r0\n"
-	"1:\n\t"
-		/* Spawn an IDLE thread.  */
-		"ldr	r0, =__main_stack_end__\n\t"
-		"msr	PSP, r0\n\t"
-		"mov	r0, #0\n\t"
-		"mov	r1, #0\n\t"
-		"ldr	r2, =idle\n\t"	     /* PC = idle */
+	"sub	r0, #45\n\t"
+	"ldrb	r1, [r0]\n\t" /* ->PRIO field.  */
+	"mov	r0, #0\n\t"
+	"cmp	r1, #247\n\t"
+	"bhi	0f\n\t"	/* Leave interrupt disabled if >= 248 */
+	/**/
+	/* Unmask interrupts.  */
 #if defined(__ARM_ARCH_6M__)
-		"mov	r3, #0x010\n\t"
-		"lsl	r3, r3, #20\n\t" /* xPSR = T-flag set (Thumb) */
+	"cpsie	i\n"
 #else
-		"mov	r3, #0x01000000\n\t" /* xPSR = T-flag set (Thumb) */
+	"msr	BASEPRI, r0\n"
 #endif
-		"push	{r0, r1, r2, r3}\n\t"
-		"mov	r0, #0\n\t"
-		"mov	r1, #0\n\t"
-		"mov	r2, #0\n\t"
-		"mov	r3, #0\n\t"
-		"push	{r0, r1, r2, r3}\n\t"
-		/**/
-		/* Unmask interrupts.  */
-		"cpsie	i\n\t"
-		/**/
-		"mov	r0, #0\n\t"
-		"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
-		"bx	r0"
-		: /* no output */ : "r" (tp) : "memory");
+	/**/
+    "0:\n\t"
+	"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
+	"bx	r0\n"
+    "1:\n\t"
+	/* Spawn an IDLE thread.  */
+	"ldr	r0, =__main_stack_end__-32\n\t"
+	"msr	PSP, r0\n\t"
+	"mov	r1, #0\n\t"
+	"mov	r2, #0\n\t"
+	"mov	r3, #0\n\t"
+	"stm	r0!, {r1, r2, r3}\n\t"
+	"stm	r0!, {r1, r2, r3}\n\t"
+	"ldr	r1, =idle\n\t"	     /* PC = idle */
+	"mov	r2, #0x010\n\t"
+	"lsl	r2, r2, #20\n\t" /* xPSR = T-flag set (Thumb) */
+	"stm	r0!, {r1, r2}\n\t"
+	/**/
+	/* Unmask interrupts.  */
+	"mov	r0, #0\n\t"
+#if defined(__ARM_ARCH_6M__)
+	"cpsie	i\n\t"
+#else
+	"msr	BASEPRI, r0\n"
+#endif
+	/**/
+	"sub	r0, #3\n\t" /* EXC_RETURN to a thread with PSP */
+	"bx	r0"
+	: /* no output */ : "r" (tp) : "memory");
 }
+
+#if defined(__ARM_ARCH_7M__)
+/*
+ * System call: switch to another thread.
+ * There are two cases:
+ *   ORIG_R0=0 (SLEEP): Current RUNNING thread is already connected to
+ *                      something (mutex, cond, intr, etc.)
+ *   ORIG_R0=1 (YIELD): Current RUNNING thread is active,
+ *                      it is needed to be enqueued to READY queue.
+ */
+void __attribute__ ((naked))
+svc (void)
+{
+  register struct chx_thread *tp asm ("r0");
+  register uint32_t orig_r0 asm ("r1");
+
+  asm ("ldr	r1, =running\n\t"
+       "ldr	r0, [r1]\n\t"
+       "add	r1, r0, #20\n\t"
+       /* Save registers onto CHX_THREAD struct.  */
+       "stm	r1!, {r4, r5, r6, r7}\n\t"
+       "mov	r2, r8\n\t"
+       "mov	r3, r9\n\t"
+       "mov	r4, r10\n\t"
+       "mov	r5, r11\n\t"
+       "mrs	r6, PSP\n\t" /* r13(=SP) in user space.  */
+       "stm	r1!, {r2, r3, r4, r5, r6}\n\t"
+       "ldr	r1, [r6]"
+       : "=r" (tp), "=r" (orig_r0)
+       : /* no input */
+       : "r2", "r3", "r4", "r5", "r6", "memory");
+
+  if (orig_r0)			/* yield */
+    {
+      if (tp->flag_sched_rr)
+	chx_timer_dequeue (tp);
+      chx_ready_enqueue (tp);
+      running = NULL;
+    }
+
+  tp = chx_ready_pop ();
+  if (tp && tp->flag_sched_rr)
+    {
+      chx_spin_lock (&q_timer.lock);
+      chx_timer_insert (tp, PREEMPTION_USEC);
+      chx_spin_unlock (&q_timer.lock);
+    }
+
+  asm volatile (
+	"b	.L_CONTEXT_SWITCH"
+	: /* no output */ : "r" (tp) : "memory");
+}
+#endif

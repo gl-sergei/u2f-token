@@ -49,6 +49,9 @@
 #endif
 
 extern uint8_t __main_stack_end__;
+#if defined(__ARM_ARCH_7M__)
+extern void svc (void);
+#endif
 extern void preempt (void);
 extern void chx_timer_expired (void);
 extern void chx_handle_intr (void);
@@ -170,7 +173,11 @@ handler vector_table[] __attribute__ ((section(".startup.vectors"))) = {
   none,
   /* 0x20 */
   none, none, none,		/* reserved */
+#if defined(__ARM_ARCH_6M__)
   none,				/* SVCall */
+#elif defined(__ARM_ARCH_7M__)
+  svc,				/* SVCall */
+#endif  
   none,				/* Debug */
   none,				/* reserved */
   preempt,			/* PendSV */
