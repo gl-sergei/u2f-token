@@ -1,5 +1,16 @@
 2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/usb-cdc.c: Update.
+
+	* example-cdc/usb_stm32f103.c (usb_handle_transfer): Don't use
+	weak symbols for callbacks, but use explicit callbacks of
+	usb_cb_tx_done and usb_cb_rx_ready.
+
+	* example-cdc/usb_lld.h (usb_cb_tx_done, usb_cb_rx_ready): New
+	callbacks.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
 	* chopstx.c (chx_cpu_sched_lock, chx_cpu_sched_unlock): Use SVC
 	for Cortex-M3, because of ICI/IT of ESPR.
 	(chx_sched): Invoke svc for Cortex-M3.

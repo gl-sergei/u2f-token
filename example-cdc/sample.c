@@ -129,6 +129,7 @@ main (int argc, const char *argv[])
 {
   struct stream *st;
   uint8_t count;
+  extern uint32_t bDeviceState;
 
   (void)argc;
   (void)argv;
@@ -153,17 +154,25 @@ main (int argc, const char *argv[])
   chopstx_cond_signal (&cnd1);
   chopstx_mutex_unlock (&mtx);
 
-  count= 0;
+  u = 1;
+  while (bDeviceState != CONFIGURED)
+    chopstx_usec_wait (500*1000);
+
+  count = 0;
   while (1)
     {
       uint8_t s[64];
-      u = 1;
 
       if (stream_wait_connection (st) < 0)
 	{
 	  chopstx_usec_wait (1000*1000);
 	  continue;
 	}
+
+      chopstx_usec_wait (500*1000);
+
+      /* Send ZLP at the beginning.  */
+      stream_send (st, s, 0);
 
       memcpy (s, "xx: Hello, World with Chopstx!\r\n\000", 32);
       s[0] = hexchar (count >> 4);
@@ -180,8 +189,11 @@ main (int argc, const char *argv[])
 	  if (size < 0)
 	    break;
 
-	  if (stream_send (st, s, size) < 0)
-	    break;
+	  if (size >= 0)
+	    {
+	      if (stream_send (st, s, size) < 0)
+		break;
+	    }
 
 	  u ^= 1;
 	}

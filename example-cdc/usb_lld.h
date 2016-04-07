@@ -63,6 +63,8 @@ int usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
 int usb_cb_handle_event (uint8_t event_type, uint16_t value);
 void usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no,
 			       struct req_args *arg);
+void usb_cb_tx_done (uint8_t ep_num);
+void usb_cb_rx_ready (uint8_t ep_num);
 
 enum {
   USB_EVENT_ADDRESS,

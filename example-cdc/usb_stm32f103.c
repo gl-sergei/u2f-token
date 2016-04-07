@@ -843,27 +843,6 @@ static void handle_out0 (void)
     dev_p->state = STALLED;
 }
 
-static void nop_proc (void)
-{
-}
-
-#define WEAK __attribute__ ((weak, alias ("nop_proc")))
-void WEAK EP1_IN_Callback (void);
-void WEAK EP2_IN_Callback (void);
-void WEAK EP3_IN_Callback (void);
-void WEAK EP4_IN_Callback (void);
-void WEAK EP5_IN_Callback (void);
-void WEAK EP6_IN_Callback (void);
-void WEAK EP7_IN_Callback (void);
-
-void WEAK EP1_OUT_Callback (void);
-void WEAK EP2_OUT_Callback (void);
-void WEAK EP3_OUT_Callback (void);
-void WEAK EP4_OUT_Callback (void);
-void WEAK EP5_OUT_Callback (void);
-void WEAK EP6_OUT_Callback (void);
-void WEAK EP7_OUT_Callback (void);
-
 static void
 usb_handle_transfer (uint16_t istr_value)
 {
@@ -901,31 +880,13 @@ usb_handle_transfer (uint16_t istr_value)
       if ((ep_value & EP_CTR_RX))
 	{
 	  st103_ep_clear_ctr_rx (ep_index);
-	  switch ((ep_index - 1))
-	    {
-	    case 0: EP1_OUT_Callback ();  break;
-	    case 1: EP2_OUT_Callback ();  break;
-	    case 2: EP3_OUT_Callback ();  break;
-	    case 3: EP4_OUT_Callback ();  break;
-	    case 4: EP5_OUT_Callback ();  break;
-	    case 5: EP6_OUT_Callback ();  break;
-	    case 6: EP7_OUT_Callback ();  break;
-	    }
+	  usb_cb_rx_ready (ep_index);
 	}
 
       if ((ep_value & EP_CTR_TX))
 	{
 	  st103_ep_clear_ctr_tx (ep_index);
-	  switch ((ep_index - 1))
-	    {
-	    case 0: EP1_IN_Callback ();  break;
-	    case 1: EP2_IN_Callback ();  break;
-	    case 2: EP3_IN_Callback ();  break;
-	    case 3: EP4_IN_Callback ();  break;
-	    case 4: EP5_IN_Callback ();  break;
-	    case 5: EP6_IN_Callback ();  break;
-	    case 6: EP7_IN_Callback ();  break;
-	    }
+	  usb_cb_tx_done (ep_index);
 	}
     }
 }
