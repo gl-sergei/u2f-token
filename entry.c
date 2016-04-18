@@ -38,7 +38,11 @@
 #undef STM32F10X_MD		/* Prepare for high density device, too.  */
 #else
 #include "board.h"
-#include "clk_gpio_init.c"
+#if defined (MCU_KINETIS_L)
+#include "clk_gpio_init-kl.c"
+#else
+#include "clk_gpio_init-stm32.c"
+#endif
 #endif
 
 

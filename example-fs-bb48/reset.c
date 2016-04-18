@@ -1,7 +1,7 @@
 /*
- * sys.c - No system routines, but only RESET handler for STM32F030.
+ * sys.c - No system routines, but only RESET handler for MKL27Z256.
  *
- * Copyright (C) 2015 Flying Stone Technology
+ * Copyright (C) 2016 Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * Copying and distribution of this file, with or without modification,
@@ -70,7 +70,7 @@ typedef void (*handler)(void);
 extern uint8_t __main_stack_end__;
 
 handler vector[] __attribute__ ((section(".vectors"))) = {
-  (handler)&__main_stack_end__,
+  (handler)(&__main_stack_end__ - 32),
   reset,
   nmi,		/* nmi */
   hard_fault,		/* hard fault */
@@ -87,24 +87,28 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
   preempt,			/* PendSV */
   chx_timer_expired,		/* SysTick */
   /* 0x40 */
-  chx_handle_intr /* WWDG */,     chx_handle_intr /* PVD */,
-  chx_handle_intr /* TAMPER */,   chx_handle_intr /* RTC */,
-  chx_handle_intr /* FLASH */,    chx_handle_intr /* RCC */,
-  chx_handle_intr /* EXTI0 */,    chx_handle_intr /* EXTI1 */,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   /* 0x60 */
-  chx_handle_intr /* EXTI2 */,    chx_handle_intr /* EXTI3 */,
-  chx_handle_intr /* EXTI4 */,    chx_handle_intr /* DMA1 CH1 */,
-  chx_handle_intr /* DMA1 CH2 */, chx_handle_intr /* DMA1 CH3 */,
-  chx_handle_intr /* DMA1 CH4 */, chx_handle_intr /* DMA1 CH5 */,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   /* 0x80 */
-  chx_handle_intr /* DMA1 CH6 */, chx_handle_intr /* DMA1 CH7 */,
-  chx_handle_intr /* ADC1_2 */,   chx_handle_intr /* USB HP */,
-  /* 0x90 */
-  chx_handle_intr /* USB LP */,   chx_handle_intr /* CAN */, 
-  /* ... and more.  EXT9_5, TIMx, I2C, SPI, USART, EXT15_10 */
-  chx_handle_intr,                chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
+  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   /* 0xA0 */
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   chx_handle_intr,  chx_handle_intr,  chx_handle_intr,  chx_handle_intr,
   /* 0xc0 */
+};
+
+uint32_t flash_config[] __attribute__ ((section(".flash_config"))) = {
+  0xffffffff, 0xffffffff, /* Backdoor comparison key. */
+  0xffffffff, /* Protection bytes */
+  0xffff3ffe, /* FSEC=0xfe, FOPT=0x3f */
+  /* FOPT=0x3f:
+   * BOOTSRC_SEL=00: Boot from flash
+   */
+  /* FSEC=0xfe:
+   * unsecure
+   */
 };

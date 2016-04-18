@@ -1,3 +1,14 @@
+2016-04-18  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48: New directory for FS-BB48.
+
+	* clk_gpio_init-kl.c: New.
+	* clk_gpio_init-stm32.c: Rename from clk_gpio_init.c.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/sys.c: Update for non-SVC Chopstx.
+
 2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/usb-cdc.c: Update.

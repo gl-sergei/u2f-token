@@ -1,6 +1,23 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.11
+
+  Released 2016-0X-XX
+
+** FS-BB48: Kinetis L MCU
+Support for FS-BB48 board with Kinetis L MCU is added.
+
+** No HardFault at context switch on Cortex-M0
+By its design, Chopstx does context switch hodling scheduler lock.
+This is implemented with the feature of BASEPRI on Cortex-M3.  Because
+Cortex-M0 doesn't have support of BASEPRI, the context switch (before
+version 0.11) always caused HardFault exception.  Since Cortex-M0
+doesn't have complex exception mechism of ICI/IT (which is supported
+on Cortex-M3), it is actually possible to implement the context switch
+in user mode.  This is done.
+
+
 * Major changes in Chopstx 0.10
 
   Released 2015-09-15

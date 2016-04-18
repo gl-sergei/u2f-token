@@ -1,5 +1,5 @@
 /*
- * clk_gpio_init.c - Clock and GPIO initialization.
+ * clk_gpio_init-stm32.c - Clock and GPIO initialization for STM32.
  *
  * Copyright (C) 2015  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
