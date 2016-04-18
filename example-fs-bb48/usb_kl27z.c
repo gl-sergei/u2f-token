@@ -863,8 +863,8 @@ handle_transaction (uint8_t stat)
       if ((stat & 0x08) == 0)
 	{
 	  dev_p->recv++;
-	  usb_cb_rx_ready (ep_num);
 	  ep[ep_num].rx_odd ^= 1;
+	  usb_cb_rx_ready (ep_num);
 	}
       else
 	{

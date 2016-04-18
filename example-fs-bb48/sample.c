@@ -199,7 +199,7 @@ main (int argc, const char *argv[])
       /* Send ZLP at the beginning.  */
       stream_send (st, s, 0);
 
-      memcpy (s, "xx: Hello, World with Chopstx!\r\n\000", 32);
+      memcpy (s, "xx: Hello, World with Chopstx!\r\n", 32);
       s[0] = hexchar (count >> 4);
       s[1] = hexchar (count & 0x0f);
       count++;
@@ -209,14 +209,19 @@ main (int argc, const char *argv[])
 
       while (1)
 	{
-	  int size = stream_recv (st, s);
+	  int size = stream_recv (st, s + 4);
 
 	  if (size < 0)
 	    break;
 
 	  if (size >= 0)
 	    {
-	      if (stream_send (st, s, size) < 0)
+	      s[0] = hexchar (size >> 4);
+	      s[1] = hexchar (size & 0x0f);
+
+	      s[size + 4] = '\r';
+	      s[size + 5] = '\n';
+	      if (stream_send (st, s, size + 6) < 0)
 		break;
 	    }
 

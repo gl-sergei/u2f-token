@@ -9,8 +9,10 @@
 struct stream {
   chopstx_mutex_t mtx;
   chopstx_cond_t cnd;
+  int sending;
+  unsigned int recv_len;
+  uint8_t recv_buf[BUFSIZE];
   uint8_t buf_send[BUFSIZE];	/* Not yet used. */
-  uint8_t buf_recv[BUFSIZE];	/* Not yet used. */
   uint8_t cnt_send_head;	/* Not yet used. */
   uint8_t cnt_send_tail;	/* Not yet used. */
   uint8_t cnt_recv_head;	/* Not yet used. */
