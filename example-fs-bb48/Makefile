@@ -6,7 +6,7 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sample.c reset.c usb_kl27z.c usb-cdc.c
+CSRC = sample.c reset.c usb_kl27z.c usb-cdc.c crc32.c
 
 ###################################
 CROSS = arm-none-eabi-

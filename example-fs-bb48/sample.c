@@ -7,6 +7,8 @@
 #include "stream.h"
 #include "board.h"
 
+#include "crc32.h"
+
 struct GPIO {
   volatile uint32_t PDOR; /* Port Data Output Register    */
   volatile uint32_t PSOR; /* Port Set Output Register     */
@@ -216,12 +218,27 @@ main (int argc, const char *argv[])
 
 	  if (size >= 0)
 	    {
+	      int i;
+	      unsigned int value;
+
+	      crc32_init ();
 	      s[0] = hexchar (size >> 4);
 	      s[1] = hexchar (size & 0x0f);
 
-	      s[size + 4] = '\r';
-	      s[size + 5] = '\n';
-	      if (stream_send (st, s, size + 6) < 0)
+	      for (i = 0; i < size; i++)
+		crc32_u8 (s + 4 + i);
+	      value = crc32_value () ^ 0xffffffff;
+	      s[4] = hexchar (value >> 28);
+	      s[5] = hexchar (value >> 24);
+	      s[6] = hexchar (value >> 20);
+	      s[7] = hexchar (value >> 16);
+	      s[8] = hexchar (value >> 12);
+	      s[9] = hexchar (value >> 8);
+	      s[10] = hexchar (value >> 4);
+	      s[11] = hexchar (value);
+	      s[12] = '\r';
+	      s[13] = '\n';
+	      if (stream_send (st, s, 14) < 0)
 		break;
 	    }
 

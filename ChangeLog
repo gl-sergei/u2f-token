@@ -1,3 +1,8 @@
+2016-04-19  gniibe  <gniibe@fsij.org>
+
+	* example-fs-bb48/sample.c (main): Change the example to display
+	CRC32 value from input line.
+
 2016-04-18  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-fs-bb48: New directory for FS-BB48.
