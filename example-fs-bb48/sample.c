@@ -143,6 +143,7 @@ const size_t __stacksize_intr = (size_t)&__process3_stack_size__;
 
 static char hexchar (uint8_t x)
 {
+  x &= 0x0f;
   if (x <= 0x09)
     return '0' + x;
   else if (x <= 0x0f)
@@ -226,7 +227,7 @@ main (int argc, const char *argv[])
 	      s[1] = hexchar (size & 0x0f);
 
 	      for (i = 0; i < size; i++)
-		crc32_u8 (s + 4 + i);
+		crc32_u8 (s[4 + i]);
 	      value = crc32_value () ^ 0xffffffff;
 	      s[4] = hexchar (value >> 28);
 	      s[5] = hexchar (value >> 24);
