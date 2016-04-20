@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include "board.h"
 
-#include "clk_gpio_init.c"
+#include "clk_gpio_init-stm32.c"
 
 #define CORTEX_PRIORITY_BITS    4
 #define CORTEX_PRIORITY_MASK(n)  ((n) << (8 - CORTEX_PRIORITY_BITS))

@@ -355,7 +355,7 @@ void usb_lld_init (uint8_t feature)
   dev_p->state = IN_DATA;
 
   usb_lld_set_configuration (0);
-  usb_lld_set_feature (feature);
+  dev_p->current_feature = feature;
 
   /* Reset USB */
   st103_set_cntr (CNTR_FRES);
@@ -891,8 +891,10 @@ usb_handle_transfer (uint16_t istr_value)
     }
 }
 
-void usb_lld_reset (void)
+void usb_lld_reset (uint8_t feature)
 {
+  usb_lld_set_configuration (0);
+  dev_p->current_feature = feature;
   st103_set_btable ();
   st103_set_daddr (0);
 }
@@ -997,11 +999,6 @@ void usb_lld_set_configuration (uint8_t config)
 uint8_t usb_lld_current_configuration (void)
 {
   return dev_p->current_configuration;
-}
-
-void usb_lld_set_feature (uint8_t feature)
-{
-  dev_p->current_feature = feature;
 }
 
 void usb_lld_set_data_to_recv (void *p, size_t len)

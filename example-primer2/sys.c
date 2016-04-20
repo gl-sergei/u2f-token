@@ -27,7 +27,7 @@
         (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPDRST | RCC_APB2RSTR_IOPERST \
 	 | RCC_APB2RSTR_IOPCRST | RCC_APB2RSTR_IOPBRST)
 
-#include "clk_gpio_init.c"
+#include "clk_gpio_init-stm32.c"
 
 static struct GPIO *const GPIO_OTHER1 = ((struct GPIO *const) GPIOC_BASE);
 static struct GPIO *const GPIO_OTHER2 = ((struct GPIO *const) GPIOB_BASE);

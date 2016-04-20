@@ -1,4 +1,16 @@
-2016-04-19  gniibe  <gniibe@fsij.org>
+2016-04-20  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb_stm32f103.c (usb_lld_reset): Supply FEATURE
+	argument.  Call usb_lld_set_configuration internally and set
+	FEATURE.
+	(usb_lld_set_feature): Remove.
+	* example-cdc/usb-cdc.c (usb_cb_device_reset): Update with new
+	API.
+
+	* example-cdc/sys.c: Include clk_gpio_init-stm32.c.
+	* example-led/sys.c, example-primer2/sys.c: Ditto.
+
+2016-04-19  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-fs-bb48/sample.c (main): Change the example to display
 	CRC32 value from input line.
