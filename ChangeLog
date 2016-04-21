@@ -1,3 +1,15 @@
+2016-04-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_snooze): New.
+	(chopstx_cond_hook, chopstx_cond_unhook): New.
+	(chopstx_cond_signal, chopstx_cond_broadcast): Fix for poll.
+	(chx_proxy_init): Initialize with RUNNING.
+	(chopstx_poll): Fix with chx_sleep.
+
+	* example-fs-bb48/sample.c (main): Update with chopstx_poll.
+	* example-fs-bb48/usb-cdc.c (stream_recv): Fix the loop clear
+	FLAG_RECV_AVAIL only after we process it.
+
 2016-04-20  Niibe Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/usb_stm32f103.c (usb_lld_reset): Supply FEATURE

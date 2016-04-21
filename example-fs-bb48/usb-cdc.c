@@ -594,14 +594,13 @@ stream_recv (struct stream *st, uint8_t *buf)
     r = -1;
   else
     {
-      stream.flags &= ~FLAG_RECV_AVAIL;
-      do
+      while (1)
 	{
-	  chopstx_cond_wait (&st->cnd, &st->mtx);
 	  if ((stream.flags & FLAG_RECV_AVAIL))
 	    {
 	      r = stream.recv_len;
 	      memcpy (buf, stream.recv_buf, r);
+	      stream.flags &= ~FLAG_RECV_AVAIL;
 	      break;
 	    }
 	  else if ((stream.flags & FLAG_CONNECTED) == 0)
@@ -609,8 +608,8 @@ stream_recv (struct stream *st, uint8_t *buf)
 	      r = -1;
 	      break;
 	    }
+	  chopstx_cond_wait (&st->cnd, &st->mtx);
 	}
-      while (1);
     }
   chopstx_mutex_unlock (&st->mtx);
 

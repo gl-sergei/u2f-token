@@ -140,11 +140,15 @@ void chopstx_wakeup_usec_wait (chopstx_t thd);
 /* Proxy for the thread.  */
 typedef struct chx_px chopstx_px_t;
 
-/* Just like chopstx_cond_wait.  Not to block, but to register.  */
-void chopstx_cond_hook (chopstx_px_t *px,
-			chopstx_cond_t *cond, chopstx_mutex_t *mutex);
-/* Like chopstx_join.  Not to block, but to register.  */ 
+/* Like chopstx_cond_wait.  Not to wait, but to register for notification.  */
+void chopstx_cond_hook (chopstx_px_t *px, chopstx_cond_t *cond,
+			chopstx_mutex_t *mutex, int (*func) (void *),
+			void *arg);
+void chopstx_cond_unhook (chopstx_px_t *px, chopstx_cond_t *cond);
+
+/* Like chopstx_join.  Not to wait for the termination, but to register.  */ 
 void chopstx_join_hook (chopstx_px_t *px, chopstx_t thd);
+void chopstx_join_unhook (chopstx_px_t *px, chopstx_t thd);
 
 typedef void (*chopstx_poll_fnc) (int reg_or_unreg, chopstx_px_t *px);
 int chopstx_poll (uint32_t *usec_p, int n, ...);

@@ -938,7 +938,7 @@ chx_exit (void *retval)
 	      {
 		struct chx_px *px = (struct chx_px *)p;
 
-		px->counter_p++;
+		(*px->counter_p)++;
 		tp = px->master;
 		if (tp->state == THREAD_WAIT_POLL)
 		  {
@@ -1070,6 +1070,44 @@ chopstx_create (uint32_t flags_and_prio,
   return (chopstx_t)tp;
 }
 
+/*
+ * Internal timer uses SYSTICK and it has rather smaller upper limit.
+ * Besides, we should check cancel condition of the thread
+ * periodically.  Thus, we don't let the thread sleep too long, but
+ * let it loops.
+ *
+ * 200ms is the upper limit.
+ *
+ * The caller should make a loop with chx_snooze.
+ */
+#define MAX_USEC_FOR_TIMER (200*1000)
+static int
+chx_snooze (uint32_t state, uint32_t *usec_p)
+{
+  uint32_t usec = *usec_p;
+  uint32_t usec0;
+  int r;
+
+  if (usec == 0)
+    {
+      chx_cpu_sched_unlock ();
+      return -1;
+    }
+
+  usec0 = (usec > MAX_USEC_FOR_TIMER) ? MAX_USEC_FOR_TIMER: usec;
+  if (running->flag_sched_rr)
+    chx_timer_dequeue (running);
+
+  chx_spin_lock (&q_timer.lock);
+  running->state = state;
+  chx_timer_insert (running, usec0);
+  chx_spin_unlock (&q_timer.lock);
+  r = chx_sched (CHX_SLEEP);
+  if (r >= 0)
+    *usec_p -= usec0;
+
+  return r;
+}
 
 /**
  * chopstx_usec_wait_var - Sleep for micro seconds (specified by variable)
@@ -1082,31 +1120,14 @@ void
 chopstx_usec_wait_var (uint32_t *var)
 {
   int r = 0;
-  uint32_t *usec_p = var;
-  uint32_t usec;
-  uint32_t usec0 = 0;
 
-  while (1)
+  do
     {
       chopstx_testcancel ();
       chx_cpu_sched_lock ();
-      if (r < 0)		/* awakened */
-	break;
-      *usec_p -= usec0;
-      usec = *usec_p;
-      if (usec == 0)
-	break;
-      usec0 = (usec > 200*1000) ? 200*1000: usec;
-      if (running->flag_sched_rr)
-	chx_timer_dequeue (running);
-      chx_spin_lock (&q_timer.lock);
-      running->state = THREAD_WAIT_TIME;
-      chx_timer_insert (running, usec0);
-      chx_spin_unlock (&q_timer.lock);
-      r = chx_sched (CHX_SLEEP);
+      r = chx_snooze (THREAD_WAIT_TIME, var);
     }
-
-  chx_cpu_sched_unlock ();
+  while (r == 0);
 }
 
 
@@ -1277,6 +1298,34 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
     chopstx_mutex_lock (mutex);
 }
 
+static int
+chx_wakeup_from_cond_wait (struct chx_thread *tp)
+{
+  int yield = 0;
+
+  if (tp->flag_is_proxy)
+    {
+      struct chx_px *px = (struct chx_px *)tp;
+
+      (*px->counter_p)++;
+      tp = px->master;
+      if (tp->state == THREAD_WAIT_POLL)
+	{
+	  chx_timer_dequeue (tp);
+	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
+	  goto wakeup;
+	}
+    }
+  else
+    {
+    wakeup:
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
+	yield = 1;
+    }
+
+  return yield;
+}
 
 /**
  * chopstx_cond_signal - Wake up a thread waiting on the condition variable
@@ -1294,27 +1343,7 @@ chopstx_cond_signal (chopstx_cond_t *cond)
   chx_spin_lock (&cond->lock);
   tp = (struct chx_thread *)ll_pop (&cond->q);
   if (tp)
-    {
-      if (tp->flag_is_proxy)
-	{
-	  struct chx_px *px = (struct chx_px *)tp;
-
-	  px->counter_p++;
-	  tp = px->master;
-	  if (tp->state == THREAD_WAIT_POLL)
-	    {
-	      chx_timer_dequeue (tp);
-	      goto wakeup;
-	    }
-	}
-      else
-	{
-	wakeup:
-	  chx_ready_enqueue (tp);
-	  if (tp->prio > running->prio)
-	    yield = 1;
-	}
-    }
+    yield = chx_wakeup_from_cond_wait (tp);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);
@@ -1338,16 +1367,68 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
   chx_cpu_sched_lock ();
   chx_spin_lock (&cond->lock);
   while ((tp = (struct chx_thread *)ll_pop (&cond->q)))
-    {
-      chx_ready_enqueue (tp);
-      if (tp->prio > running->prio)
-	yield = 1;
-    }
+    yield |= chx_wakeup_from_cond_wait (tp);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
+}
+
+
+/**
+ * chopstx_cond_hook - Register a proxy to wait on the confition variable
+ * @px: Proxy to a thread
+ * @cond: Condition Variable
+ * @mutex: Associated mutex
+ * @func: Function to evaluate the condition
+ * @arg: Argument to the @func
+ *
+ * If @func with @arg returns 0, register @px to wait for @cond with @mutex.
+ */
+void
+chopstx_cond_hook (chopstx_px_t *px, chopstx_cond_t *cond,
+		   chopstx_mutex_t *mutex, int (*func) (void *), void *arg)
+{
+  chopstx_testcancel ();
+
+  if (mutex)
+    chopstx_mutex_lock (mutex);
+
+  if ((*func) (arg) != 0)
+    (*px->counter_p)++;
+  else
+    { /* Condition doesn't met.
+       * Register the proxy to wait for the condition.
+       */
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&cond->lock);
+      ll_prio_enqueue ((struct chx_pq *)px, &cond->q);
+      chx_spin_unlock (&cond->lock);
+      chx_cpu_sched_unlock ();
+    }
+
+  if (mutex)
+    chopstx_mutex_unlock (mutex);
+}
+
+/**
+ * chopstx_cond_unhook - de-register a proxy to wait on the confition variable
+ * @px: Proxy to a thread
+ * @cond: Condition Variable
+
+ * If @px is on @cond, dequeue it from it.
+ */
+void
+chopstx_cond_unhook (chopstx_px_t *px, chopstx_cond_t *cond)
+{
+  chx_cpu_sched_lock ();
+  if (px->parent == &cond->q)
+    {
+      ll_dequeue ((struct chx_pq *)px);
+      px->parent = NULL;
+    }
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1698,9 +1779,10 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
 {
   px->next = px->prev = (struct chx_pq *)px;
   px->flag_is_proxy = 1;
-  px->prio = px->v = 0;
+  px->prio = running->prio;
   px->parent = NULL;
-  px->master = NULL;
+  px->v = 0;
+  px->master = running;
   px->counter_p = cp;
 }
 
@@ -1729,27 +1811,28 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
 
   chx_cpu_sched_lock ();
   if (counter)
-    {
-      chx_cpu_sched_unlock ();
-      goto wakeup;
-    }
+    chx_cpu_sched_unlock ();
   else
     {
-      running->state = THREAD_WAIT_POLL;
-      chx_spin_lock (&q_timer.lock);
-      chx_timer_insert (running, *usec_p);
-      chx_spin_unlock (&q_timer.lock);
-      chx_sched (CHX_SLEEP);
+      int r;
 
-    wakeup:
-      va_start (ap, n);
-      for (i = 0; i < n; i++)
+      chx_cpu_sched_unlock ();
+      do
 	{
-	  pollfnc = va_arg (ap, chopstx_poll_fnc);
-	  (*pollfnc) (1, &px[i]);
+	  chopstx_testcancel ();
+	  chx_cpu_sched_lock ();
+	  r = chx_snooze (THREAD_WAIT_POLL, usec_p);
 	}
-      va_end (ap);
+      while (r == 0);
     }
+
+  va_start (ap, n);
+  for (i = 0; i < n; i++)
+    {
+      pollfnc = va_arg (ap, chopstx_poll_fnc);
+      (*pollfnc) (1, &px[i]);
+    }
+  va_end (ap);
 
   return counter;		/* Bitmap??? */
 }

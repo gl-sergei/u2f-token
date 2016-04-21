@@ -152,10 +152,31 @@ static char hexchar (uint8_t x)
     return '?';
 }
 
+static struct stream *st;
+
+static int
+check_recv (void *arg)
+{
+  struct stream *s = arg;
+  if ((s->flags & FLAG_CONNECTED) == 0)
+    return 1;
+  if ((s->flags & FLAG_RECV_AVAIL))
+    return 1;
+  return 0;
+}
+
+static void
+poll_for_stream (int reg_or_unreg, chopstx_px_t *px)
+{
+  if (reg_or_unreg == 0)
+    chopstx_cond_hook (px, &st->cnd, &st->mtx, check_recv, st);
+  else
+    chopstx_cond_unhook (px, &st->cnd);
+}
+
 int
 main (int argc, const char *argv[])
 {
-  struct stream *st;
   uint8_t count;
   extern uint32_t bDeviceState;
 
@@ -212,35 +233,43 @@ main (int argc, const char *argv[])
 
       while (1)
 	{
-	  int size = stream_recv (st, s + 4);
+	  int size;
+	  uint32_t usec;
 
-	  if (size < 0)
-	    break;
-
-	  if (size >= 0)
+	  /* With chopstx_poll, we can do timed cond_wait */
+	  usec = 3000000;
+	  if (chopstx_poll (&usec, 1, poll_for_stream))
 	    {
-	      int i;
-	      unsigned int value;
+	      size = stream_recv (st, s + 4);
 
-	      crc32_init ();
-	      s[0] = hexchar (size >> 4);
-	      s[1] = hexchar (size & 0x0f);
-
-	      for (i = 0; i < size; i++)
-		crc32_u8 (s[4 + i]);
-	      value = crc32_value () ^ 0xffffffff;
-	      s[4] = hexchar (value >> 28);
-	      s[5] = hexchar (value >> 24);
-	      s[6] = hexchar (value >> 20);
-	      s[7] = hexchar (value >> 16);
-	      s[8] = hexchar (value >> 12);
-	      s[9] = hexchar (value >> 8);
-	      s[10] = hexchar (value >> 4);
-	      s[11] = hexchar (value);
-	      s[12] = '\r';
-	      s[13] = '\n';
-	      if (stream_send (st, s, 14) < 0)
+	      if (size < 0)
 		break;
+
+	      if (size >= 0)
+		{
+		  int i;
+		  unsigned int value;
+
+		  crc32_init ();
+		  s[0] = hexchar (size >> 4);
+		  s[1] = hexchar (size & 0x0f);
+
+		  for (i = 0; i < size; i++)
+		    crc32_u8 (s[4 + i]);
+		  value = crc32_value () ^ 0xffffffff;
+		  s[4] = hexchar (value >> 28);
+		  s[5] = hexchar (value >> 24);
+		  s[6] = hexchar (value >> 20);
+		  s[7] = hexchar (value >> 16);
+		  s[8] = hexchar (value >> 12);
+		  s[9] = hexchar (value >> 8);
+		  s[10] = hexchar (value >> 4);
+		  s[11] = hexchar (value);
+		  s[12] = '\r';
+		  s[13] = '\n';
+		  if (stream_send (st, s, 14) < 0)
+		    break;
+		}
 	    }
 
 	  u ^= 1;
