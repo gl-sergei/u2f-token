@@ -934,24 +934,7 @@ chx_exit (void *retval)
 	    struct chx_thread *tp = (struct chx_thread *)p;
 
 	    ll_dequeue (p);
-	    if (tp->flag_is_proxy)
-	      {
-		struct chx_px *px = (struct chx_px *)p;
-
-		(*px->counter_p)++;
-		tp = px->master;
-		if (tp->state == THREAD_WAIT_POLL)
-		  {
-		    chx_timer_dequeue (tp);
-		    goto wakeup;
-		  }
-	      }
-	    else
-	      {
-		((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
-	      wakeup:
-		chx_ready_enqueue (tp);
-	      }
+	    chx_wakeup (tp);
 	    break;
 	  }
       chx_spin_unlock (&q_join.lock);
@@ -1299,7 +1282,7 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 }
 
 static int
-chx_wakeup_from_cond_wait (struct chx_thread *tp)
+chx_wakeup (struct chx_thread *tp)
 {
   int yield = 0;
 
@@ -1318,6 +1301,7 @@ chx_wakeup_from_cond_wait (struct chx_thread *tp)
     }
   else
     {
+      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
     wakeup:
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
@@ -1343,7 +1327,7 @@ chopstx_cond_signal (chopstx_cond_t *cond)
   chx_spin_lock (&cond->lock);
   tp = (struct chx_thread *)ll_pop (&cond->q);
   if (tp)
-    yield = chx_wakeup_from_cond_wait (tp);
+    yield = chx_wakeup (tp);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);
@@ -1367,7 +1351,7 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
   chx_cpu_sched_lock ();
   chx_spin_lock (&cond->lock);
   while ((tp = (struct chx_thread *)ll_pop (&cond->q)))
-    yield |= chx_wakeup_from_cond_wait (tp);
+    yield |= chx_wakeup (tp);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);

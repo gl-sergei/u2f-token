@@ -5,6 +5,10 @@ NEWS - Noteworthy changes
 
   Released 2016-0X-XX
 
+** New feature: polling
+New function chopstx_poll is added to watch multiple condition
+variables simultaneously with timeout.
+
 ** FS-BB48: Kinetis L MCU
 Support for FS-BB48 board with Kinetis L MCU is added.
 
