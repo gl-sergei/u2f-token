@@ -1,11 +1,11 @@
 /*
  * MK27Z memory setup.
  */
-__main_stack_size__     = 0x0100;  /* Exception handlers     */
+__main_stack_size__      = 0x0100; /* Exception handlers     */
 __process0_stack_size__  = 0x0300; /* Main program           */
-__process1_stack_size__  = 0x0200; /* first thread program */
-__process2_stack_size__  = 0x0100; /* second thread program */
-__process3_stack_size__  = 0x0200; /* third thread program */
+__process1_stack_size__  = 0x0200; /* first thread program   */
+__process2_stack_size__  = 0x0100; /* second thread program  */
+__process3_stack_size__  = 0x0200; /* third thread program   */
 
 MEMORY
 {
@@ -23,15 +23,19 @@ SECTIONS
 
     _text = .;
 
+    .f2 : ALIGN(16) SUBALIGN(8)
+    {
+        KEEP(*(.first_page.first_words))
+        KEEP(*(.first_page))
+        KEEP(*(.flash_config))
+	KEEP(*(.flash_config_page))
+    } > flash =0xffffffff
+
     .text : ALIGN(16) SUBALIGN(16)
     {
-	KEEP(*(.vectors))
 	. = ALIGN(1024);
-        KEEP(*(.flash_config))
+        KEEP(*(.startup.vectors))
 	. = ALIGN(16);
-        *(.text.svc)
-        *(.text.sched)
-        *(.text.preempt)
         *(.text.startup.*)
         *(.text)
         *(.text.*)
@@ -41,11 +45,10 @@ SECTIONS
         *(.glue_7)
         *(.gcc*)
 	. = ALIGN(8);
-    } > flash
+    } > flash =0xffffffff
 
     /DISCARD/ :
     {
-        *(.startup.vectors)
         *(.bss.startup.0)
     }
 
@@ -55,7 +58,7 @@ SECTIONS
         PROVIDE(__exidx_start = .);
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
         PROVIDE(__exidx_end = .);
-     } > flash
+     } > flash =0xffffffff
 
     .eh_frame_hdr : {*(.eh_frame_hdr)} > flash
 
@@ -98,11 +101,6 @@ SECTIONS
 
     .data :
     {
-        . = ALIGN(512);
-	__usb_bdt__ = .;
-        . += 512;
-	__usb_buf__ = .;
-        . += 8 /*control write*/ + 64 /*control read*/ + 64 + 64 + 8;
         . = ALIGN(4);
         PROVIDE(_data = .);
         *(.data)
@@ -112,7 +110,7 @@ SECTIONS
         *(.ramtext)
         . = ALIGN(4);
         PROVIDE(_edata = .);
-    } > ram AT > flash
+    } > ram AT > flash =0xffffffff
 
     .bss :
     {
@@ -123,7 +121,9 @@ SECTIONS
         *(.bss.*)
         . = ALIGN(4);
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(512);
+	__usb_bdt__ = .;
+        . += 512;
         PROVIDE(_bss_end = .);
     } > ram
 

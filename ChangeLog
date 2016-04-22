@@ -1,5 +1,10 @@
 2016-04-22  Niibe Yutaka  <gniibe@fsij.org>
 
+	* example-fs-bb48/first-pages.c: Rename from reset.c and merge
+	crc32.c.
+	* example-fs-bb48/sample.ld: Define section for first two pages.
+	* example-fs-bb48/usb_kl27z.c (__usb_buf__): Remove.
+
 	* chopstx.c (chx_cond_hook): Rename from chopstx_cond_hook and make
 	it internal.
 	(chx_cond_unhook): Likewise.

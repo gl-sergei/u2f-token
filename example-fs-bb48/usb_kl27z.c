@@ -132,7 +132,6 @@ struct BD {
 #define TOK_PID(ctrl)   ((ctrl >> 2) & 0x0f)
 
 extern uint8_t __usb_bdt__;
-extern uint8_t __usb_buf__;
 
 static struct BD *const BD_table = (struct BD *const)&__usb_bdt__;
 
