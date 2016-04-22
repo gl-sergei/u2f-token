@@ -209,3 +209,13 @@ Calling chopstx_setcancelstate sets cancelability state.
 Returns old state which is 0 when it was enabled.
 @end deftypefun
 
+@subheading chopstx_poll
+@anchor{chopstx_poll}
+@deftypefun {int} {chopstx_poll} (uint32_t * @var{usec_p}, int @var{n},  @var{...})
+@var{usec_p}: Pointer to usec
+
+@var{n}: Number of poll descriptors
+
+Returns number of active descriptors.
+@end deftypefun
+

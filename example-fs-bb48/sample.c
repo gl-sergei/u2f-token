@@ -152,7 +152,6 @@ static char hexchar (uint8_t x)
     return '?';
 }
 
-static struct stream *st;
 
 static int
 check_recv (void *arg)
@@ -165,18 +164,11 @@ check_recv (void *arg)
   return 0;
 }
 
-static void
-poll_for_stream (int reg_or_unreg, chopstx_px_t *px)
-{
-  if (reg_or_unreg == 0)
-    chopstx_cond_hook (px, &st->cnd, &st->mtx, check_recv, st);
-  else
-    chopstx_cond_unhook (px, &st->cnd);
-}
 
 int
 main (int argc, const char *argv[])
 {
+  struct stream *st;
   uint8_t count;
   extern uint32_t bDeviceState;
 
@@ -212,6 +204,7 @@ main (int argc, const char *argv[])
     {
       uint8_t s[64];
 
+      u = 1;
       if (stream_wait_connection (st) < 0)
 	{
 	  chopstx_usec_wait (1000*1000);
@@ -235,10 +228,17 @@ main (int argc, const char *argv[])
 	{
 	  int size;
 	  uint32_t usec;
+	  struct chx_poll_desc poll_desc;
+
+	  poll_desc.type = CHOPSTX_POLL_COND;
+	  poll_desc.c.cond = &st->cnd;
+	  poll_desc.c.mutex = &st->mtx;
+	  poll_desc.c.check = check_recv;
+	  poll_desc.c.arg = st;
 
 	  /* With chopstx_poll, we can do timed cond_wait */
 	  usec = 3000000;
-	  if (chopstx_poll (&usec, 1, poll_for_stream))
+	  if (chopstx_poll (&usec, 1, &poll_desc))
 	    {
 	      size = stream_recv (st, s + 4);
 

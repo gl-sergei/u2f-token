@@ -915,6 +915,37 @@ chx_sched (uint32_t yield)
 }
 
 
+static int
+chx_wakeup (struct chx_thread *tp)
+{
+  int yield = 0;
+
+  if (tp->flag_is_proxy)
+    {
+      struct chx_px *px = (struct chx_px *)tp;
+
+      (*px->counter_p)++;
+      tp = px->master;
+      if (tp->state == THREAD_WAIT_POLL)
+	{
+	  chx_timer_dequeue (tp);
+	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
+	  goto wakeup;
+	}
+    }
+  else
+    {
+      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
+    wakeup:
+      chx_ready_enqueue (tp);
+      if (tp->prio > running->prio)
+	yield = 1;
+    }
+
+  return yield;
+}
+
+
 /* The RETVAL is saved into register R8.  */
 static void __attribute__((noreturn))
 chx_exit (void *retval)
@@ -1281,35 +1312,6 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
     chopstx_mutex_lock (mutex);
 }
 
-static int
-chx_wakeup (struct chx_thread *tp)
-{
-  int yield = 0;
-
-  if (tp->flag_is_proxy)
-    {
-      struct chx_px *px = (struct chx_px *)tp;
-
-      (*px->counter_p)++;
-      tp = px->master;
-      if (tp->state == THREAD_WAIT_POLL)
-	{
-	  chx_timer_dequeue (tp);
-	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
-	  goto wakeup;
-	}
-    }
-  else
-    {
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
-    wakeup:
-      chx_ready_enqueue (tp);
-      if (tp->prio > running->prio)
-	yield = 1;
-    }
-
-  return yield;
-}
 
 /**
  * chopstx_cond_signal - Wake up a thread waiting on the condition variable
@@ -1360,26 +1362,16 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 }
 
 
-/**
- * chopstx_cond_hook - Register a proxy to wait on the confition variable
- * @px: Proxy to a thread
- * @cond: Condition Variable
- * @mutex: Associated mutex
- * @func: Function to evaluate the condition
- * @arg: Argument to the @func
- *
- * If @func with @arg returns 0, register @px to wait for @cond with @mutex.
- */
-void
-chopstx_cond_hook (chopstx_px_t *px, chopstx_cond_t *cond,
-		   chopstx_mutex_t *mutex, int (*func) (void *), void *arg)
+static void
+chx_cond_hook (struct chx_px *px, chopstx_cond_t *cond,
+	       chopstx_mutex_t *mutex, int (*check) (void *), void *arg)
 {
   chopstx_testcancel ();
 
   if (mutex)
     chopstx_mutex_lock (mutex);
 
-  if ((*func) (arg) != 0)
+  if ((*check) (arg) != 0)
     (*px->counter_p)++;
   else
     { /* Condition doesn't met.
@@ -1396,15 +1388,8 @@ chopstx_cond_hook (chopstx_px_t *px, chopstx_cond_t *cond,
     chopstx_mutex_unlock (mutex);
 }
 
-/**
- * chopstx_cond_unhook - de-register a proxy to wait on the confition variable
- * @px: Proxy to a thread
- * @cond: Condition Variable
-
- * If @px is on @cond, dequeue it from it.
- */
-void
-chopstx_cond_unhook (chopstx_px_t *px, chopstx_cond_t *cond)
+static void
+chx_cond_unhook (struct chx_px *px, chopstx_cond_t *cond)
 {
   chx_cpu_sched_lock ();
   if (px->parent == &cond->q)
@@ -1648,6 +1633,49 @@ chopstx_join (chopstx_t thd, void **ret)
 }
 
 
+static void
+chx_join_hook (struct chx_px *px, chopstx_t thd)
+{
+  struct chx_thread *tp = (struct chx_thread *)thd;
+
+  chopstx_testcancel ();
+  chx_cpu_sched_lock ();
+
+  if (tp->flag_detached)
+    {
+      chx_cpu_sched_unlock ();
+      chx_fatal (CHOPSTX_ERR_JOIN);
+    }
+
+  if (tp->state == THREAD_EXITED)
+    (*px->counter_p)++;
+  else
+    { /* Not yet exited.
+       * Register the proxy to wait for TP's exit.
+       */
+      chx_cpu_sched_lock ();
+      px->v = (uint32_t)tp;
+      chx_spin_lock (&q_join.lock);
+      ll_prio_enqueue ((struct chx_pq *)px, &q_join.q);
+      chx_spin_unlock (&q_join.lock);
+      tp->flag_join_req = 1;
+    }
+  chx_cpu_sched_unlock ();
+}
+
+static void
+chx_join_unhook (struct chx_px *px)
+{
+  chx_cpu_sched_lock ();
+  if (px->parent == &q_join.q)
+    {
+      ll_dequeue ((struct chx_pq *)px);
+      px->parent = NULL;
+    }
+  chx_cpu_sched_unlock ();
+}
+
+
 /**
  * chopstx_wakeup_usec_wait - wakeup the sleeping thread for timer
  * @thd: Thread to be awakened
@@ -1771,6 +1799,14 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
 }
 
 
+/**
+ * chopstx_poll - wait for condition variable or thread's exit
+ * @usec_p: Pointer to usec
+ * @n: Number of poll descriptors
+ * @VARARGS: Pointers to an object of struct chx_poll_desc
+ *
+ * Returns number of active descriptors.
+ */
 int
 chopstx_poll (uint32_t *usec_p, int n, ...)
 {
@@ -1778,7 +1814,7 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   int i;
   va_list ap;
   struct chx_px px[n];
-  chopstx_poll_fnc pollfnc;
+  struct chx_poll_desc *pd;
 
   chopstx_testcancel ();
 
@@ -1788,8 +1824,11 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pollfnc = va_arg (ap, chopstx_poll_fnc);
-      (*pollfnc) (0, &px[i]);
+      pd = va_arg (ap, struct chx_poll_desc *);
+      if (pd->type == CHOPSTX_POLL_COND) 
+	chx_cond_hook (&px[i], pd->c.cond, pd->c.mutex, pd->c.check, pd->c.arg);
+      else
+	chx_join_hook (&px[i], pd->j.thd);
     }
   va_end (ap);
 
@@ -1813,8 +1852,11 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pollfnc = va_arg (ap, chopstx_poll_fnc);
-      (*pollfnc) (1, &px[i]);
+      pd = va_arg (ap, struct chx_poll_desc *);
+      if (pd->type == CHOPSTX_POLL_COND) 
+	chx_cond_unhook (&px[i], pd->c.cond);
+      else
+	chx_join_unhook (&px[i]);
     }
   va_end (ap);
 

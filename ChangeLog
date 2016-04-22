@@ -1,3 +1,14 @@
+2016-04-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_cond_hook): Rename from chopstx_cond_hook and make
+	it internal.
+	(chx_cond_unhook): Likewise.
+	(chx_join_hook, chx_join_unhook): New.
+	(chopstx_poll): Change API, not exposing internals of hook/unhook.
+
+	* example-fs-bb48/sample.c (main): Follow the API change of
+	chopstx_poll.
+
 2016-04-21  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_snooze, chx_wakeup): New.
