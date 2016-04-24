@@ -1104,8 +1104,20 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
 
   if (usec == 0)
     {
-      chx_cpu_sched_unlock ();
-      return -1;
+      if (state == THREAD_WAIT_TIME)
+	{
+	  chx_cpu_sched_unlock ();
+	  return -1;
+	}
+      else
+	{
+	  if (running->flag_sched_rr)
+	    chx_timer_dequeue (running);
+
+	  running->state = state;
+	  r = chx_sched (CHX_SLEEP);
+	  return r;
+	}
     }
 
   usec0 = (usec > MAX_USEC_FOR_TIMER) ? MAX_USEC_FOR_TIMER: usec;
