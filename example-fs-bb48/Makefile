@@ -6,7 +6,7 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sample.c first-pages.c usb_kl27z.c usb-cdc.c
+CSRC = sample.c first-pages.c usb_kl27z.c usb-cdc.c adc_kl27z.c
 
 ###################################
 CROSS = arm-none-eabi-

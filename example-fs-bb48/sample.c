@@ -8,6 +8,7 @@
 #include "board.h"
 
 #include "crc32.h"
+#include "adc.h"
 
 struct GPIO {
   volatile uint32_t PDOR; /* Port Data Output Register    */
@@ -175,6 +176,9 @@ main (int argc, const char *argv[])
   (void)argc;
   (void)argv;
 
+  adc_init ();
+  adc_start ();
+
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd0);
   chopstx_cond_init (&cnd1);
@@ -247,16 +251,30 @@ main (int argc, const char *argv[])
 
 	      if (size >= 0)
 		{
-		  int i;
 		  unsigned int value;
 
-		  crc32_init ();
-		  s[0] = hexchar (size >> 4);
-		  s[1] = hexchar (size & 0x0f);
+		  if (s[4] == 't')
+		    {
+		      s[0] = 'T';
+		      s[1] = 'M';
 
-		  for (i = 0; i < size; i++)
-		    crc32_u8 (s[4 + i]);
-		  value = crc32_value () ^ 0xffffffff;
+		      adc_start_conversion (0, 1);
+		      adc_wait_completion (NULL);
+		      value = adc_buf[0];
+		    }
+		  else
+		    {
+		      int i;
+
+		      crc32_init ();
+		      s[0] = hexchar (size >> 4);
+		      s[1] = hexchar (size & 0x0f);
+
+		      for (i = 0; i < size; i++)
+			crc32_u8 (s[4 + i]);
+		      value = crc32_value () ^ 0xffffffff;
+		    }
+
 		  s[4] = hexchar (value >> 28);
 		  s[5] = hexchar (value >> 24);
 		  s[6] = hexchar (value >> 20);
