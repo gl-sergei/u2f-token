@@ -1182,6 +1182,7 @@ chopstx_mutex_init (chopstx_mutex_t *mutex)
   chx_spin_init (&mutex->lock);
   mutex->q.next = mutex->q.prev = (struct chx_pq *)&mutex->q;
   mutex->list = NULL;
+  mutex->owner = NULL;
 }
 
 

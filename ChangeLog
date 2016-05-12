@@ -1,3 +1,7 @@
+2016-05-12  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_mutex_init): Initialize OWNER, too.
+
 2016-04-24  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_snooze): Wait forever when it's POLL and usec==0.
