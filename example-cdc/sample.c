@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <chopstx.h>
+
 #include "sys.h" /* for set_led */
 #include "usb_lld.h"
 #include "stream.h"
@@ -9,7 +10,6 @@
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
 static chopstx_cond_t cnd1;
-
 
 static uint8_t u, v;
 static uint8_t m;		/* 0..100 */
@@ -113,14 +113,28 @@ const size_t __stacksize_blk = (size_t)&__process2_stack_size__;
 const uint32_t __stackaddr_intr = (uint32_t)&__process3_stack_base__;
 const size_t __stacksize_intr = (size_t)&__process3_stack_size__;
 
+
 static char hexchar (uint8_t x)
 {
+  x &= 0x0f;
   if (x <= 0x09)
     return '0' + x;
   else if (x <= 0x0f)
     return 'a' + x - 10;
   else
     return '?';
+}
+
+
+static int
+check_recv (void *arg)
+{
+  struct stream *s = arg;
+  if ((s->flags & FLAG_CONNECTED) == 0)
+    return 1;
+  if ((s->flags & FLAG_RECV_AVAIL))
+    return 1;
+  return 0;
 }
 
 
@@ -163,6 +177,7 @@ main (int argc, const char *argv[])
     {
       uint8_t s[64];
 
+      u = 1;
       if (stream_wait_connection (st) < 0)
 	{
 	  chopstx_usec_wait (1000*1000);
@@ -174,7 +189,7 @@ main (int argc, const char *argv[])
       /* Send ZLP at the beginning.  */
       stream_send (st, s, 0);
 
-      memcpy (s, "xx: Hello, World with Chopstx!\r\n\000", 32);
+      memcpy (s, "xx: Hello, World with Chopstx!\r\n", 32);
       s[0] = hexchar (count >> 4);
       s[1] = hexchar (count & 0x0f);
       count++;
@@ -184,15 +199,36 @@ main (int argc, const char *argv[])
 
       while (1)
 	{
-	  int size = stream_recv (st, s);
+	  int size;
+	  uint32_t usec;
+	  struct chx_poll_desc poll_desc;
 
-	  if (size < 0)
-	    break;
+	  poll_desc.type = CHOPSTX_POLL_COND;
+	  poll_desc.c.cond = &st->cnd;
+	  poll_desc.c.mutex = &st->mtx;
+	  poll_desc.c.check = check_recv;
+	  poll_desc.c.arg = st;
 
-	  if (size >= 0)
+	  /* With chopstx_poll, we can do timed cond_wait */
+	  usec = 3000000;	/* 3.0 seconds */
+	  if (chopstx_poll (&usec, 1, &poll_desc))
 	    {
-	      if (stream_send (st, s, size) < 0)
+	      size = stream_recv (st, s + 4);
+
+	      if (size < 0)
 		break;
+
+	      if (size >= 0)
+		{
+		  s[0] = hexchar (size >> 4);
+		  s[1] = hexchar (size & 0x0f);
+		  s[2] = ':';
+		  s[3] = ' ';
+		  s[size + 4] = '\r';
+		  s[size + 5] = '\n';
+		  if (stream_send (st, s, size + 6) < 0)
+		    break;
+		}
 	    }
 
 	  u ^= 1;

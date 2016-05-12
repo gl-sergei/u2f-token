@@ -1,8 +1,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <chopstx.h>
+#include <string.h>
 #include "usb_lld.h"
 #include "stream.h"
+
+static uint8_t send_buf[64];
+static unsigned int send_len;
+
+static unsigned int recv_len;
+
+static uint8_t inputline[64];
+static unsigned int inputline_len;
 
 static struct stream stream;
 
@@ -190,6 +199,8 @@ usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, struct req_args *arg)
       stream.flags &= ~FLAG_CONNECTED;
       stream.flags |= ((arg->value & CDC_CTRL_DTR) != 0)? FLAG_CONNECTED : 0;
       chopstx_cond_signal (&stream.cnd);
+      recv_len = 0;
+      usb_lld_rx_enable (ENDP3);
       chopstx_mutex_unlock (&stream.mtx);
     }
 }
@@ -393,36 +404,136 @@ usb_cb_interface (uint8_t cmd, struct req_args *arg)
 }
 
 
+static void
+stream_echo_char (int c)
+{
+  chopstx_mutex_lock (&stream.mtx);
+  if (send_len < sizeof (send_buf))
+    send_buf[send_len++] = c;
+  else
+    {
+      /* All that we can is ignoring the output.  */
+      ;
+    }
+
+  if (stream.sending == 0)
+    {
+      usb_lld_txcpy (send_buf, ENDP1, 0, send_len);
+      usb_lld_tx_enable (ENDP1, send_len);
+      send_len = 0;
+      stream.sending = 1;
+    }
+  chopstx_mutex_unlock (&stream.mtx);
+}
+
+
 void
 usb_cb_tx_done (uint8_t ep_num)
 {
   if (ep_num == ENDP1)
     {
       chopstx_mutex_lock (&stream.mtx);
-      if ((stream.flags & FLAG_SEND_AVAIL))
+      stream.sending = 0;
+      if (send_len)
 	{
-	  stream.flags &= ~FLAG_SEND_AVAIL;
-	  chopstx_cond_signal (&stream.cnd);
+	  stream.sending = 1;
+	  usb_lld_txcpy (send_buf, ENDP1, 0, send_len);
+	  usb_lld_tx_enable (ENDP1, send_len);
+	  send_len = 0;
+	}
+      else
+	{
+	  if ((stream.flags & FLAG_SEND_AVAIL))
+	    {
+	      stream.flags &= ~FLAG_SEND_AVAIL;
+	      chopstx_cond_signal (&stream.cnd);
+	    }
 	}
       chopstx_mutex_unlock (&stream.mtx);
     }
   else if (ep_num == ENDP2)
     {
+      /* Nothing */
+    }
+}
+
+
+static void
+stream_input_char (int c)
+{
+  unsigned int i;
+
+  /* Process DEL, C-U, C-R, and RET as editing command. */
+  switch (c)
+    {
+    case 0x0d: /* Control-M */
+      stream_echo_char (0x0d);
+      stream_echo_char (0x0a);
+      chopstx_mutex_lock (&stream.mtx);
+      if ((stream.flags & FLAG_RECV_AVAIL) == 0)
+	{
+	  memcpy (stream.recv_buf, inputline, inputline_len);
+	  stream.recv_len = inputline_len;
+	  stream.flags |= FLAG_RECV_AVAIL;
+	  chopstx_cond_signal (&stream.cnd);
+	}
+      chopstx_mutex_unlock (&stream.mtx);
+      inputline_len = 0;
+      break;
+    case 0x12: /* Control-R */
+      stream_echo_char ('^');
+      stream_echo_char ('R');
+      stream_echo_char (0x0d);
+      stream_echo_char (0x0a);
+      for (i = 0; i < inputline_len; i++)
+	stream_echo_char (inputline[i]);
+      break;
+    case 0x15: /* Control-U */
+      for (i = 0; i < inputline_len; i++)
+	{
+	  stream_echo_char (0x08);
+	  stream_echo_char (0x20);
+	  stream_echo_char (0x08);
+	}
+      inputline_len = 0;
+      break;
+    case 0x7f: /* DEL    */
+      if (inputline_len > 0)
+	{
+	  stream_echo_char (0x08);
+	  stream_echo_char (0x20);
+	  stream_echo_char (0x08);
+	  inputline_len--;
+	}
+      break;
+    default:
+      if (inputline_len < sizeof (inputline))
+	{
+	  stream_echo_char (c);
+	  inputline[inputline_len++] = c;
+	}
+      else
+	/* Beep */
+	stream_echo_char (0x0a);
+      break;
     }
 }
 
 void
 usb_cb_rx_ready (uint8_t ep_num)
 {
+  uint8_t recv_buf[64];
+
   if (ep_num == ENDP3)
     {
-      chopstx_mutex_lock (&stream.mtx);
-      if ((stream.flags & FLAG_RECV_AVAIL) == 0)
-	{
-	  stream.flags |= FLAG_RECV_AVAIL;
-	  chopstx_cond_signal (&stream.cnd);
-	}
-      chopstx_mutex_unlock (&stream.mtx);
+      int i, r;
+
+      r = usb_lld_rx_data_len (ENDP3);
+      usb_lld_rxcpy (recv_buf, ep_num, 0, r);
+      for (i = 0; i < r; i++)
+	stream_input_char (recv_buf[i]);
+
+      usb_lld_rx_enable (ENDP3);
     }
 }
 
@@ -456,7 +567,9 @@ stream_send (struct stream *st, uint8_t *buf, uint8_t count)
     r = -1;
   else
     {
-      usb_lld_write (ENDP1, buf, count);
+      stream.sending = 1;
+      usb_lld_txcpy (buf, ENDP1, 0, count);
+      usb_lld_tx_enable (ENDP1, count);
       stream.flags |= FLAG_SEND_AVAIL;
       do
 	{
@@ -471,6 +584,7 @@ stream_send (struct stream *st, uint8_t *buf, uint8_t count)
 	}
       while (1);
     }
+  stream.sending = 0;
   chopstx_mutex_unlock (&st->mtx);
   return r;
 }
@@ -486,15 +600,13 @@ stream_recv (struct stream *st, uint8_t *buf)
     r = -1;
   else
     {
-      usb_lld_rx_enable (ENDP3);
-      stream.flags &= ~FLAG_RECV_AVAIL;
-      do
+      while (1)
 	{
-	  chopstx_cond_wait (&st->cnd, &st->mtx);
 	  if ((stream.flags & FLAG_RECV_AVAIL))
 	    {
-	      r = usb_lld_rx_data_len (ENDP3);
-	      usb_lld_rxcpy (buf, ENDP3, 0, r);
+	      r = stream.recv_len;
+	      memcpy (buf, stream.recv_buf, r);
+	      stream.flags &= ~FLAG_RECV_AVAIL;
 	      break;
 	    }
 	  else if ((stream.flags & FLAG_CONNECTED) == 0)
@@ -502,8 +614,8 @@ stream_recv (struct stream *st, uint8_t *buf)
 	      r = -1;
 	      break;
 	    }
+	  chopstx_cond_wait (&st->cnd, &st->mtx);
 	}
-      while (1);
     }
   chopstx_mutex_unlock (&st->mtx);
 

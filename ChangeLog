@@ -1,5 +1,10 @@
 2016-05-12  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/sample.c: Update using chopstx_poll.
+	* example-cdc/sample.ld: Likewise.
+	* example-cdc/stream.h: Likewise.
+	* example-cdc/usb-cdc.c: Likewise.
+
 	* chopstx.c (chopstx_mutex_init): Initialize OWNER, too.
 	[__ARM_ARCH_7M__] (preempt): Bug fix for register 0 to inhibit
 	scheduling.
