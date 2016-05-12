@@ -1,6 +1,13 @@
 2016-05-12  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_mutex_init): Initialize OWNER, too.
+	[__ARM_ARCH_7M__] (preempt): Bug fix for register 0 to inhibit
+	scheduling.
+	[__ARM_ARCH_6M__] (chx_sched): Return YIELD normally.
+	(MAX_USEC_FOR_TIMER): Guarantee 24-bit tick.
+	(chx_snooze): Revert the change of 2016-04-24 and modify
+	chopstx_poll instead.
+	(chopstx_poll): Support waiting forever.
 
 2016-04-24  Niibe Yutaka  <gniibe@fsij.org>
 

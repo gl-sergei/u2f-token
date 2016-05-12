@@ -517,6 +517,7 @@ chx_timer_insert (struct chx_thread *tp, uint32_t usec)
     {
       if (ticks < next_ticks)
 	{
+	  tp->parent = &q_timer.q;
 	  ll_insert ((struct chx_pq *)tp, (struct chx_qh *)p);
 	  chx_set_timer ((struct chx_thread *)tp->prev, ticks);
 	  chx_set_timer (tp, (next_ticks - ticks));
@@ -531,6 +532,7 @@ chx_timer_insert (struct chx_thread *tp, uint32_t usec)
 
   if (p == (struct chx_pq *)&q_timer.q)
     {
+      tp->parent = &q_timer.q;
       ll_insert ((struct chx_pq *)tp, (struct chx_qh *)p);
       chx_set_timer ((struct chx_thread *)tp->prev, ticks);
       chx_set_timer (tp, 1);	/* Non-zero for the last entry. */
@@ -754,6 +756,7 @@ chx_request_preemption (uint16_t prio)
  *
  * 	AAPCS: ARM Architecture Procedure Call Standard
  *
+ * Returns YIELD normally, returns -1 on forcible wakeup.
  */
 static int __attribute__ ((naked, noinline))
 chx_sched (uint32_t yield)
@@ -770,7 +773,7 @@ chx_sched (uint32_t yield)
 
   /* Build stack data as if it were an exception entry.  */
   /*
-   * r0:  0                     scratch
+   * r0:  YIELD                 scratch
    * r1:  0                     scratch
    * r2:  0                     scratch
    * r3:  0                     scratch
@@ -788,7 +791,7 @@ chx_sched (uint32_t yield)
        "mov	r2, r1\n\t"
        "mov	r3, r1\n\t"
        "push	{r1, r2, r3}\n\t"
-       "push	{r1, r2}"
+       "push	{%1, r1}"
        : /* no output*/
        : "r" (yield)
        : "r1", "r2", "r3", "memory");
@@ -915,6 +918,9 @@ chx_sched (uint32_t yield)
 }
 
 
+/*
+ * Wakeup the thread TP.   Called with schedule lock held.
+ */
 static int
 chx_wakeup (struct chx_thread *tp)
 {
@@ -984,6 +990,9 @@ chx_exit (void *retval)
 }
 
 
+/*
+ * Lower layer mutex unlocking.  Called with schedule lock held.
+ */
 static chopstx_prio_t
 chx_mutex_unlock (chopstx_mutex_t *mutex)
 {
@@ -1086,15 +1095,12 @@ chopstx_create (uint32_t flags_and_prio,
 
 /*
  * Internal timer uses SYSTICK and it has rather smaller upper limit.
- * Besides, we should check cancel condition of the thread
- * periodically.  Thus, we don't let the thread sleep too long, but
- * let it loops.
- *
- * 200ms is the upper limit.
+ * Thus, we can't let the thread sleep too long, but let it loops.
  *
  * The caller should make a loop with chx_snooze.
  */
-#define MAX_USEC_FOR_TIMER (200*1000)
+#define MAX_USEC_FOR_TIMER (16777215/MHZ) /* SYSTICK is 24-bit. */
+
 static int
 chx_snooze (uint32_t state, uint32_t *usec_p)
 {
@@ -1104,20 +1110,8 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
 
   if (usec == 0)
     {
-      if (state == THREAD_WAIT_TIME)
-	{
-	  chx_cpu_sched_unlock ();
-	  return -1;
-	}
-      else
-	{
-	  if (running->flag_sched_rr)
-	    chx_timer_dequeue (running);
-
-	  running->state = state;
-	  r = chx_sched (CHX_SLEEP);
-	  return r;
-	}
+      chx_cpu_sched_unlock ();
+      return -1;
     }
 
   usec0 = (usec > MAX_USEC_FOR_TIMER) ? MAX_USEC_FOR_TIMER: usec;
@@ -1848,6 +1842,14 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   chx_cpu_sched_lock ();
   if (counter)
     chx_cpu_sched_unlock ();
+  else if (*usec_p == 0)
+    {
+      if (running->flag_sched_rr)
+	chx_timer_dequeue (running);
+
+      running->state = THREAD_WAIT_POLL;
+      chx_sched (CHX_SLEEP);
+    }
   else
     {
       int r;
@@ -1897,7 +1899,7 @@ preempt (void)
 	"ldr	r0, [r2]\n\t"
 	"mov	r1, r0"
 	: "=r" (tp), "=r" (cur)
-	: /* no input */
+	: "0" (CPU_EXCEPTION_PRIORITY_INHIBIT_SCHED)
 	: "r2");
 
   if (!cur)
