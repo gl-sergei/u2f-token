@@ -6,9 +6,9 @@
 	* example-cdc/usb-cdc.c: Likewise.
 
 	* chopstx.c (chopstx_mutex_init): Initialize OWNER, too.
-	[__ARM_ARCH_7M__] (preempt): Bug fix for register 0 to inhibit
+	(preempt) [__ARM_ARCH_7M__]: Bug fix for register 0 to inhibit
 	scheduling.
-	[__ARM_ARCH_6M__] (chx_sched): Return YIELD normally.
+	(chx_sched) [__ARM_ARCH_6M__]: Return YIELD normally.
 	(MAX_USEC_FOR_TIMER): Guarantee 24-bit tick.
 	(chx_snooze): Revert the change of 2016-04-24 and modify
 	chopstx_poll instead.
@@ -251,7 +251,7 @@
 	* example-fsm-55/hacker-emblem.ld: Put vectors on ROM.
 	* example-fsm-55/sys.c: No system services.
 	* entry.c (entry): Can be public.
-	* clk_gpio_init.c [MCU_STM32F0] (clock_init): Don't change CFGR1.
+	* clk_gpio_init.c (clock_init) [MCU_STM32F0]: Don't change CFGR1.
 
 2015-07-30  Niibe Yutaka  <gniibe@fsij.org>
 
@@ -281,7 +281,7 @@
 	* example-cdc/sys.c (sys_board_id): New.
 	* example-cdc/sample.ld (.sys.board_id): New.
 	(__flash_start__, __flash_end__): Remove.
-	* entry.c [HAVE_SYS_H] (vector_table): By undefining STM32F10X_MD,
+	* entry.c (vector_table) [HAVE_SYS_H]: By undefining STM32F10X_MD,
 	prepare for high density device even compiled for MD device.
 
 2015-07-13  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
