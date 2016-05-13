@@ -1,5 +1,11 @@
 2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chx_handle_intr): Call chx_request_preemption.
+	(chx_wakeup, chopstx_cond_signal, chopstx_cond_broadcast)
+	(chx_intr_hook, chopstx_poll): Cleanup.
+
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
 	* chopstx.c (chopstx_exit): Don't call chx_release_irq_thread.
 	(chx_release_irq_thread): Remove.
 	(q_intr): New variable.

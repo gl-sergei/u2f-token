@@ -245,7 +245,7 @@ static struct chx_queue q_join;
 
 /* Forward declaration(s). */
 static void chx_request_preemption (uint16_t prio);
-static int chx_wakeup (struct chx_thread *tp);
+static int chx_wakeup (struct chx_pq *p);
 
 
 /**************/
@@ -624,15 +624,17 @@ chx_handle_intr (void)
   asm volatile ("mrs	%0, IPSR\n\t"
 		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
 		: "=r" (irq_num) : /* no input */ : "memory");
+
   chx_disable_intr (irq_num);
   chx_spin_lock (&q_intr.lock);
   for (p = q_intr.q.next; p != (struct chx_pq *)&q_intr.q; p = p->next)
     if (p->v == irq_num)
       {			/* should be one at most. */
-	struct chx_thread *tp = (struct chx_thread *)p;
+	struct chx_px *px = (struct chx_px *)p;
 
 	ll_dequeue (p);
-	chx_wakeup (tp);
+	chx_wakeup (p);
+	chx_request_preemption (px->master->prio);
 	break;
       }
   chx_spin_unlock (&q_intr.lock);
@@ -908,13 +910,14 @@ chx_sched (uint32_t yield)
  * Wakeup the thread TP.   Called with schedule lock held.
  */
 static int
-chx_wakeup (struct chx_thread *tp)
+chx_wakeup (struct chx_pq *pq)
 {
   int yield = 0;
+  struct chx_thread *tp;
 
-  if (tp->flag_is_proxy)
+  if (pq->flag_is_proxy)
     {
-      struct chx_px *px = (struct chx_px *)tp;
+      struct chx_px *px = (struct chx_px *)pq;
 
       chx_spin_lock (&px->lock);
       (*px->counter_p)++;
@@ -933,6 +936,7 @@ chx_wakeup (struct chx_thread *tp)
     }
   else
     {
+      tp = (struct chx_thread *)pq;
       ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
@@ -959,10 +963,8 @@ chx_exit (void *retval)
       for (p = q_join.q.next; p != (struct chx_pq *)&q_join.q; p = p->next)
 	if (p->v == (uint32_t)running)
 	  {			/* should be one at most. */
-	    struct chx_thread *tp = (struct chx_thread *)p;
-
 	    ll_dequeue (p);
-	    chx_wakeup (tp);
+	    chx_wakeup (p);
 	    break;
 	  }
       chx_spin_unlock (&q_join.lock);
@@ -1335,14 +1337,14 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 void
 chopstx_cond_signal (chopstx_cond_t *cond)
 {
-  struct chx_thread *tp;
+  struct chx_pq *p;
   int yield = 0;
 
   chx_cpu_sched_lock ();
   chx_spin_lock (&cond->lock);
-  tp = (struct chx_thread *)ll_pop (&cond->q);
-  if (tp)
-    yield = chx_wakeup (tp);
+  p = ll_pop (&cond->q);
+  if (p)
+    yield = chx_wakeup (p);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);
@@ -1360,13 +1362,13 @@ chopstx_cond_signal (chopstx_cond_t *cond)
 void
 chopstx_cond_broadcast (chopstx_cond_t *cond)
 {
-  struct chx_thread *tp;
+  struct chx_pq *p;
   int yield = 0;
 
   chx_cpu_sched_lock ();
   chx_spin_lock (&cond->lock);
-  while ((tp = (struct chx_thread *)ll_pop (&cond->q)))
-    yield |= chx_wakeup (tp);
+  while ((p = ll_pop (&cond->q)))
+    yield |= chx_wakeup (p);
   chx_spin_unlock (&cond->lock);
   if (yield)
     chx_sched (CHX_YIELD);
@@ -1457,8 +1459,8 @@ chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
   intr->ready = 0;
   px->v = intr->irq_num;
   chx_spin_lock (&q_intr.lock);
-  chx_enable_intr (intr->irq_num);
   ll_prio_enqueue ((struct chx_pq *)px, &q_intr.q);
+  chx_enable_intr (intr->irq_num);
   chx_spin_unlock (&q_intr.lock);
   chx_cpu_sched_unlock ();
 }
@@ -1797,13 +1799,13 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   for (i = 0; i < n; i++)
     {
       pd = va_arg (ap, struct chx_poll_head *);
+      px[i].ready_p = &pd->ready;
       if (pd->type == CHOPSTX_POLL_COND)
 	chx_cond_hook (&px[i], pd);
       else if (pd->type == CHOPSTX_POLL_INTR)
 	chx_intr_hook (&px[i], pd);
       else
 	chx_join_hook (&px[i], pd);
-      px[i].ready_p = &pd->ready;
     }
   va_end (ap);
 
