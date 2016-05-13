@@ -1454,22 +1454,28 @@ chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
 
   chopstx_testcancel ();
   chx_cpu_sched_lock ();
-  if (intr->ready)
-    {
-      chx_spin_lock (&px->lock);
-      (*px->counter_p)++;
-      *px->ready_p = 1;
-      chx_spin_unlock (&px->lock);
-    }
-  else
-    {
-      px->v = intr->irq_num;
-      chx_spin_lock (&q_intr.lock);
-      chx_enable_intr (intr->irq_num);
-      ll_prio_enqueue ((struct chx_pq *)px, &q_intr.q);
-      chx_spin_unlock (&q_intr.lock);
-    }
+  intr->ready = 0;
+  px->v = intr->irq_num;
+  chx_spin_lock (&q_intr.lock);
+  chx_enable_intr (intr->irq_num);
+  ll_prio_enqueue ((struct chx_pq *)px, &q_intr.q);
+  chx_spin_unlock (&q_intr.lock);
   chx_cpu_sched_unlock ();
+}
+
+
+/**
+ * chopstx_intr_wait - Wait for interrupt request from hardware
+ * @intr: Pointer to INTR structure
+ *
+ * Wait for the interrupt @intr to be occured.
+ *
+ * This function is DEPRECATED.  Use chopstx_poll.
+ */
+void
+chopstx_intr_wait (chopstx_intr_t *intr)
+{
+  chopstx_poll (NULL, 1, intr);
 }
 
 

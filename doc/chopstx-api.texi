@@ -118,20 +118,14 @@ Wake up all threads waiting on @var{cond}.
 Claim interrupt @var{intr} with @var{irq_num} for this thread.
 @end deftypefun
 
-@subheading chopstx_release_irq
-@anchor{chopstx_release_irq}
-@deftypefun {void} {chopstx_release_irq} (chopstx_intr_t * @var{intr0})
-@var{intr0}: Interrupt request to be unregistered
-
-Release the interrupt request specified by @var{intr0}.
-@end deftypefun
-
 @subheading chopstx_intr_wait
 @anchor{chopstx_intr_wait}
 @deftypefun {void} {chopstx_intr_wait} (chopstx_intr_t * @var{intr})
 @var{intr}: Pointer to INTR structure
 
 Wait for the interrupt @var{intr} to be occured.
+
+This function is DEPRECATED.  Use chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_cleanup_push
@@ -212,7 +206,7 @@ Returns old state which is 0 when it was enabled.
 @subheading chopstx_poll
 @anchor{chopstx_poll}
 @deftypefun {int} {chopstx_poll} (uint32_t * @var{usec_p}, int @var{n},  @var{...})
-@var{usec_p}: Pointer to usec
+@var{usec_p}: Pointer to usec for timeout.  Forever if NULL.
 
 @var{n}: Number of poll descriptors
 

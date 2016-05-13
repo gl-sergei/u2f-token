@@ -11,7 +11,7 @@
 	(chopstx_release_irq): Remove.
 	(chx_release_irq): New internal function.
 	(THREAD_WAIT_INT): Remove.
-	(chopstx_intr_wait): Remove, now offered as a macro.
+	(chopstx_intr_wait): Rewrite by chopstx_poll.
 
 2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
 

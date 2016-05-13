@@ -159,7 +159,7 @@ typedef struct chx_intr chopstx_intr_t;
 
 void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
 
-#define chopstx_intr_wait(intr)   chopstx_poll (NULL, 1, intr)
+void chopstx_intr_wait (chopstx_intr_t *intr); /* DEPRECATED */
 
 
 struct chx_poll_head {

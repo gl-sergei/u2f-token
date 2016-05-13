@@ -13,7 +13,7 @@ variables, threads' exit, or IRQ simultaneously with timeout.
 Releasing irq is now called automaticall, internally.
 
 ** Function chopstx_intr_wait is deprecated
-It's now a macro with chopstx_poll.
+Use of chopstx_poll is recommended.
 
 ** FS-BB48: Kinetis L MCU
 Support for FS-BB48 board with Kinetis L MCU is added.
