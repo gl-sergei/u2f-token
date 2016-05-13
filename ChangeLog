@@ -1,6 +1,8 @@
 2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_sched) [__ARM_ARCH_6M__]: Fix asm.
+	(chx_handle_intr, chx_wakeup, chopstx_cancel): Fix for polling
+	with no timeout.
 
 	* example-cdc/sample.c (main): Update chopstx_poll example.
 	* example-fs-bb48/sample.c (main): Ditto.

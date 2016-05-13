@@ -245,10 +245,6 @@ static struct chx_queue q_join;
 
 /* Forward declaration(s). */
 static void chx_request_preemption (uint16_t prio);
-static void chx_timer_dequeue (struct chx_thread *tp);
-static struct chx_thread *chx_timer_insert (struct chx_thread *tp,
-					    uint32_t usec);
-
 
 
 /**************/
@@ -641,7 +637,8 @@ chx_handle_intr (void)
 	{
 	  if (intr->tp->state == THREAD_WAIT_POLL)
 	    {
-	      chx_timer_dequeue (intr->tp);
+	      if (intr->tp->parent == &q_timer.q)
+		chx_timer_dequeue (intr->tp);
 	      chx_ready_enqueue (intr->tp);
 	      chx_request_preemption (intr->tp->prio);
 	    }
@@ -938,7 +935,8 @@ chx_wakeup (struct chx_thread *tp)
       tp = px->master;
       if (tp->state == THREAD_WAIT_POLL)
 	{
-	  chx_timer_dequeue (tp);
+	  if (tp->parent == &q_timer.q)
+	    chx_timer_dequeue (tp);
 	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
 	  chx_ready_enqueue (tp);
 	  if (tp->prio > running->prio)
@@ -1761,7 +1759,8 @@ chopstx_cancel (chopstx_t thd)
 	  ll_dequeue ((struct chx_pq *)tp);
 	  chx_spin_unlock (&cond->lock);
 	}
-      else if (tp->state == THREAD_WAIT_TIME || tp->state == THREAD_WAIT_POLL)
+      else if ((tp->state == THREAD_WAIT_TIME || tp->state == THREAD_WAIT_POLL)
+	       && (tp->parent == &q_timer.q))
 	chx_timer_dequeue (tp);
 
       chx_ready_enqueue (tp);
