@@ -82,12 +82,15 @@ void chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex);
 void chopstx_cond_signal (chopstx_cond_t *cond);
 void chopstx_cond_broadcast (chopstx_cond_t *cond);
 
-typedef struct chx_intr {
+struct chx_intr {
+  uint16_t type;
+  uint16_t ready;
+  /**/
   struct chx_intr *next;
   struct chx_thread *tp;
-  uint32_t ready;
   uint8_t irq_num;
-} chopstx_intr_t;
+};
+typedef struct chx_intr chopstx_intr_t;
 
 void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
 void chopstx_release_irq (chopstx_intr_t *intr);
@@ -138,9 +141,13 @@ void chopstx_wakeup_usec_wait (chopstx_t thd);
 enum {
   CHOPSTX_POLL_COND = 0,
   CHOPSTX_POLL_JOIN,
+  CHOPSTX_POLL_INTR,
 };
 
 struct chx_poll_cond {
+  uint16_t type;
+  uint16_t ready;
+  /**/
   chopstx_cond_t *cond;
   chopstx_mutex_t *mutex;
   int (*check) (void *);
@@ -148,15 +155,15 @@ struct chx_poll_cond {
 };
 
 struct chx_poll_join {
+  uint16_t type;
+  uint16_t ready;
+  /**/
   chopstx_t thd;
 };
 
-struct chx_poll_desc {
-  int type;
-  union {
-    struct chx_poll_cond c;
-    struct chx_poll_join j;
-  };
+struct chx_poll_head {
+  uint16_t type;
+  uint16_t ready;
 };
 
 int chopstx_poll (uint32_t *usec_p, int n, ...);

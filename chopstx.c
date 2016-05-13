@@ -315,6 +315,8 @@ struct chx_px {			/* inherits PQ */
   uint32_t v;
   struct chx_thread *master;
   uint32_t *counter_p;
+  uint16_t *ready_p;
+  struct chx_spinlock lock;	/* spinlock to update the COUNTER */
 };
 
 struct chx_thread {		/* inherits PQ */
@@ -791,7 +793,7 @@ chx_sched (uint32_t yield)
        "mov	r2, r1\n\t"
        "mov	r3, r1\n\t"
        "push	{r1, r2, r3}\n\t"
-       "push	{%1, r1}"
+       "push	{%0, r1}"
        : /* no output*/
        : "r" (yield)
        : "r1", "r2", "r3", "memory");
@@ -876,7 +878,7 @@ chx_sched (uint32_t yield)
 		  24: pc
 		  28: psr
 		  32: possibly exists for alignment
-		  [28 or 32] <-- pc           
+		  [28 or 32] <-- pc
 		*/
 		"ldr	r0, [sp, #28]\n\t"
 		"lsl	r1, r0, #23\n\t"
@@ -930,19 +932,23 @@ chx_wakeup (struct chx_thread *tp)
     {
       struct chx_px *px = (struct chx_px *)tp;
 
+      chx_spin_lock (&px->lock);
       (*px->counter_p)++;
+      *px->ready_p = 1;
       tp = px->master;
       if (tp->state == THREAD_WAIT_POLL)
 	{
 	  chx_timer_dequeue (tp);
 	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
-	  goto wakeup;
+	  chx_ready_enqueue (tp);
+	  if (tp->prio > running->prio)
+	    yield = 1;
 	}
+      chx_spin_unlock (&px->lock);
     }
   else
     {
       ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
-    wakeup:
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
 	yield = 1;
@@ -1213,16 +1219,31 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
       while (1)
 	{			/* Priority inheritance.  */
 	  owner->prio = tp->prio;
-	  if (owner->state == THREAD_READY || owner->state == THREAD_WAIT_CND)
+	  if (owner->state == THREAD_READY)
 	    {
+	      chx_spin_lock (&q_ready.lock);
 	      ll_prio_enqueue (ll_dequeue ((struct chx_pq *)owner),
 			       owner->parent);
+	      chx_spin_unlock (&q_ready.lock);
 	      break;
+	    }
+	  if (owner->state == THREAD_WAIT_CND)
+	    {
+	      struct chx_cond *cond = (struct chx_cond *)owner->parent;
+
+	      chx_spin_lock (&cond->lock);
+	      ll_prio_enqueue (ll_dequeue ((struct chx_pq *)owner),
+			       owner->parent);
+	      chx_spin_unlock (&cond->lock);
 	    }
 	  else if (owner->state == THREAD_WAIT_MTX)
 	    {
+	      struct chx_mtx *mutex = (struct chx_mtx *)owner->parent;
+
+	      chx_spin_lock (&mutex->lock);
 	      ll_prio_enqueue (ll_dequeue ((struct chx_pq *)owner),
 			       owner->parent);
+	      chx_spin_unlock (&mutex->lock);
 	      owner = m->owner;
 	      continue;
 	    }
@@ -1370,41 +1391,35 @@ chopstx_cond_broadcast (chopstx_cond_t *cond)
 
 
 static void
-chx_cond_hook (struct chx_px *px, chopstx_cond_t *cond,
-	       chopstx_mutex_t *mutex, int (*check) (void *), void *arg)
+chx_cond_hook (struct chx_px *px, struct chx_poll_head *pd)
 {
+  struct chx_poll_cond *pc = (struct chx_poll_cond *)pd;
+
   chopstx_testcancel ();
 
-  if (mutex)
-    chopstx_mutex_lock (mutex);
+  if (pc->mutex)
+    chopstx_mutex_lock (pc->mutex);
 
-  if ((*check) (arg) != 0)
-    (*px->counter_p)++;
+  if ((*pc->check) (pc->arg) != 0)
+    {
+      chx_spin_lock (&px->lock);
+      (*px->counter_p)++;
+      *px->ready_p = 1;
+      chx_spin_unlock (&px->lock);
+    }
   else
     { /* Condition doesn't met.
        * Register the proxy to wait for the condition.
        */
       chx_cpu_sched_lock ();
-      chx_spin_lock (&cond->lock);
-      ll_prio_enqueue ((struct chx_pq *)px, &cond->q);
-      chx_spin_unlock (&cond->lock);
+      chx_spin_lock (&pc->cond->lock);
+      ll_prio_enqueue ((struct chx_pq *)px, &pc->cond->q);
+      chx_spin_unlock (&pc->cond->lock);
       chx_cpu_sched_unlock ();
     }
 
-  if (mutex)
-    chopstx_mutex_unlock (mutex);
-}
-
-static void
-chx_cond_unhook (struct chx_px *px, chopstx_cond_t *cond)
-{
-  chx_cpu_sched_lock ();
-  if (px->parent == &cond->q)
-    {
-      ll_dequeue ((struct chx_pq *)px);
-      px->parent = NULL;
-    }
-  chx_cpu_sched_unlock ();
+  if (pc->mutex)
+    chopstx_mutex_unlock (pc->mutex);
 }
 
 
@@ -1418,6 +1433,7 @@ chx_cond_unhook (struct chx_px *px, chopstx_cond_t *cond)
 void
 chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
 {
+  intr->type = CHOPSTX_POLL_INTR;
   intr->irq_num = irq_num;
   intr->tp = running;
   intr->ready = 0;
@@ -1620,7 +1636,6 @@ chopstx_join (chopstx_t thd, void **ret)
       ll_prio_enqueue ((struct chx_pq *)running, &q_join.q);
       running->v = (uint32_t)tp;
       running->state = THREAD_JOIN;
-      chx_spin_unlock (&q_join.lock);
       tp->flag_join_req = 1;
       if (tp->prio < running->prio)
 	{
@@ -1629,6 +1644,7 @@ chopstx_join (chopstx_t thd, void **ret)
 	      || tp->state == THREAD_WAIT_MTX || tp->state == THREAD_WAIT_CND)
 	    ll_prio_enqueue (ll_dequeue ((struct chx_pq *)tp), tp->parent);
 	}
+      chx_spin_unlock (&q_join.lock);
       chx_sched (CHX_SLEEP);
     }
   else
@@ -1641,9 +1657,10 @@ chopstx_join (chopstx_t thd, void **ret)
 
 
 static void
-chx_join_hook (struct chx_px *px, chopstx_t thd)
+chx_join_hook (struct chx_px *px, struct chx_poll_head *pd)
 {
-  struct chx_thread *tp = (struct chx_thread *)thd;
+  struct chx_poll_join *pj = (struct chx_poll_join *)pd;
+  struct chx_thread *tp = (struct chx_thread *)pj->thd;
 
   chopstx_testcancel ();
   chx_cpu_sched_lock ();
@@ -1655,29 +1672,21 @@ chx_join_hook (struct chx_px *px, chopstx_t thd)
     }
 
   if (tp->state == THREAD_EXITED)
-    (*px->counter_p)++;
+    {
+      chx_spin_lock (&px->lock);
+      (*px->counter_p)++;
+      *px->ready_p = 1;
+      chx_spin_unlock (&px->lock);
+    }
   else
     { /* Not yet exited.
        * Register the proxy to wait for TP's exit.
        */
-      chx_cpu_sched_lock ();
       px->v = (uint32_t)tp;
       chx_spin_lock (&q_join.lock);
       ll_prio_enqueue ((struct chx_pq *)px, &q_join.q);
       chx_spin_unlock (&q_join.lock);
       tp->flag_join_req = 1;
-    }
-  chx_cpu_sched_unlock ();
-}
-
-static void
-chx_join_unhook (struct chx_px *px)
-{
-  chx_cpu_sched_lock ();
-  if (px->parent == &q_join.q)
-    {
-      ll_dequeue ((struct chx_pq *)px);
-      px->parent = NULL;
     }
   chx_cpu_sched_unlock ();
 }
@@ -1745,7 +1754,13 @@ chopstx_cancel (chopstx_t thd)
       p->reg[REG_PC] = (uint32_t)chopstx_exit;
 
       if (tp->state == THREAD_WAIT_CND)
-	ll_dequeue ((struct chx_pq *)tp);
+	{
+	  struct chx_cond *cond = (struct chx_cond *)tp->parent;
+
+	  chx_spin_lock (&cond->lock);
+	  ll_dequeue ((struct chx_pq *)tp);
+	  chx_spin_unlock (&cond->lock);
+	}
       else if (tp->state == THREAD_WAIT_TIME || tp->state == THREAD_WAIT_POLL)
 	chx_timer_dequeue (tp);
 
@@ -1778,7 +1793,7 @@ chopstx_testcancel (void)
 /**
  * chopstx_setcancelstate - set cancelability state
  * @cancel_disable: 0 to enable cancelation, otherwise disabled.
- * 
+ *
  * Calling chopstx_setcancelstate sets cancelability state.
  *
  * Returns old state which is 0 when it was enabled.
@@ -1803,6 +1818,8 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
   px->v = 0;
   px->master = running;
   px->counter_p = cp;
+  px->ready_p = NULL;
+  chx_spin_init (&px->lock);
 }
 
 
@@ -1810,7 +1827,8 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
  * chopstx_poll - wait for condition variable or thread's exit
  * @usec_p: Pointer to usec
  * @n: Number of poll descriptors
- * @VARARGS: Pointers to an object of struct chx_poll_desc
+ * @VARARGS: Pointers to an object which should be one of:
+ *           struct chx_poll_cond, chx_poll_join, or chx_intr.
  *
  * Returns number of active descriptors.
  */
@@ -1821,7 +1839,7 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   int i;
   va_list ap;
   struct chx_px px[n];
-  struct chx_poll_desc *pd;
+  struct chx_poll_head *pd;
 
   chopstx_testcancel ();
 
@@ -1831,29 +1849,36 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pd = va_arg (ap, struct chx_poll_desc *);
-      if (pd->type == CHOPSTX_POLL_COND) 
-	chx_cond_hook (&px[i], pd->c.cond, pd->c.mutex, pd->c.check, pd->c.arg);
+      pd = va_arg (ap, struct chx_poll_head *);
+      if (pd->type == CHOPSTX_POLL_COND)
+	chx_cond_hook (&px[i], pd);
       else
-	chx_join_hook (&px[i], pd->j.thd);
+	chx_join_hook (&px[i], pd);
+      px[i].ready_p = &pd->ready;
     }
   va_end (ap);
 
   chx_cpu_sched_lock ();
+  chx_spin_lock (&px->lock);
   if (counter)
-    chx_cpu_sched_unlock ();
+    {
+      chx_spin_unlock (&px->lock);
+      chx_cpu_sched_unlock ();
+    }
   else if (*usec_p == 0)
     {
       if (running->flag_sched_rr)
 	chx_timer_dequeue (running);
 
       running->state = THREAD_WAIT_POLL;
+      chx_spin_unlock (&px->lock);
       chx_sched (CHX_SLEEP);
     }
   else
     {
       int r;
 
+      chx_spin_unlock (&px->lock);
       chx_cpu_sched_unlock ();
       do
 	{
@@ -1864,23 +1889,21 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       while (r == 0);
     }
 
-  va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pd = va_arg (ap, struct chx_poll_desc *);
-      if (pd->type == CHOPSTX_POLL_COND) 
-	chx_cond_unhook (&px[i], pd->c.cond);
-      else
-	chx_join_unhook (&px[i]);
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&px[i].lock);
+      ll_dequeue ((struct chx_pq *)&px[i]);
+      chx_spin_unlock (&px[i].lock);
+      chx_cpu_sched_unlock ();
     }
-  va_end (ap);
 
-  return counter;		/* Bitmap??? */
+  return counter;
 }
 
 /*
  * Lower layer architecture specific exception handling entries.
- * 
+ *
  */
 
 void __attribute__ ((naked))
@@ -1923,7 +1946,7 @@ preempt (void)
 	   * Memory clobber constraint here is not accurate, but this
 	   * works.  R7 keeps its value, but having "r7" here prevents
 	   * use of R7 before this asm statement.
-	   */ 
+	   */
 	: "r2", "r3", "r4", "r5", "r6", "r7", "memory");
 
       if (tp)

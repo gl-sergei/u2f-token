@@ -232,13 +232,14 @@ main (int argc, const char *argv[])
 	{
 	  int size;
 	  uint32_t usec;
-	  struct chx_poll_desc poll_desc;
+	  struct chx_poll_cond poll_desc;
 
 	  poll_desc.type = CHOPSTX_POLL_COND;
-	  poll_desc.c.cond = &st->cnd;
-	  poll_desc.c.mutex = &st->mtx;
-	  poll_desc.c.check = check_recv;
-	  poll_desc.c.arg = st;
+	  poll_desc.ready = 0;
+	  poll_desc.cond = &st->cnd;
+	  poll_desc.mutex = &st->mtx;
+	  poll_desc.check = check_recv;
+	  poll_desc.arg = st;
 
 	  /* With chopstx_poll, we can do timed cond_wait */
 	  usec = 3000000;

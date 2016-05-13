@@ -1,3 +1,20 @@
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_sched) [__ARM_ARCH_6M__]: Fix asm.
+
+	* example-cdc/sample.c (main): Update chopstx_poll example.
+	* example-fs-bb48/sample.c (main): Ditto.
+
+	* chopstx.c (struct chx_px): Add READY_P and LOCK.
+	(chx_proxy_init): Add initialization of new members.
+	(chx_wakeup): Spinlock PX.
+	(chopstx_mutex_lock): Add protection by splinlock.
+	(chx_cond_hook, chx_join_hook): Change arguments.
+	(chx_cond_unhook, chx_join_unhook): Remove.
+	(chopstx_claim_irq): Compatible to chx_poll.
+	(chopstx_join): Fix spinlocking.
+	(chopstx_cancel): Fix spinlocking.
+
 2016-05-12  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/sample.c: Update using chopstx_poll.
