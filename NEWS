@@ -7,13 +7,19 @@ NEWS - Noteworthy changes
 
 ** New feature: polling
 New function chopstx_poll is added to watch multiple condition
-variables simultaneously with timeout.
+variables, threads' exit, or IRQ simultaneously with timeout.
+
+** Remove the function chopstx_release_irq
+Releasing irq is now called automaticall, internally.
+
+** Function chopstx_intr_wait is deprecated
+It's now a macro with chopstx_poll.
 
 ** FS-BB48: Kinetis L MCU
 Support for FS-BB48 board with Kinetis L MCU is added.
 
 ** No HardFault at context switch on Cortex-M0
-By its design, Chopstx does context switch hodling scheduler lock.
+By its design, Chopstx does context switch holding the scheduler lock.
 This is implemented with the feature of BASEPRI on Cortex-M3.  Because
 Cortex-M0 doesn't have support of BASEPRI, the context switch (before
 version 0.11) always caused HardFault exception.  Since Cortex-M0

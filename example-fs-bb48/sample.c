@@ -115,7 +115,6 @@ usb_intr (void *arg)
       usb_interrupt_handler ();
     }
 
-  chopstx_release_irq (&interrupt);
   return NULL;
 }
 

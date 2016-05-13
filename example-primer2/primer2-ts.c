@@ -113,10 +113,6 @@ void adc3_conversion (uint32_t *result)
 void adc3_stop (void)
 {
 
-#if USE_ADC3_INTR
-  chopstx_release_irq (&adc3_intr);
-#endif
-
   /* Power off.  */
   ADC3->CR1 = 0;
   ADC3->CR2 = 0;

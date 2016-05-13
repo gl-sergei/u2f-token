@@ -239,12 +239,13 @@ static struct chx_queue q_ready;
 /* Queue of threads waiting for timer.  */
 static struct chx_queue q_timer;
 
-/* Queue of threads which wait exit of some thread.  */
+/* Queue of threads which wait for the exit of some thread.  */
 static struct chx_queue q_join;
 
 
 /* Forward declaration(s). */
 static void chx_request_preemption (uint16_t prio);
+static int chx_wakeup (struct chx_thread *tp);
 
 
 /**************/
@@ -440,7 +441,6 @@ enum  {
   THREAD_WAIT_MTX,
   THREAD_WAIT_CND,
   THREAD_WAIT_TIME,
-  THREAD_WAIT_INT,
   THREAD_WAIT_POLL,
   THREAD_JOIN,
   /**/
@@ -612,44 +612,30 @@ chx_timer_expired (void)
   chx_spin_unlock (&q_timer.lock);
 }
 
-static chopstx_intr_t *intr_top;
-static struct chx_spinlock intr_lock;
+/* Queue of threads which wait for some interrupts.  */
+static struct chx_queue q_intr;
 
 void
 chx_handle_intr (void)
 {
-  chopstx_intr_t *intr;
+  struct chx_pq *p;
   register uint32_t irq_num;
 
   asm volatile ("mrs	%0, IPSR\n\t"
 		"sub	%0, #16"   /* Exception # - 16 = interrupt number.  */
 		: "=r" (irq_num) : /* no input */ : "memory");
   chx_disable_intr (irq_num);
-  chx_spin_lock (&intr_lock);
-  for (intr = intr_top; intr; intr = intr->next)
-    if (intr->irq_num == irq_num)
-      break;
+  chx_spin_lock (&q_intr.lock);
+  for (p = q_intr.q.next; p != (struct chx_pq *)&q_intr.q; p = p->next)
+    if (p->v == irq_num)
+      {			/* should be one at most. */
+	struct chx_thread *tp = (struct chx_thread *)p;
 
-  if (intr)
-    {
-      intr->ready++;
-      if (intr->tp != running)
-	{
-	  if (intr->tp->state == THREAD_WAIT_POLL)
-	    {
-	      if (intr->tp->parent == &q_timer.q)
-		chx_timer_dequeue (intr->tp);
-	      chx_ready_enqueue (intr->tp);
-	      chx_request_preemption (intr->tp->prio);
-	    }
-	  else if (intr->tp->state == THREAD_WAIT_INT)
-	    {
-	      chx_ready_enqueue (intr->tp);
-	      chx_request_preemption (intr->tp->prio);
-	    }
-	}
-    }
-  chx_spin_unlock (&intr_lock);
+	ll_dequeue (p);
+	chx_wakeup (tp);
+	break;
+      }
+  chx_spin_unlock (&q_intr.lock);
 }
 
 void
@@ -672,7 +658,6 @@ chopstx_t chopstx_main;
 void
 chx_init (struct chx_thread *tp)
 {
-  chx_spin_init (&intr_lock);
   chx_prio_init ();
   memset (&tp->tc, 0, sizeof (tp->tc));
   q_ready.q.next = q_ready.q.prev = (struct chx_pq *)&q_ready.q;
@@ -681,6 +666,8 @@ chx_init (struct chx_thread *tp)
   chx_spin_init (&q_timer.lock);
   q_join.q.next = q_join.q.prev = (struct chx_pq *)&q_join.q;
   chx_spin_init (&q_join.lock);
+  q_intr.q.next = q_intr.q.prev = (struct chx_pq *)&q_intr.q;
+  chx_spin_init (&q_intr.lock);
   tp->next = tp->prev = (struct chx_pq *)tp;
   tp->mutex_list = NULL;
   tp->clp = NULL;
@@ -1421,6 +1408,19 @@ chx_cond_hook (struct chx_px *px, struct chx_poll_head *pd)
 }
 
 
+/*
+ * Release the interrupt request.
+ */
+static void
+chx_release_irq (chopstx_intr_t *intr)
+{
+  chx_cpu_sched_lock ();
+  chx_spin_lock (&q_intr.lock);
+  chx_enable_intr (intr->irq_num);
+  chx_spin_unlock (&q_intr.lock);
+  chx_cpu_sched_unlock ();
+}
+
 /**
  * chopstx_claim_irq - Claim interrupt request to handle by this thread
  * @intr: Pointer to INTR structure
@@ -1432,101 +1432,44 @@ void
 chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
 {
   intr->type = CHOPSTX_POLL_INTR;
-  intr->irq_num = irq_num;
-  intr->tp = running;
   intr->ready = 0;
+  intr->irq_num = irq_num;
+  intr->cln.routine = (void (*)(void *))chx_release_irq;
+  intr->cln.arg = (void *)intr;
+  chopstx_cleanup_push (&intr->cln);
+
   chx_cpu_sched_lock ();
+  chx_spin_lock (&q_intr.lock);
   chx_disable_intr (irq_num);
   chx_set_intr_prio (irq_num);
-  chx_spin_lock (&intr_lock);
-  intr->next = intr_top;
-  intr_top = intr;
-  chx_spin_unlock (&intr_lock);
-  chx_cpu_sched_unlock ();
-}
-
-
-/**
- * chopstx_realease_irq - Unregister interrupt request
- * @intr0: Interrupt request to be unregistered
- *
- * Release the interrupt request specified by @intr0.
- */
-void
-chopstx_release_irq (chopstx_intr_t *intr0)
-{
-  chopstx_intr_t *intr, *intr_prev;
-
-  chx_cpu_sched_lock ();
-  chx_enable_intr (intr0->irq_num);
-  chx_spin_lock (&intr_lock);
-  intr_prev = intr_top;
-  for (intr = intr_top; intr; intr = intr->next)
-    if (intr == intr0)
-      break;
-
-  if (intr == intr_top)
-    intr_top = intr_top->next;
-  else
-    intr_prev->next = intr->next;
-  chx_spin_unlock (&intr_lock);
+  chx_spin_unlock (&q_intr.lock);
   chx_cpu_sched_unlock ();
 }
 
 
 static void
-chx_release_irq_thread (struct chx_thread *tp)
+chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
 {
-  chopstx_intr_t *intr, *intr_prev;
+  struct chx_intr *intr = (struct chx_intr *)pd;
 
-  chx_cpu_sched_lock ();
-  chx_spin_lock (&intr_lock);
-  intr_prev = intr_top;
-  for (intr = intr_top; intr; intr = intr->next)
-    {
-      if (intr->tp == tp)
-	break;
-      intr_prev = intr;
-    }
-
-  if (intr)
-    {
-      chx_enable_intr (intr->irq_num);
-      if (intr == intr_top)
-	intr_top = intr_top->next;
-      else
-	intr_prev->next = intr->next;
-    }
-  chx_spin_unlock (&intr_lock);
-  chx_cpu_sched_unlock ();
-}
-
-
-/**
- * chopstx_intr_wait - Wait for interrupt request from hardware
- * @intr: Pointer to INTR structure
- *
- * Wait for the interrupt @intr to be occured.
- */
-void
-chopstx_intr_wait (chopstx_intr_t *intr)
-{
   chopstx_testcancel ();
   chx_cpu_sched_lock ();
-  if (intr->ready == 0)
+  if (intr->ready)
     {
-      chx_enable_intr (intr->irq_num);
-      if (running->flag_sched_rr)
-	chx_timer_dequeue (running);
-      running->state = THREAD_WAIT_INT;
-      running->parent = NULL;
-      running->v = 0;
-      chx_sched (CHX_SLEEP);
-      chx_clr_intr (intr->irq_num);
+      chx_spin_lock (&px->lock);
+      (*px->counter_p)++;
+      *px->ready_p = 1;
+      chx_spin_unlock (&px->lock);
     }
   else
-    chx_cpu_sched_unlock ();
-  intr->ready--;
+    {
+      px->v = intr->irq_num;
+      chx_spin_lock (&q_intr.lock);
+      chx_enable_intr (intr->irq_num);
+      ll_prio_enqueue ((struct chx_pq *)px, &q_intr.q);
+      chx_spin_unlock (&q_intr.lock);
+    }
+  chx_cpu_sched_unlock ();
 }
 
 
@@ -1598,7 +1541,6 @@ chopstx_exit (void *retval)
       chx_cpu_sched_unlock ();
     }
 
-  chx_release_irq_thread (running);
   chx_exit (retval);
 }
 
@@ -1742,8 +1684,8 @@ chopstx_cancel (chopstx_t thd)
     }
 
   /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
-  if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_INT
-      || tp->state == THREAD_WAIT_TIME || tp->state == THREAD_WAIT_POLL)
+  if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_TIME
+      || tp->state == THREAD_WAIT_POLL)
     {
       /* Throw away registers on stack and direct to chopstx_exit.  */
       /* This is pretty much violent, but it works.  */
@@ -1823,11 +1765,11 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
 
 
 /**
- * chopstx_poll - wait for condition variable or thread's exit
- * @usec_p: Pointer to usec
+ * chopstx_poll - wait for condition variable, thread's exit, or IRQ
+ * @usec_p: Pointer to usec for timeout.  Forever if NULL.
  * @n: Number of poll descriptors
  * @VARARGS: Pointers to an object which should be one of:
- *           struct chx_poll_cond, chx_poll_join, or chx_intr.
+ *           chopstx_poll_cond_t, chopstx_poll_join_t, or chopstx_intr_t.
  *
  * Returns number of active descriptors.
  */
@@ -1851,6 +1793,8 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       pd = va_arg (ap, struct chx_poll_head *);
       if (pd->type == CHOPSTX_POLL_COND)
 	chx_cond_hook (&px[i], pd);
+      else if (pd->type == CHOPSTX_POLL_INTR)
+	chx_intr_hook (&px[i], pd);
       else
 	chx_join_hook (&px[i], pd);
       px[i].ready_p = &pd->ready;
@@ -1864,7 +1808,7 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       chx_spin_unlock (&px->lock);
       chx_cpu_sched_unlock ();
     }
-  else if (*usec_p == 0)
+  else if (usec_p == NULL)
     {
       if (running->flag_sched_rr)
 	chx_timer_dequeue (running);
@@ -1888,14 +1832,24 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       while (r == 0);
     }
 
+  va_start (ap, n);
   for (i = 0; i < n; i++)
     {
+      pd = va_arg (ap, struct chx_poll_head *);
+      if (pd->type == CHOPSTX_POLL_INTR)
+	{
+	  struct chx_intr *intr = (struct chx_intr *)pd;
+	  if (intr->ready)
+	    chx_clr_intr (intr->irq_num);
+	}
+
       chx_cpu_sched_lock ();
       chx_spin_lock (&px[i].lock);
       ll_dequeue ((struct chx_pq *)&px[i]);
       chx_spin_unlock (&px[i].lock);
       chx_cpu_sched_unlock ();
     }
+  va_end (ap);
 
   return counter;
 }

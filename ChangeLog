@@ -1,5 +1,20 @@
 2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chopstx_exit): Don't call chx_release_irq_thread.
+	(chx_release_irq_thread): Remove.
+	(q_intr): New variable.
+	(intr_top): Remove.
+	(chx_handle_intr, chx_init, chopstx_claim_irq)
+	(chopstx_intr_wait): Use Q_INTR.
+	(chx_intr_hook): New.
+	(chopstx_poll): Support CHOPSTX_POLL_INTR.
+	(chopstx_release_irq): Remove.
+	(chx_release_irq): New internal function.
+	(THREAD_WAIT_INT): Remove.
+	(chopstx_intr_wait): Remove, now offered as a macro.
+
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
 	* chopstx.c (chx_sched) [__ARM_ARCH_6M__]: Fix asm.
 	(chx_handle_intr, chx_wakeup, chopstx_cancel): Fix for polling
 	with no timeout.

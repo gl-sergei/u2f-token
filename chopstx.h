@@ -82,21 +82,6 @@ void chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex);
 void chopstx_cond_signal (chopstx_cond_t *cond);
 void chopstx_cond_broadcast (chopstx_cond_t *cond);
 
-struct chx_intr {
-  uint16_t type;
-  uint16_t ready;
-  /**/
-  struct chx_intr *next;
-  struct chx_thread *tp;
-  uint8_t irq_num;
-};
-typedef struct chx_intr chopstx_intr_t;
-
-void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
-void chopstx_release_irq (chopstx_intr_t *intr);
-
-void chopstx_intr_wait (chopstx_intr_t *intr);
-
 /*
  * Library provides default implementation as weak reference.
  * User can replace it.
@@ -125,14 +110,14 @@ void chopstx_testcancel (void);
 /* NOTE: This signature is different to PTHREAD's one.  */
 int chopstx_setcancelstate (int);
 
-struct chx_cleanup {
+typedef struct chx_cleanup {
   struct chx_cleanup *next;
   void (*routine) (void *);
   void *arg;
-};
+} chopstx_cleanup_t;
 
 /* NOTE: This signature is different to PTHREAD's one.  */
-void chopstx_cleanup_push (struct chx_cleanup *clp);
+void chopstx_cleanup_push (chopstx_cleanup_t *clp);
 void chopstx_cleanup_pop (int execute);
 
 
@@ -140,8 +125,8 @@ void chopstx_wakeup_usec_wait (chopstx_t thd);
 
 enum {
   CHOPSTX_POLL_COND = 0,
-  CHOPSTX_POLL_JOIN,
   CHOPSTX_POLL_INTR,
+  CHOPSTX_POLL_JOIN,
 };
 
 struct chx_poll_cond {
@@ -153,6 +138,7 @@ struct chx_poll_cond {
   int (*check) (void *);
   void *arg;
 };
+typedef struct chx_poll_cond chopstx_poll_cond_t;
 
 struct chx_poll_join {
   uint16_t type;
@@ -160,6 +146,21 @@ struct chx_poll_join {
   /**/
   chopstx_t thd;
 };
+typedef struct chx_poll_join chopstx_poll_join_t;
+
+struct chx_intr {
+  uint16_t type;
+  uint16_t ready;
+  /**/
+  uint8_t irq_num;
+  struct chx_cleanup cln;
+};
+typedef struct chx_intr chopstx_intr_t;
+
+void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
+
+#define chopstx_intr_wait(intr)   chopstx_poll (NULL, 1, intr)
+
 
 struct chx_poll_head {
   uint16_t type;
