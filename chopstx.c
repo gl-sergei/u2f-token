@@ -1857,23 +1857,26 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   for (i = 0; i < n; i++)
     {
       pd = va_arg (ap, struct chx_poll_head *);
+
+      chx_cpu_sched_lock ();
+      chx_spin_lock (&px[i].lock);
       if (pd->type == CHOPSTX_POLL_INTR)
 	{
 	  struct chx_intr *intr = (struct chx_intr *)pd;
 
-	  chx_cpu_sched_lock ();
-	  chx_spin_lock (&q_intr.lock);
 	  if (intr->ready)
 	    chx_clr_intr (intr->irq_num);
 	  else
-	    chx_disable_intr (intr->irq_num);
-	  chx_spin_unlock (&q_intr.lock);
-	  chx_cpu_sched_unlock ();
+	    {
+	      ll_dequeue ((struct chx_pq *)&px[i]);
+	      chx_disable_intr (intr->irq_num);
+	    }
 	}
-
-      chx_cpu_sched_lock ();
-      chx_spin_lock (&px[i].lock);
-      ll_dequeue ((struct chx_pq *)&px[i]);
+      else
+	{
+	  if (pd->ready == 0)
+	    ll_dequeue ((struct chx_pq *)&px[i]);
+	}
       chx_spin_unlock (&px[i].lock);
       chx_cpu_sched_unlock ();
     }
