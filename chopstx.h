@@ -88,7 +88,7 @@ void chopstx_cond_broadcast (chopstx_cond_t *cond);
   */
 void chx_fatal (uint32_t err_code) __attribute__((__weak__, __noreturn__));
 
-void chopstx_join (chopstx_t, void **);
+int chopstx_join (chopstx_t, void **);
 void chopstx_exit (void *retval) __attribute__((__noreturn__));
 
 
@@ -98,11 +98,7 @@ enum {
   CHOPSTX_ERR_JOIN,
 };
 
-enum {
-  CHOPSTX_EXIT_SUCCESS = 0,
-  CHOPSTX_EXIT_CANCELED         = 256,
-  CHOPSTX_EXIT_CANCELED_IN_SYNC = 257,
-};
+#define CHOPSTX_CANCELED ((void *) -1)
 
 void chopstx_cancel (chopstx_t thd);
 void chopstx_testcancel (void);
@@ -153,7 +149,6 @@ struct chx_intr {
   uint16_t ready;
   /**/
   uint8_t irq_num;
-  struct chx_cleanup cln;
 };
 typedef struct chx_intr chopstx_intr_t;
 

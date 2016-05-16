@@ -125,7 +125,7 @@ Claim interrupt @var{intr} with @var{irq_num} for this thread.
 
 Wait for the interrupt @var{intr} to be occured.
 
-This function is DEPRECATED.  Use chopstx_poll.
+This function is DEPRECATED.  Please use chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_cleanup_push
@@ -158,12 +158,13 @@ IRQ, it will be released, too.  This function never returns.
 
 @subheading chopstx_join
 @anchor{chopstx_join}
-@deftypefun {void} {chopstx_join} (chopstx_t @var{thd}, void ** @var{ret})
+@deftypefun {int} {chopstx_join} (chopstx_t @var{thd}, void ** @var{ret})
 @var{thd}: Thread to wait
 
 @var{ret}: Pointer to void * to store return value
 
 Waits for the thread of @var{thd} to terminate.
+Returns 0 on success, 1 when waiting is interrupted.
 @end deftypefun
 
 @subheading chopstx_wakeup_usec_wait

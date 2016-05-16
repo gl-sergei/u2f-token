@@ -744,7 +744,10 @@ chx_request_preemption (uint16_t prio)
  *
  * 	AAPCS: ARM Architecture Procedure Call Standard
  *
- * Returns YIELD normally, returns -1 on forcible wakeup.
+ * Returns:
+ *          1 on erroneous wakeup.
+ *          0 on normal wakeup.
+ *         -1 on cancellation.
  */
 static int __attribute__ ((naked, noinline))
 chx_sched (uint32_t yield)
@@ -761,7 +764,7 @@ chx_sched (uint32_t yield)
 
   /* Build stack data as if it were an exception entry.  */
   /*
-   * r0:  YIELD                 scratch
+   * r0:  0                     scratch
    * r1:  0                     scratch
    * r2:  0                     scratch
    * r3:  0                     scratch
@@ -779,9 +782,9 @@ chx_sched (uint32_t yield)
        "mov	r2, r1\n\t"
        "mov	r3, r1\n\t"
        "push	{r1, r2, r3}\n\t"
-       "push	{%0, r1}"
+       "push	{r1, r2}"
        : /* no output*/
-       : "r" (yield)
+       : /* no input */
        : "r1", "r2", "r3", "memory");
 
   /* Save registers onto CHX_THREAD struct.  */
@@ -927,7 +930,6 @@ chx_wakeup (struct chx_pq *pq)
 	{
 	  if (tp->parent == &q_timer.q)
 	    chx_timer_dequeue (tp);
-	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
 	  chx_ready_enqueue (tp);
 	  if (tp->prio > running->prio)
 	    yield = 1;
@@ -937,7 +939,6 @@ chx_wakeup (struct chx_pq *pq)
   else
     {
       tp = (struct chx_thread *)pq;
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 0;
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
 	yield = 1;
@@ -1094,6 +1095,14 @@ chopstx_create (uint32_t flags_and_prio,
  */
 #define MAX_USEC_FOR_TIMER (16777215/MHZ) /* SYSTICK is 24-bit. */
 
+/*
+ * Sleep for some event (MAX_USEC_FOR_TIMER at max).
+ *
+ * Returns:
+ *         -1 on cancellation of the thread.
+ *          0 on timeout.
+ *          1 when no sleep is needed any more, or some event occurs.
+ */
 static int
 chx_snooze (uint32_t state, uint32_t *usec_p)
 {
@@ -1104,7 +1113,7 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
   if (usec == 0)
     {
       chx_cpu_sched_unlock ();
-      return -1;
+      return 1;
     }
 
   usec0 = (usec > MAX_USEC_FOR_TIMER) ? MAX_USEC_FOR_TIMER: usec;
@@ -1116,7 +1125,7 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
   chx_timer_insert (running, usec0);
   chx_spin_unlock (&q_timer.lock);
   r = chx_sched (CHX_SLEEP);
-  if (r >= 0)
+  if (r == 0)
     *usec_p -= usec0;
 
   return r;
@@ -1234,17 +1243,27 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 	      owner = m->owner;
 	      continue;
 	    }
-	  else if (owner->state == THREAD_JOIN
-		   || owner->state == THREAD_WAIT_TIME
+	  else if (owner->state == THREAD_JOIN)
+	    {
+	      ((struct chx_stack_regs *)owner->tc.reg[REG_SP])->reg[REG_R0] = 1;
+	      chx_spin_lock (&q_join.lock);
+	      ll_dequeue ((struct chx_pq *)owner);
+	      chx_spin_unlock (&q_join.lock);
+	      chx_ready_enqueue (owner);
+	      break;
+	    }
+	  else if (owner->state == THREAD_WAIT_TIME
 		   || owner->state == THREAD_WAIT_POLL)
 	    {
-	      ((struct chx_stack_regs *)owner->tc.reg[REG_SP])->reg[REG_R0] = -1;
+	      ((struct chx_stack_regs *)owner->tc.reg[REG_SP])->reg[REG_R0] = 1;
+	      if (tp->parent == &q_timer.q)
+		chx_timer_dequeue (tp);
+
 	      chx_ready_enqueue (owner);
 	      break;
 	    }
 	  else
 	    break;
-	  /* Assume it's UP no case of: ->state==RUNNING on SMP??? */
 	}
 
       if (tp->flag_sched_rr)
@@ -1304,6 +1323,7 @@ void
 chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
 {
   struct chx_thread *tp = running;
+  int r;
 
   chopstx_testcancel ();
   chx_cpu_sched_lock ();
@@ -1321,10 +1341,13 @@ chopstx_cond_wait (chopstx_cond_t *cond, chopstx_mutex_t *mutex)
   ll_prio_enqueue ((struct chx_pq *)tp, &cond->q);
   tp->state = THREAD_WAIT_CND;
   chx_spin_unlock (&cond->lock);
-  chx_sched (CHX_SLEEP);
+  r = chx_sched (CHX_SLEEP);
 
   if (mutex)
     chopstx_mutex_lock (mutex);
+
+  if (r < 0)
+    chopstx_exit (CHOPSTX_CANCELED);
 }
 
 
@@ -1410,19 +1433,6 @@ chx_cond_hook (struct chx_px *px, struct chx_poll_head *pd)
 }
 
 
-/*
- * Release the interrupt request.
- */
-static void
-chx_release_irq (chopstx_intr_t *intr)
-{
-  chx_cpu_sched_lock ();
-  chx_spin_lock (&q_intr.lock);
-  chx_enable_intr (intr->irq_num);
-  chx_spin_unlock (&q_intr.lock);
-  chx_cpu_sched_unlock ();
-}
-
 /**
  * chopstx_claim_irq - Claim interrupt request to handle by this thread
  * @intr: Pointer to INTR structure
@@ -1436,9 +1446,6 @@ chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
   intr->type = CHOPSTX_POLL_INTR;
   intr->ready = 0;
   intr->irq_num = irq_num;
-  intr->cln.routine = (void (*)(void *))chx_release_irq;
-  intr->cln.arg = (void *)intr;
-  chopstx_cleanup_push (&intr->cln);
 
   chx_cpu_sched_lock ();
   chx_spin_lock (&q_intr.lock);
@@ -1472,7 +1479,7 @@ chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
  *
  * Wait for the interrupt @intr to be occured.
  *
- * This function is DEPRECATED.  Use chopstx_poll.
+ * This function is DEPRECATED.  Please use chopstx_poll.
  */
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
@@ -1559,11 +1566,13 @@ chopstx_exit (void *retval)
  * @ret: Pointer to void * to store return value
  *
  * Waits for the thread of @thd to terminate.
+ * Returns 0 on success, 1 when waiting is interrupted.
  */
-void
+int
 chopstx_join (chopstx_t thd, void **ret)
 {
   struct chx_thread *tp = (struct chx_thread *)thd;
+  int r = 0;
 
   /*
    * We don't offer deadlock detection.  It's users' responsibility.
@@ -1593,14 +1602,22 @@ chopstx_join (chopstx_t thd, void **ret)
 	    ll_prio_enqueue (ll_dequeue ((struct chx_pq *)tp), tp->parent);
 	}
       chx_spin_unlock (&q_join.lock);
-      chx_sched (CHX_SLEEP);
+      r = chx_sched (CHX_SLEEP);
     }
   else
     chx_cpu_sched_unlock ();
 
-  tp->state = THREAD_FINISHED;
-  if (ret)
-    *ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
+  if (r < 0)
+    chopstx_exit (CHOPSTX_CANCELED);
+
+  if (r == 0)
+    {
+      tp->state = THREAD_FINISHED;
+      if (ret)
+	*ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
+    }
+
+  return r;
 }
 
 
@@ -1656,7 +1673,7 @@ chopstx_wakeup_usec_wait (chopstx_t thd)
   chx_cpu_sched_lock ();
   if (tp->state == THREAD_WAIT_TIME)
     {
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
+      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
       chx_timer_dequeue (tp);
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
@@ -1679,10 +1696,7 @@ void
 chopstx_cancel (chopstx_t thd)
 {
   struct chx_thread *tp = (struct chx_thread *)thd;
-  struct chx_stack_regs *p;
-  int yield = 0;
 
-  /* Assume it's UP, it's *never*: tp->state==RUNNING on SMP??? */
   chx_cpu_sched_lock ();
   tp->flag_got_cancel = 1;
   if (!tp->flag_cancelable)
@@ -1691,33 +1705,31 @@ chopstx_cancel (chopstx_t thd)
       return;
     }
 
-  /* Cancellation points: cond_wait, intr_wait, and usec_wait.  */
-  if (tp->state == THREAD_WAIT_CND || tp->state == THREAD_WAIT_TIME
-      || tp->state == THREAD_WAIT_POLL)
+  /* Cancellation points: cond_wait, usec_wait, and poll.  */
+  if (tp->state == THREAD_WAIT_CND)
     {
-      /* Throw away registers on stack and direct to chopstx_exit.  */
-      /* This is pretty much violent, but it works.  */
-      p = (struct chx_stack_regs *)tp->tc.reg[REG_SP];
-      p->reg[REG_R0] = CHOPSTX_EXIT_CANCELED;
-      p->reg[REG_PC] = (uint32_t)chopstx_exit;
+      struct chx_cond *cond = (struct chx_cond *)tp->parent;
 
-      if (tp->state == THREAD_WAIT_CND)
-	{
-	  struct chx_cond *cond = (struct chx_cond *)tp->parent;
-
-	  chx_spin_lock (&cond->lock);
-	  ll_dequeue ((struct chx_pq *)tp);
-	  chx_spin_unlock (&cond->lock);
-	}
-      else if ((tp->state == THREAD_WAIT_TIME || tp->state == THREAD_WAIT_POLL)
-	       && (tp->parent == &q_timer.q))
-	chx_timer_dequeue (tp);
-
-      chx_ready_enqueue (tp);
-      if (tp->prio > running->prio)
-	yield = 1;
+      chx_spin_lock (&cond->lock);
+      ll_dequeue ((struct chx_pq *)tp);
+      chx_spin_unlock (&cond->lock);
     }
-  if (yield)
+  else if (tp->state == THREAD_WAIT_TIME)
+    chx_timer_dequeue (tp);
+  else if (tp->state == THREAD_WAIT_POLL)
+    {
+      if (tp->parent == &q_timer.q)
+	chx_timer_dequeue (tp);
+    }
+  else
+    {
+      chx_cpu_sched_unlock ();
+      return;
+    }
+
+  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
+  chx_ready_enqueue (tp);
+  if (tp->prio > running->prio)
     chx_sched (CHX_YIELD);
   else
     chx_cpu_sched_unlock ();
@@ -1735,7 +1747,7 @@ void
 chopstx_testcancel (void)
 {
   if (running->flag_cancelable && running->flag_got_cancel)
-    chopstx_exit ((void *)CHOPSTX_EXIT_CANCELED_IN_SYNC);
+    chopstx_exit (CHOPSTX_CANCELED);
 }
 
 
@@ -1789,6 +1801,7 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   va_list ap;
   struct chx_px px[n];
   struct chx_poll_head *pd;
+  int r = 0;
 
   chopstx_testcancel ();
 
@@ -1823,12 +1836,10 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
 
       running->state = THREAD_WAIT_POLL;
       chx_spin_unlock (&px->lock);
-      chx_sched (CHX_SLEEP);
+      r = chx_sched (CHX_SLEEP);
     }
   else
     {
-      int r;
-
       chx_spin_unlock (&px->lock);
       chx_cpu_sched_unlock ();
       do
@@ -1847,8 +1858,15 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       if (pd->type == CHOPSTX_POLL_INTR)
 	{
 	  struct chx_intr *intr = (struct chx_intr *)pd;
+
+	  chx_cpu_sched_lock ();
+	  chx_spin_lock (&q_intr.lock);
 	  if (intr->ready)
 	    chx_clr_intr (intr->irq_num);
+	  else
+	    chx_disable_intr (intr->irq_num);
+	  chx_spin_unlock (&q_intr.lock);
+	  chx_cpu_sched_unlock ();
 	}
 
       chx_cpu_sched_lock ();
@@ -1858,6 +1876,9 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       chx_cpu_sched_unlock ();
     }
   va_end (ap);
+
+  if (r < 0)
+    chopstx_exit (CHOPSTX_CANCELED);
 
   return counter;
 }
