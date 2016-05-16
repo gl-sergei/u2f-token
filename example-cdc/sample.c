@@ -65,24 +65,31 @@ usb_intr (void *arg)
   chopstx_intr_t interrupt;
 
   (void)arg;
-  usb_lld_init (0x80);		/* Bus powered. */
-  chopstx_claim_irq (&interrupt, INTR_REQ_USB);
-
+#if defined(OLDER_SYS_H)
   /*
+   * Historically (before sys < 3.0), NVIC priority setting for USB
+   * interrupt was done in usb_lld_sys_init.  Thus this code.
+   *
    * When USB interrupt occurs between usb_lld_init (which assumes
    * ISR) and chopstx_claim_irq (which clears pending interrupt),
    * invocation of usb_interrupt_handler won't occur.
-   *
-   * We can't call usb_lld_init after chopstx_claim_irq, as
-   * usb_lld_init does its own setting for NVIC.  Calling
-   * chopstx_claim_irq after usb_lld_init overrides that.
    *
    * Calling usb_interrupt_handler is no harm even if there were no
    * interrupts, thus, we call it unconditionally here, just in case
    * if there is a request.
    *
+   * We can't call usb_lld_init after chopstx_claim_irq, as
+   * usb_lld_init does its own setting for NVIC.  Calling
+   * chopstx_claim_irq after usb_lld_init overrides that.
+   *
    */
+  usb_lld_init (0x80);		/* Bus powered. */
+  chopstx_claim_irq (&interrupt, INTR_REQ_USB);
   usb_interrupt_handler ();
+#else
+  chopstx_claim_irq (&interrupt, INTR_REQ_USB);
+  usb_lld_init (0x80);		/* Bus powered. */
+#endif
 
   while (1)
     {

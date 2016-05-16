@@ -1,7 +1,7 @@
 /*
  * sys.c - system routines for the initial page for STM32F103.
  *
- * Copyright (C) 2013, 2014, 2015 Flying Stone Technology
+ * Copyright (C) 2013, 2014, 2015, 2016  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * Copying and distribution of this file, with or without modification,
@@ -19,39 +19,6 @@
 
 #include "clk_gpio_init-stm32.c"
 
-#define CORTEX_PRIORITY_BITS    4
-#define CORTEX_PRIORITY_MASK(n)  ((n) << (8 - CORTEX_PRIORITY_BITS))
-#define USB_LP_CAN1_RX0_IRQn	 20
-#define STM32_USB_IRQ_PRIORITY   11
-
-struct NVIC {
-  volatile uint32_t ISER[8];
-  volatile uint32_t unused1[24];
-  volatile uint32_t ICER[8];
-  volatile uint32_t unused2[24];
-  volatile uint32_t ISPR[8];
-  volatile uint32_t unused3[24];
-  volatile uint32_t ICPR[8];
-  volatile uint32_t unused4[24];
-  volatile uint32_t IABR[8];
-  volatile uint32_t unused5[56];
-  volatile uint32_t IPR[60];
-};
-
-static struct NVIC *const NVICBase = ((struct NVIC *const)0xE000E100);
-#define NVIC_ISER(n)	(NVICBase->ISER[n >> 5])
-#define NVIC_ICPR(n)	(NVICBase->ICPR[n >> 5])
-#define NVIC_IPR(n)	(NVICBase->IPR[n >> 2])
-
-static void
-nvic_enable_vector (uint32_t n, uint32_t prio)
-{
-  unsigned int sh = (n & 3) << 3;
-
-  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (prio << sh);
-  NVIC_ICPR (n) = 1 << (n & 0x1F);
-  NVIC_ISER (n) = 1 << (n & 0x1F);
-}
 
 static void
 usb_cable_config (int enable)
@@ -118,13 +85,6 @@ usb_lld_sys_init (void)
 
   usb_cable_config (1);
   RCC->APB1ENR |= RCC_APB1ENR_USBEN;
-  nvic_enable_vector (USB_LP_CAN1_RX0_IRQn,
-		      CORTEX_PRIORITY_MASK (STM32_USB_IRQ_PRIORITY));
-  /*
-   * Note that we also have other IRQ(s):
-   * 	USB_HP_CAN1_TX_IRQn (for double-buffered or isochronous)
-   * 	USBWakeUp_IRQn (suspend/resume)
-   */
   RCC->APB1RSTR = RCC_APB1RSTR_USBRST;
   RCC->APB1RSTR = 0;
 }
@@ -423,8 +383,8 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
 const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
   3*2+2,	     /* bLength */
   0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE */
-  /* sys version: "2.1" */
-  '2', 0, '.', 0, '1', 0,
+  /* sys version: "3.0" */
+  '3', 0, '.', 0, '0', 0,
 };
 
 const uint32_t __attribute__((section(".sys.board_id")))

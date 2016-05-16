@@ -1,5 +1,11 @@
 2016-05-16  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/sys.c (nvic_enable_vector): Remove.
+	(usb_lld_sys_init): Don't setup NVIC priority.
+	(sys_version): sys version 3.0.
+
+2016-05-16  NIIBE Yutaka  <gniibe@fsij.org>
+
 	* chopstx.h (CHOPSTX_EXIT_SUCCESS, CHOPSTX_EXIT_CANCELED)
 	(CHOPSTX_EXIT_CANCELED_IN_SYNC): Remove.
 	(CHOPSTX_CANCELED): New.
