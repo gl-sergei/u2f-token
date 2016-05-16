@@ -928,6 +928,7 @@ chx_wakeup (struct chx_pq *pq)
       tp = px->master;
       if (tp->state == THREAD_WAIT_POLL)
 	{
+	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
 	  if (tp->parent == &q_timer.q)
 	    chx_timer_dequeue (tp);
 	  chx_ready_enqueue (tp);
@@ -938,6 +939,7 @@ chx_wakeup (struct chx_pq *pq)
     }
   else
     {
+      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
       tp = (struct chx_thread *)pq;
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
