@@ -1,3 +1,13 @@
+2016-05-17  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c: Update as TTY input/output with line
+	editing support.
+	* example-cdc/sample.c: Likewise.
+	* example-cdc/tty.h: Rename from stream.h.
+
+	* chopstx.c (chopstx_poll): Set ->ready = 0.
+	Add spinlock for ll_dequeue.
+
 2016-05-16  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-cdc/sys.c (nvic_enable_vector): Remove.
