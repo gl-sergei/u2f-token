@@ -17,7 +17,8 @@ struct tty {
   chopstx_intr_t intr;
   uint8_t inputline[BUFSIZE];   /* Line editing is supported */
   uint8_t send_buf[BUFSIZE];	/* Sending ring buffer for echo back */
-  uint32_t inputline_len : 16;
+  uint32_t inputline_len : 13;
+  uint32_t device_state: 3;     /* USB device status */
   uint32_t send_head : 8;
   uint32_t send_tail : 8;
 };
@@ -53,6 +54,8 @@ static const uint8_t vcom_device_desc[18] = {
   1				/* bNumConfigurations.              */
 };
 
+#define VCOM_FEATURE_BUS_POWERED	0x80
+
 /* Configuration Descriptor tree for a CDC.*/
 static const uint8_t vcom_config_desc[67] = {
   9,
@@ -62,7 +65,7 @@ static const uint8_t vcom_config_desc[67] = {
   0x02,				/* bNumInterfaces.                  */
   0x01,				/* bConfigurationValue.             */
   0,				/* iConfiguration.                  */
-  0x80,				/* bmAttributes (bus powered).      */
+  VCOM_FEATURE_BUS_POWERED,	/* bmAttributes.                    */
   50,				/* bMaxPower (100mA).               */
   /* Interface Descriptor.*/
   9,
@@ -175,20 +178,18 @@ static const uint8_t vcom_string3[28] = {
 
 #define NUM_INTERFACES 2
 
-static uint32_t bDeviceState = UNCONNECTED; /* USB device status */
-
 
 void
 usb_cb_device_reset (void)
 {
-  usb_lld_reset (vcom_config_desc[7]);
+  usb_lld_reset (VCOM_FEATURE_BUS_POWERED);
 
   /* Initialize Endpoint 0 */
   usb_lld_setup_endpoint (ENDP0, EP_CONTROL, 0, ENDP0_RXADDR, ENDP0_TXADDR, 64);
 
   chopstx_mutex_lock (&tty.mtx);
   tty.flags = 0;
-  bDeviceState = ATTACHED;
+  tty.device_state = ATTACHED;
   chopstx_mutex_unlock (&tty.mtx);
 }
 
@@ -344,7 +345,9 @@ usb_cb_handle_event (uint8_t event_type, uint16_t value)
   switch (event_type)
     {
     case USB_EVENT_ADDRESS:
-      bDeviceState = ADDRESSED;
+      chopstx_mutex_lock (&tty.mtx);
+      tty.device_state = ADDRESSED;
+      chopstx_mutex_unlock (&tty.mtx);
       return USB_SUCCESS;
     case USB_EVENT_CONFIG:
       current_conf = usb_lld_current_configuration ();
@@ -356,7 +359,9 @@ usb_cb_handle_event (uint8_t event_type, uint16_t value)
 	  usb_lld_set_configuration (1);
 	  for (i = 0; i < NUM_INTERFACES; i++)
 	    vcom_setup_endpoints_for_interface (i, 0);
-	  bDeviceState = CONFIGURED;
+	  chopstx_mutex_lock (&tty.mtx);
+	  tty.device_state = CONFIGURED;
+	  chopstx_mutex_unlock (&tty.mtx);
 	}
       else if (current_conf != value)
 	{
@@ -366,7 +371,9 @@ usb_cb_handle_event (uint8_t event_type, uint16_t value)
 	  usb_lld_set_configuration (0);
 	  for (i = 0; i < NUM_INTERFACES; i++)
 	    vcom_setup_endpoints_for_interface (i, 1);
-	  bDeviceState = ADDRESSED;
+	  chopstx_mutex_lock (&tty.mtx);
+	  tty.device_state = ADDRESSED;
+	  chopstx_mutex_unlock (&tty.mtx);
 	}
       /* Do nothing when current_conf == value */
       return USB_SUCCESS;
@@ -575,6 +582,7 @@ tty_open (void)
   tty.flags = 0;
   tty.send_head = tty.send_tail = 0;
   tty.inputline_len = 0;
+  tty.device_state = UNCONNECTED;
 
   chopstx_create (PRIO_TTY, __stackaddr_tty, __stacksize_tty,
 		  tty_main, NULL);
@@ -605,12 +613,12 @@ tty_main (void *arg)
    * chopstx_claim_irq after usb_lld_init overrides that.
    *
    */
-  usb_lld_init (0x80);		/* Bus powered. */
+  usb_lld_init (VCOM_FEATURE_BUS_POWERED);
   chopstx_claim_irq (&tty.intr, INTR_REQ_USB);
   usb_interrupt_handler ();
 #else
   chopstx_claim_irq (&tty.intr, INTR_REQ_USB);
-  usb_lld_init (0x80);		/* Bus powered. */
+  usb_lld_init (VCOM_FEATURE_BUS_POWERED);
 #endif
 
   while (1)
@@ -620,7 +628,7 @@ tty_main (void *arg)
 	usb_interrupt_handler ();
 
       chopstx_mutex_lock (&tty.mtx);
-      if (bDeviceState == CONFIGURED
+      if (tty.device_state == CONFIGURED
 	  && (tty.flags & FLAG_CONNECTED)
 	  && (tty.flags & FLAG_SEND_READY))
 	{
@@ -645,7 +653,7 @@ void
 tty_wait_configured (struct tty *t)
 {
   chopstx_mutex_lock (&t->mtx);
-  while (bDeviceState != CONFIGURED)
+  while (t->device_state != CONFIGURED)
     chopstx_cond_wait (&t->cnd, &t->mtx);
   chopstx_mutex_unlock (&t->mtx);
 }
