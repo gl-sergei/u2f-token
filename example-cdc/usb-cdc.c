@@ -380,8 +380,6 @@ usb_cb_handle_event (uint8_t event_type, uint16_t value)
 	}
       /* Do nothing when current_conf == value */
       return USB_SUCCESS;
-
-      return USB_SUCCESS;
     default:
       break;
     }
@@ -581,6 +579,7 @@ struct tty *
 tty_open (void)
 {
   chopstx_mutex_init (&tty.mtx);
+  chopstx_cond_init (&tty.cnd);
   tty.inputline_len = 0;
   tty.send_head = tty.send_tail = 0;
   tty.flag_connected = 0;
