@@ -1,5 +1,8 @@
 2016-05-18  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (requeue): New.
+	(chopstx_mutex_lock, chopstx_join): Fix by requeue.
+
 	* example-cdc/usb-cdc.c: Prepare multiple TTYs.
 
 2016-05-17  NIIBE Yutaka  <gniibe@fsij.org>
