@@ -3,7 +3,7 @@
 	* chopstx.c (requeue): New.
 	(chopstx_mutex_lock, chopstx_join): Fix by requeue.
 
-	* example-cdc/usb-cdc.c: Prepare multiple TTYs.
+	* example-cdc/usb-cdc.c: Prepare for multiple TTYs.
 
 2016-05-17  NIIBE Yutaka  <gniibe@fsij.org>
 
