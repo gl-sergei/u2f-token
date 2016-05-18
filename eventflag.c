@@ -66,6 +66,16 @@ eventflag_check (void *arg)
   return ev->flags != 0;
 }
 
+void
+eventflag_set_poll_desc (struct eventflag *ev, chopstx_poll_cond_t *poll_desc)
+{ 
+  poll_desc->type = CHOPSTX_POLL_COND;
+  poll_desc->ready = 0;
+  poll_desc->cond = &ev->cond;
+  poll_desc->mutex = &ev->mutex;
+  poll_desc->check = eventflag_check;
+  poll_desc->arg = ev;
+}
 
 eventmask_t
 eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
@@ -74,12 +84,7 @@ eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
   int n;
   eventmask_t em = 0;
 
-  poll_desc.type = CHOPSTX_POLL_COND;
-  poll_desc.ready = 0;
-  poll_desc.cond = &ev->cond;
-  poll_desc.mutex = &ev->mutex;
-  poll_desc.check = eventflag_check;
-  poll_desc.arg = ev;
+  eventflag_set_poll_desc (ev, &poll_desc);
 
   chopstx_poll (&usec, 1, &poll_desc);
 
