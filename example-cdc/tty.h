@@ -1,3 +1,5 @@
+#define LINEBUFSIZE 128
+
 struct tty;
 
 struct tty *tty_open (void);
