@@ -48,7 +48,7 @@ eventflag_wait (struct eventflag *ev)
 
   chopstx_mutex_lock (&ev->mutex);
   if (!ev->flags)
-    chopstx_cond_wait (&ev->u.cond, &ev->mutex);
+    chopstx_cond_wait (&ev->cond, &ev->mutex);
 
   n = __builtin_ffs (ev->flags);
   ev->flags &= ~(1 << (n - 1));
@@ -100,7 +100,7 @@ void
 eventflag_signal (struct eventflag *ev, eventmask_t m)
 {
   chopstx_mutex_lock (&ev->mutex);
-  ev->flag |= m;
-  chopstx_cond_signal (&ev->u.cond);
+  ev->flags |= m;
+  chopstx_cond_signal (&ev->cond);
   chopstx_mutex_unlock (&ev->mutex);
 }
