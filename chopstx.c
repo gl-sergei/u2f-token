@@ -164,8 +164,6 @@ static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
 #define NVIC_ICPR(n)	(NVIC->ICPR[n >> 5])
 #define NVIC_IPR(n)	(NVIC->IPR[n >> 2])
 
-#define USB_LP_CAN1_RX0_IRQn	 20
-
 
 static void
 chx_enable_intr (uint8_t irq_num)
