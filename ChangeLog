@@ -1,7 +1,11 @@
 2016-05-18  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* eventflag.c: Update using chopstx_poll.
+
 	* chopstx.c (requeue): New.
 	(chopstx_mutex_lock, chopstx_join): Fix by requeue.
+	(chopstx_main_init): Remove.
+	(chopstx_setpriority): New.
 
 	* example-cdc/usb-cdc.c: Prepare for multiple TTYs.
 
@@ -245,7 +249,7 @@
 	comply AAPCS (ARM Architecture Procedure Call Standard).
 	(chx_init): Initialize W.
 
-	* example-cdc/{usb_stm32f103.c,usb_lld.h}: Update from Gnuk.
+	* example-cdc/usb_stm32f103.c, usb_lld.h: Update from Gnuk.
 	* example-cdc/usb-cdc.c: Update.
 
 2015-11-05  Niibe Yutaka  <gniibe@fsij.org>
@@ -263,7 +267,7 @@
 
 	* chopstx.c (q_exit): Remove.
 	(chx_init, chx_exit): Remove access to Q_EXIT.
-	(chx_release_irq_thread): Fix removing form the list.
+	(chx_release_irq_thread): Fix removing from the list.
 
 2015-09-11  Niibe Yutaka  <gniibe@fsij.org>
 

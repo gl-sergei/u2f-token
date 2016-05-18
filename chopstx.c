@@ -333,6 +333,11 @@ struct chx_thread {		/* inherits PQ */
   struct chx_cleanup *clp;
 };
 
+struct chx_poll_head {
+  uint16_t type;
+  uint16_t ready;
+};
+
 
 static void
 chx_cpu_sched_lock (void)
@@ -691,27 +696,6 @@ chx_init (struct chx_thread *tp)
   chopstx_main = (chopstx_t)tp;
 }
 
-
-/**
- * chopstx_main_init - initialize main thread
- * @prio: priority
- *
- * Initialize main thread with @prio.
- * The thread main is created with priority CHX_PRIO_MAIN_INIT,
- * and it runs with that priority until this routine will is called.
- */
-void
-chopstx_main_init (chopstx_prio_t prio)
-{
-  struct chx_thread *tp = (struct chx_thread *)chopstx_main;
-
-  tp->prio_orig = prio;
-
-  if (prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    chx_cpu_sched_lock ();
-
-  tp->prio = prio;
-}
 
 
 static void
@@ -1137,6 +1121,8 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
  *
  * Sleep for micro seconds, specified by @var.
  * Another thread can clear @var to stop the caller going into sleep.
+ *
+ * This function is DEPRECATED.  Please use chopstx_poll.
  */
 void
 chopstx_usec_wait_var (uint32_t *var)
@@ -1524,13 +1510,13 @@ chopstx_cleanup_pop (int execute)
 
 
 /**
- * chopstx_exit - Terminate the execution of thread
+ * chopstx_exit - Terminate the execution of running thread
  * @retval: Return value (to be caught by a joining thread)
  *
- * Calling this function terminates the execution of thread, after
- * calling clean up functions.  If the calling thread still holds
- * mutexes, they will be released.  If the calling thread claiming
- * IRQ, it will be released, too.  This function never returns.
+ * Calling this function terminates the execution of running thread,
+ * after calling clean up functions.  If the calling thread still
+ * holds mutexes, they will be released.  This function never
+ * returns.
  */
 void
 chopstx_exit (void *retval)
@@ -1667,6 +1653,9 @@ chx_join_hook (struct chx_px *px, struct chx_poll_head *pd)
  *
  * Canceling the timer, wake up the sleeping thread.
  * No return value.
+ *
+ * This function is DEPRECATED.  Please use chopstx_cond_signal,
+ * where sleeping process calls chopstx_poll.
  */
 void
 chopstx_wakeup_usec_wait (chopstx_t thd)
@@ -1908,6 +1897,30 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
     chopstx_exit (CHOPSTX_CANCELED);
 
   return counter;
+}
+
+
+/**
+ * chopstx_setpriority - change the schedule priority of running thread
+ * @prio: priority
+ *
+ * Change the schedule priority with @prio.
+ *
+ * In general, it is not recommended to use this function because
+ * dynamically changing schedule priorities complicates the system.
+ * Only a possible valid usage of this function is in the main thread
+ * which starts its execution with priority of CHX_PRIO_MAIN_INIT, and
+ * let it change its priority after initialization of other threads.
+ */
+void
+chopstx_setpriority (chopstx_prio_t prio)
+{
+  struct chx_thread *tp = running;
+
+  tp->prio_orig = prio;
+  if (prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    chx_cpu_sched_lock ();
+  tp->prio = prio;
 }
 
 /*

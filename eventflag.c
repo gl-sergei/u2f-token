@@ -1,7 +1,7 @@
 /*
- * eventflag.c - Eventflag with/without timeout
+ * eventflag.c - Eventflag
  *
- * Copyright (C) 2013 Flying Stone Technology
+ * Copyright (C) 2013, 2016  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * This file is a part of Chopstx, a thread library for embedded.
@@ -31,23 +31,12 @@
 #include <chopstx.h>
 #include <eventflag.h>
 
-enum {
-  EVENTFLAG_ERR_WAIT = CHOPSTX_ERR_JOIN + 1,
-  EVENTFLAG_ERR_TIMED_WAIT,
-};
-
 
 void
-eventflag_init (struct eventflag *ev, chopstx_t sleeper)
+eventflag_init (struct eventflag *ev)
 {
-  ev->sleeper = sleeper;
-
-  if (sleeper)
-    ev->u.wait_usec = 0;
-  else
-    chopstx_cond_init (&ev->u.cond);
-
-  ev->flag = 0;
+  ev->flags = 0;
+  chopstx_cond_init (&ev->cond);
   chopstx_mutex_init (&ev->mutex);
 }
 
@@ -57,48 +46,52 @@ eventflag_wait (struct eventflag *ev)
 {
   int n;
 
-  if (ev->sleeper)
-    chx_fatal (EVENTFLAG_ERR_WAIT);
-
   chopstx_mutex_lock (&ev->mutex);
-  if (!ev->flag)
+  if (!ev->flags)
     chopstx_cond_wait (&ev->u.cond, &ev->mutex);
 
-  n = __builtin_ffs (ev->flag);
-  ev->flag &= ~(1 << (n - 1));
+  n = __builtin_ffs (ev->flags);
+  ev->flags &= ~(1 << (n - 1));
   chopstx_mutex_unlock (&ev->mutex);
 
   return (1 << (n - 1));
 }
 
+
+static int
+eventflag_check (void *arg)
+{
+  struct eventflag *ev = arg;
+
+  return ev->flags != 0;
+}
+
+
 eventmask_t
 eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
 {
-  eventmask_t em = 0;
+  chopstx_poll_cond_t poll_desc;
   int n;
+  eventmask_t em = 0;
 
-  if (ev->sleeper == 0)
-    chx_fatal (EVENTFLAG_ERR_TIMED_WAIT);
+  poll_desc.type = CHOPSTX_POLL_COND;
+  poll_desc.ready = 0;
+  poll_desc.cond = &ev->cond;
+  poll_desc.mutex = &ev->mutex;
+  poll_desc.check = eventflag_check;
+  poll_desc.arg = ev;
+
+  chopstx_poll (&usec, 1, &poll_desc);
 
   chopstx_mutex_lock (&ev->mutex);
-
-  if (!ev->flag)
-    {
-      ev->u.wait_usec = usec;
-      chopstx_mutex_unlock (&ev->mutex);
-      chopstx_usec_wait_var (&ev->u.wait_usec);
-      chopstx_mutex_lock (&ev->mutex);
-      ev->u.wait_usec = 0;
-    }
-
-  n = __builtin_ffs (ev->flag);
+  n = __builtin_ffs (ev->flags);
   if (n)
     {
       em = (1 << (n - 1));
-      ev->flag &= ~em;
+      ev->flags &= ~em;
     }
-
   chopstx_mutex_unlock (&ev->mutex);
+
   return em;
 }
 
@@ -108,15 +101,6 @@ eventflag_signal (struct eventflag *ev, eventmask_t m)
 {
   chopstx_mutex_lock (&ev->mutex);
   ev->flag |= m;
-  if (ev->sleeper)
-    {
-      if (ev->u.wait_usec)
-	{
-	  ev->u.wait_usec = 0;
-	  chopstx_wakeup_usec_wait (ev->sleeper);
-	}
-    }
-  else
-    chopstx_cond_signal (&ev->u.cond);
+  chopstx_cond_signal (&ev->u.cond);
   chopstx_mutex_unlock (&ev->mutex);
 }

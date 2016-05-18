@@ -7,16 +7,6 @@ When it detects a coding error, this function will be called to
 stop further execution of code.  It never returns.
 @end deftypefun
 
-@subheading chopstx_main_init
-@anchor{chopstx_main_init}
-@deftypefun {void} {chopstx_main_init} (chopstx_prio_t @var{prio})
-@var{prio}: priority
-
-Initialize main thread with @var{prio}.
-The thread main is created with priority CHX_PRIO_MAIN_INIT,
-and it runs with that priority until this routine will is called.
-@end deftypefun
-
 @subheading chopstx_create
 @anchor{chopstx_create}
 @deftypefun {chopstx_t} {chopstx_create} (uint32_t @var{flags_and_prio}, uint32_t @var{stack_addr}, size_t @var{stack_size}, voidfunc @var{thread_entry}, void * @var{arg})
@@ -40,6 +30,8 @@ Create a thread.  Returns thread ID.
 
 Sleep for micro seconds, specified by @var{var}.
 Another thread can clear @var{var} to stop the caller going into sleep.
+
+This function is DEPRECATED.  Please use chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_usec_wait
@@ -150,10 +142,10 @@ clean-up will be executed.
 @deftypefun {void} {chopstx_exit} (void * @var{retval})
 @var{retval}: Return value (to be caught by a joining thread)
 
-Calling this function terminates the execution of thread, after
-calling clean up functions.  If the calling thread still holds
-mutexes, they will be released.  If the calling thread claiming
-IRQ, it will be released, too.  This function never returns.
+Calling this function terminates the execution of running thread,
+after calling clean up functions.  If the calling thread still
+holds mutexes, they will be released.  This function never
+returns.
 @end deftypefun
 
 @subheading chopstx_join
@@ -174,6 +166,9 @@ Returns 0 on success, 1 when waiting is interrupted.
 
 Canceling the timer, wake up the sleeping thread.
 No return value.
+
+This function is DEPRECATED.  Please use chopstx_cond_signal,
+where sleeping process calls chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_cancel
@@ -212,5 +207,19 @@ Returns old state which is 0 when it was enabled.
 @var{n}: Number of poll descriptors
 
 Returns number of active descriptors.
+@end deftypefun
+
+@subheading chopstx_setpriority
+@anchor{chopstx_setpriority}
+@deftypefun {void} {chopstx_setpriority} (chopstx_prio_t @var{prio})
+@var{prio}: priority
+
+Change the schedule priority with @var{prio}.
+
+In general, it is not recommended to use this function because
+dynamically changing schedule priorities complicates the system.
+Only a possible valid usage of this function is in the main thread
+which starts its execution with priority of CHX_PRIO_MAIN_INIT, and
+let it change its priority after initialization of other threads.
 @end deftypefun
 

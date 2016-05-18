@@ -35,7 +35,6 @@ typedef uint8_t chopstx_prio_t;
 
 extern chopstx_t chopstx_main;
 
-void chopstx_main_init (chopstx_prio_t);
 
 /* NOTE: This signature is different to PTHREAD's one.  */
 chopstx_t
@@ -47,8 +46,6 @@ chopstx_create (uint32_t flags_and_prio,
 #define CHOPSTX_SCHED_RR 0x20000
 
 #define CHOPSTX_PRIO_INHIBIT_PREEMPTION 248
-
-void chopstx_usec_wait_var (uint32_t *arg);
 
 void chopstx_usec_wait (uint32_t usec);
 
@@ -117,7 +114,10 @@ void chopstx_cleanup_push (chopstx_cleanup_t *clp);
 void chopstx_cleanup_pop (int execute);
 
 
-void chopstx_wakeup_usec_wait (chopstx_t thd);
+void chopstx_setpriority (chopstx_prio_t);
+
+void chopstx_usec_wait_var (uint32_t *arg); /* DEPRECATED */
+void chopstx_wakeup_usec_wait (chopstx_t thd); /* DEPRECATED */
 
 enum {
   CHOPSTX_POLL_COND = 0,
@@ -156,11 +156,6 @@ void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
 
 void chopstx_intr_wait (chopstx_intr_t *intr); /* DEPRECATED */
 
-
-struct chx_poll_head {
-  uint16_t type;
-  uint16_t ready;
-};
 
 int chopstx_poll (uint32_t *usec_p, int n, ...);
 

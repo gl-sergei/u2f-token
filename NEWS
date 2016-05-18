@@ -3,15 +3,31 @@ NEWS - Noteworthy changes
 
 * Major changes in Chopstx 0.11
 
-  Released 2016-0X-XX
+  Released 2016-05-19
 
 ** New feature: polling
 New function chopstx_poll is added to watch multiple condition
 variables, threads' exit, or IRQ, simultaneously with timeout.
 
-** Remove the function chopstx_release_irq
-IRQ is enabled only a thread is blocked in polling.  When it (the
+** Change API of eventflag
+
+The initialization function eventflag_init only has EV.  The eventflag
+is can be waited with timeout or can be waited with no timeout,
+dynamically.  It is not determined at initialization time.  Besides,
+the eventflag can be waited by any threads.
+
+
+** Removal of the function chopstx_release_irq
+IRQ is enabled only when a thread is blocked in polling.  When it (the
 thread in polling) is canceled, IRQ is disabled.
+
+** Removal of the function chopstx_main_init
+Removed because it's too special.  Please use chopstx_setpriority
+instead.
+
+** New function: chopstx_setpriority
+This function is not recommended in general.  It is only added to
+offer the purpose of chopstx_main_init.
 
 ** Function chopstx_intr_wait is deprecated
 Use of chopstx_poll is recommended.
@@ -27,6 +43,9 @@ version 0.11) always caused HardFault exception.  Since Cortex-M0
 doesn't have complex exception mechism of ICI/IT (which is supported
 on Cortex-M3), it is actually possible to implement the context switch
 in user mode.  This is done.
+
+** New sys.c (3.0)
+Don't touch NVIC in usb_lld_sys_init.
 
 
 * Major changes in Chopstx 0.10
