@@ -1,3 +1,8 @@
+2016-05-19  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.11.
+	* doc/chopstx.texi (VERSION): 0.11.
+
 2016-05-18  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* eventflag.c: Update using chopstx_poll and offer API for poll.

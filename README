@@ -1,14 +1,14 @@
 Chopstx - Threads and only Threads
 							Version 0.11
-							  2016-04-XX
+							  2016-05-19
 							Niibe Yutaka
 					     Flying Stone Technology
 
 What's Chopstx?
 ===============
 
-Chopstx is an RT thread library for STM32F103 (ARM Cortex-M3)
-or STM32F0 (ARM Cortex-M0).
+Chopstx is an RT thread library for STM32F103 (ARM Cortex-M3),
+STM32F0 (ARM Cortex-M0), or KL27Z (ARM Cortex-M0plus).
 
 While most RTOSes come with many features, drivers, and stacks,
 Chopstx just offers a simple RT thread library.
@@ -45,6 +45,10 @@ For STM32 Primer2, see the directory: example-primer2.
 Future Works
 ============
 
-Convenience function to determine bottom of thread stack, thread local
-storage would be next thing to be done.
+Convenience function to determine the bottom of thread stack, thread
+local storage would be next thing to be done.
+
+Experimental SMP port for Cortex-A7 is under development.  For SMP,
+more careful considerations for shared access to objects of struct
+chx_pq is needed.  So, modifications required will not be small.
 -- 

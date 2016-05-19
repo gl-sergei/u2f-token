@@ -23,7 +23,8 @@ Mateusz Zalega:
 
 NIIBE Yutaka:
     Write the library:
-	chopstx.c, eventflag.c, entry.c, clk_gpio_init.c
+	chopstx.c, eventflag.c, entry.c,
+	clk_gpio_init-kl.c, clk_gpio_init-stm32.c
         chopstx.h, eventflag.h
     Draw the logo:
 	chopstx.svg, chopstx.png
