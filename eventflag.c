@@ -41,23 +41,6 @@ eventflag_init (struct eventflag *ev)
 }
 
 
-eventmask_t
-eventflag_wait (struct eventflag *ev)
-{
-  int n;
-
-  chopstx_mutex_lock (&ev->mutex);
-  if (!ev->flags)
-    chopstx_cond_wait (&ev->cond, &ev->mutex);
-
-  n = __builtin_ffs (ev->flags);
-  ev->flags &= ~(1 << (n - 1));
-  chopstx_mutex_unlock (&ev->mutex);
-
-  return (1 << (n - 1));
-}
-
-
 static int
 eventflag_check (void *arg)
 {
@@ -66,8 +49,9 @@ eventflag_check (void *arg)
   return ev->flags != 0;
 }
 
+
 void
-eventflag_set_poll_desc (struct eventflag *ev, chopstx_poll_cond_t *poll_desc)
+eventflag_prepare_poll (struct eventflag *ev, chopstx_poll_cond_t *poll_desc)
 { 
   poll_desc->type = CHOPSTX_POLL_COND;
   poll_desc->ready = 0;
@@ -77,27 +61,60 @@ eventflag_set_poll_desc (struct eventflag *ev, chopstx_poll_cond_t *poll_desc)
   poll_desc->arg = ev;
 }
 
+
 eventmask_t
-eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
+eventflag_get (struct eventflag *ev)
 {
-  chopstx_poll_cond_t poll_desc;
   int n;
-  eventmask_t em = 0;
-
-  eventflag_set_poll_desc (ev, &poll_desc);
-
-  chopstx_poll (&usec, 1, &poll_desc);
+  eventmask_t m;
 
   chopstx_mutex_lock (&ev->mutex);
   n = __builtin_ffs (ev->flags);
   if (n)
     {
-      em = (1 << (n - 1));
-      ev->flags &= ~em;
+      m = (1 << (n - 1));
+      ev->flags &= ~m;
     }
+  else
+    m = 0;
   chopstx_mutex_unlock (&ev->mutex);
 
-  return em;
+  return m;
+}
+
+
+eventmask_t
+eventflag_wait (struct eventflag *ev)
+{
+  int n;
+  eventmask_t m;
+
+  chopstx_mutex_lock (&ev->mutex);
+  if (!ev->flags)
+    chopstx_cond_wait (&ev->cond, &ev->mutex);
+
+  n = __builtin_ffs (ev->flags);
+  if (n) /* Always n > 0 when waked up, but make sure no bad things.  */
+    {
+      m = (1 << (n - 1));
+      ev->flags &= ~m;
+    }
+  else
+    m = 0;
+  chopstx_mutex_unlock (&ev->mutex);
+
+  return m;
+}
+
+
+eventmask_t
+eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
+{
+  chopstx_poll_cond_t poll_desc;
+
+  eventflag_prepare_poll (ev, &poll_desc);
+  chopstx_poll (&usec, 1, &poll_desc);
+  return eventflag_get (ev);
 }
 
 

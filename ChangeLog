@@ -1,6 +1,6 @@
 2016-05-18  NIIBE Yutaka  <gniibe@fsij.org>
 
-	* eventflag.c: Update using chopstx_poll.
+	* eventflag.c: Update using chopstx_poll and offer API for poll.
 
 	* chopstx.c (requeue): New.
 	(chopstx_mutex_lock, chopstx_join): Fix by requeue.
