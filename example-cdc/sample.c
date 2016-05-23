@@ -142,8 +142,10 @@ main (int argc, const char *argv[])
 	  if (size < 0)
 	    break;
 
-	  if (usec)
+	  if (size)
 	    {
+	      size--;
+
 	      s[0] = hexchar (size >> 4);
 	      s[1] = hexchar (size & 0x0f);
 	      s[2] = ':';

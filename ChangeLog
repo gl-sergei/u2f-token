@@ -1,5 +1,8 @@
 2016-05-23  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* example-cdc/usb-cdc.c (tty_input_char): Include newline.
+	* example-cdc/sample.c: Handle newline.
+
 	* example-fs-bb48/usb-cdc.c: Update from example-cdc.
 	* example-fs-bb48/tty.h: Likewise.
 	* example-fs-bb48/sample.c: Follow the change.
