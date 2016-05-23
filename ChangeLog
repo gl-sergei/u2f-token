@@ -1,3 +1,8 @@
+2016-05-20  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): internal function.
+	(chopstx_wakeup_usec_wait): Remove.
+
 2016-05-19  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 0.11.

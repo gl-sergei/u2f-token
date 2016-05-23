@@ -1115,16 +1115,8 @@ chx_snooze (uint32_t state, uint32_t *usec_p)
   return r;
 }
 
-/**
- * chopstx_usec_wait_var - Sleep for micro seconds (specified by variable)
- * @var: Pointer to usec
- *
- * Sleep for micro seconds, specified by @var.
- * Another thread can clear @var to stop the caller going into sleep.
- *
- * This function is DEPRECATED.  Please use chopstx_poll.
- */
-void
+
+static void
 chopstx_usec_wait_var (uint32_t *var)
 {
   int r = 0;
@@ -1422,11 +1414,11 @@ chx_cond_hook (struct chx_px *px, struct chx_poll_head *pd)
 
 
 /**
- * chopstx_claim_irq - Claim interrupt request to handle by this thread
+ * chopstx_claim_irq - Claim interrupt request to handle
  * @intr: Pointer to INTR structure
  * @irq_num: IRQ Number (hardware specific)
  *
- * Claim interrupt @intr with @irq_num for this thread.
+ * Claim interrupt @intr with @irq_num
  */
 void
 chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num)
@@ -1646,37 +1638,6 @@ chx_join_hook (struct chx_px *px, struct chx_poll_head *pd)
   chx_cpu_sched_unlock ();
 }
 
-
-/**
- * chopstx_wakeup_usec_wait - wakeup the sleeping thread for timer
- * @thd: Thread to be awakened
- *
- * Canceling the timer, wake up the sleeping thread.
- * No return value.
- *
- * This function is DEPRECATED.  Please use chopstx_cond_signal,
- * where sleeping process calls chopstx_poll.
- */
-void
-chopstx_wakeup_usec_wait (chopstx_t thd)
-{
-  struct chx_thread *tp = (struct chx_thread *)thd;
-  int yield = 0;
-
-  chx_cpu_sched_lock ();
-  if (tp->state == THREAD_WAIT_TIME)
-    {
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
-      chx_timer_dequeue (tp);
-      chx_ready_enqueue (tp);
-      if (tp->prio > running->prio)
-	yield = 1;
-    }
-  if (yield)
-    chx_sched (CHX_YIELD);
-  else
-    chx_cpu_sched_unlock ();
-}
 
 /**
  * chopstx_cancel - request a cancellation to a thread
