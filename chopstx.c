@@ -727,7 +727,7 @@ chx_request_preemption (uint16_t prio)
  * 	AAPCS: ARM Architecture Procedure Call Standard
  *
  * Returns:
- *          1 on erroneous wakeup.
+ *          1 on wakeup by others.
  *          0 on normal wakeup.
  *         -1 on cancellation.
  */
@@ -855,11 +855,11 @@ chx_sched (uint32_t yield)
 		"lsl	r1, r0, #23\n\t"
 		"bcc	2f\n\t"
 		/**/
-		"msr	APSR_nzcvq, r0\n\t"
-		"ldr	r0, [sp, #24]\n\t"
+		"ldr	r2, [sp, #24]\n\t"
 		"mov	r1, #1\n\t"
-		"orr	r0, r1\n\t"	/* Ensure Thumb-mode */
-		"str	r0, [sp, #32]\n\t"
+		"orr	r2, r1\n\t"	/* Ensure Thumb-mode */
+		"str	r2, [sp, #32]\n\t"
+		"msr	APSR_nzcvq, r0\n\t"
 		/**/
 		"ldr	r0, [sp, #20]\n\t"
 		"mov	lr, r0\n\t"
@@ -869,11 +869,11 @@ chx_sched (uint32_t yield)
 		"add	sp, #16\n\t"
 		"pop	{pc}\n"
 	"2:\n\t"
-		"msr	APSR_nzcvq, r0\n\t"
-		"ldr	r0, [sp, #24]\n\t"
+		"ldr	r2, [sp, #24]\n\t"
 		"mov	r1, #1\n\t"
-		"orr	r0, r1\n\t"	/* Ensure Thumb-mode */
-		"str	r0, [sp, #28]\n\t"
+		"orr	r2, r1\n\t"	/* Ensure Thumb-mode */
+		"str	r2, [sp, #28]\n\t"
+		"msr	APSR_nzcvq, r0\n\t"
 		/**/
 		"ldr	r0, [sp, #20]\n\t"
 		"mov	lr, r0\n\t"
