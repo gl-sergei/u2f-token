@@ -147,7 +147,7 @@ kl27z_usb_init (void)
   int i;
 
   memset (ep, 0, sizeof (ep));
-  memset (BD_table, 0, 10 * sizeof (struct BD));
+  memset (BD_table, 0, 16 * 2 * 2 * sizeof (struct BD));
 
   /* D+ pull up */
   USB_CTRL0->OTGCTL = 0x80;
