@@ -378,8 +378,7 @@ vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
 	{
 	  usb_lld_setup_endpoint (ENDP1, EP_BULK, 0, 0, ENDP1_TXADDR, 0);
 	  usb_lld_setup_endpoint (ENDP3, EP_BULK, 0, ENDP3_RXADDR, 0, 64);
-	  /* Start with no data receiving */
-	  usb_lld_stall_rx (ENDP3);
+	  /* Start with no data receiving (ENDP3 not enabled)*/
 	}
       else
 	{
