@@ -1,5 +1,7 @@
 2016-05-23  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chopstx_poll): Fix a race.  Check COUNTER.
+
 	* example-cdc/usb-cdc.c (tty_input_char): Include newline.
 	* example-cdc/sample.c: Handle newline.
 

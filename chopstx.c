@@ -1801,6 +1801,11 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
 	{
 	  chopstx_testcancel ();
 	  chx_cpu_sched_lock ();
+	  if (counter)
+	    {
+	      chx_cpu_sched_unlock ();
+	      break;
+	    }
 	  r = chx_snooze (THREAD_WAIT_POLL, usec_p);
 	}
       while (r == 0);
