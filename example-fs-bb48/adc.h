@@ -1,4 +1,4 @@
-void adc_init (void);
+int adc_init (void);
 void adc_start (void);
 void adc_stop (void);
 

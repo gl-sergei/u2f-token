@@ -735,10 +735,10 @@ check_tx (struct tty *t)
 }
 
 int
-tty_send (struct tty *t, uint8_t *buf, int len)
+tty_send (struct tty *t, const uint8_t *buf, int len)
 {
   int r;
-  uint8_t *p;
+  const uint8_t *p;
   int count;
 
   p = buf;
@@ -767,6 +767,11 @@ tty_send (struct tty *t, uint8_t *buf, int len)
       count = len >= 64 ? 64 : len;
     }
 
+  /* Wait until all sent. */
+  chopstx_mutex_lock (&t->mtx);
+  while ((r = check_tx (t)) == 0)
+    chopstx_cond_wait (&t->cnd, &t->mtx);
+  chopstx_mutex_unlock (&t->mtx);
   return r;
 }
 

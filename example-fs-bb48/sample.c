@@ -6,9 +6,7 @@
 #include "usb_lld.h"
 #include "tty.h"
 #include "board.h"
-
-#include "crc32.h"
-#include "adc.h"
+#include "command.h"
 
 struct GPIO {
   volatile uint32_t PDOR; /* Port Data Output Register    */
@@ -128,9 +126,6 @@ main (int argc, const char *argv[])
   (void)argc;
   (void)argv;
 
-  adc_init ();
-  adc_start ();
-
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd0);
   chopstx_cond_init (&cnd1);
@@ -158,6 +153,7 @@ main (int argc, const char *argv[])
     {
       uint8_t s[LINEBUFSIZE];
 
+    connection_loop:
       u = 1;
       tty_wait_connection (tty);
 
@@ -176,85 +172,32 @@ main (int argc, const char *argv[])
 
       while (1)
 	{
-	  int size;
 	  uint32_t usec;
 
-	  usec = 3000000;	/* 3.0 seconds */
-	  size = tty_recv (tty, s + 4, &usec);
-	  if (size < 0)
+	  /* Prompt */
+	  if (tty_send (tty, (uint8_t *)"> ", 2) < 0)
 	    break;
 
-	  if (size)
+	  usec = 3000000;	/* 3.0 seconds */
+	  while (1)
 	    {
-	      unsigned int value;
+	      int size = tty_recv (tty, s, &usec);
+	      u ^= 1;
 
-	      if (s[4] == 't')
+	      if (size < 0)
+		goto connection_loop;
+
+	      if (size == 1)
+		/* Do nothing but prompt again.  */
+		break;
+	      else if (size)
 		{
-		  s[0] = 'T';
-		  s[1] = 'M';
-
-		  adc_start_conversion (0, 1);
-		  adc_wait_completion (NULL);
-		  value = adc_buf[0];
-
-		  s[4] = hexchar (value >> 28);
-		  s[5] = hexchar (value >> 24);
-		  s[6] = hexchar (value >> 20);
-		  s[7] = hexchar (value >> 16);
-		  s[8] = hexchar (value >> 12);
-		  s[9] = hexchar (value >> 8);
-		  s[10] = hexchar (value >> 4);
-		  s[11] = hexchar (value);
-		  s[12] = '\r';
-		  s[13] = '\n';
-
-		  if (tty_send (tty, s, 14) < 0)
-		    break;
-		}
-	      else if (s[4] == 'c')
-		{
-		  int i;
-
-		  size--;
-
-		  crc32_init ();
-		  s[0] = hexchar (size >> 4);
-		  s[1] = hexchar (size & 0x0f);
-
-		  for (i = 0; i < size; i++)
-		    crc32_u8 (s[4 + i]);
-		  value = crc32_value () ^ 0xffffffff;
-
-		  s[4] = hexchar (value >> 28);
-		  s[5] = hexchar (value >> 24);
-		  s[6] = hexchar (value >> 20);
-		  s[7] = hexchar (value >> 16);
-		  s[8] = hexchar (value >> 12);
-		  s[9] = hexchar (value >> 8);
-		  s[10] = hexchar (value >> 4);
-		  s[11] = hexchar (value);
-		  s[12] = '\r';
-		  s[13] = '\n';
-
-		  if (tty_send (tty, s, 14) < 0)
-		    break;
-		}
-	      else
-		{
-		  size--;
-
-		  s[0] = hexchar (size >> 4);
-		  s[1] = hexchar (size & 0x0f);
-		  s[2] = ':';
-		  s[3] = ' ';
-		  s[size + 4] = '\r';
-		  s[size + 5] = '\n';
-		  if (tty_send (tty, s, size + 6) < 0)
-		    break;
+		  /* Newline into NUL */
+		  s[size - 1] = 0;
+		  cmd_dispatch (tty, (char *)s);
+		  break;
 		}
 	    }
-
-	  u ^= 1;
 	}
     }
 

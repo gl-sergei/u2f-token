@@ -81,48 +81,53 @@ static struct ADC *const ADC = (struct ADC *const)0x4003B000;
 #define ADC_SC1_ADCSTOP         31
 
 /* CFG1 */
-#define ADC_CLOCK_SOURCE_ASYNCH 3
-#define ADC_RESOLUTION_16BIT    3
-#define ADC_ADLSMP_SHORT        0
-#define ADC_ADLSMP_LONG         1
-#define ADC_ADIV_1              0
-#define ADC_ADIV_8              3
-#define ADC_ADLPC_NORMAL        1
+#define ADC_CLOCK_SOURCE_ASYNCH (3 << 0)
+#define ADC_MODE_16BIT          (3 << 2)
+#define ADC_ADLSMP_SHORT        (0 << 4)
+#define ADC_ADLSMP_LONG         (1 << 4)
+#define ADC_ADIV_1              (0 << 5)
+#define ADC_ADIV_8              (3 << 5)
+#define ADC_ADLPC_NORMAL        (0 << 7)
+#define ADC_ADLPC_LOWPOWER      (1 << 7)
 /**/
 #define ADC_CLOCK_SOURCE ADC_CLOCK_SOURCE_ASYNCH
-#define ADC_MODE         (ADC_RESOLUTION_16BIT << 2)
-#define ADC_ADLSMP       (ADC_ADLSMP_SHORT << 4)
-#define ADC_ADIV         (ADC_ADIV_8 << 5)
-#define ADC_ADLPC        (ADC_ADLPC_NORMAL << 7)
+#define ADC_MODE         ADC_MODE_16BIT
+#if 0
+#define ADC_ADLSMP       ADC_ADLSMP_SHORT
+#else
+#define ADC_ADLSMP       ADC_ADLSMP_LONG
+#endif
+#define ADC_ADIV         ADC_ADIV_8
+#define ADC_ADLPC        ADC_ADLPC_LOWPOWER
 
 /* CFG2 */
 #define ADC_ADLSTS_DEFAULT      0 /* 24 cycles if CFG1.ADLSMP=1, 4 if not.  */
-#define ADC_ADHSC_NORMAL        0
-#define ADC_ADHSC_HIGHSPEED     1
-#define ADC_ADACK_ENABLE        1
-#define ADC_ADACK_DISABLE       0
-#define ADC_MUXSEL_A            0
-#define ADC_MUXSEL_B            1
+#define ADC_ADHSC_NORMAL        (0 << 2)
+#define ADC_ADHSC_HIGHSPEED     (1 << 2)
+#define ADC_ADACK_DISABLE       (0 << 3)
+#define ADC_ADACK_ENABLE        (1 << 3)
+#define ADC_MUXSEL_A            (0 << 4)
+#define ADC_MUXSEL_B            (1 << 4)
 /**/
 #define ADC_ADLSTS       ADC_ADLSTS_DEFAULT 
-#define ADC_ADHSC        (ADC_ADHSC_NORMAL << 2)
-#define ADC_ADACKEN      (ADC_ADACK_ENABLE << 3)
-#define ADC_MUXSEL       (ADC_MUXSEL_A << 4) 
+#define ADC_ADHSC        ADC_ADHSC_NORMAL
+#define ADC_ADACKEN      ADC_ADACK_ENABLE
+#define ADC_MUXSEL       ADC_MUXSEL_A
 
 /* SC2 */
-#define ADC_SC2_ADTRG		(1 << 6) /* For hardware trigger */
-#define ADC_SC2_ACFE            (1 << 5)
-#define ADC_SC2_ACFGT           (1 << 4)
-#define ADC_SC2_ACREN           (1 << 3)
+#define ADC_SC2_REFSEL_DEFAULT  1 /* Internal Voltage Reference??? */
 #define ADC_SC2_DMAEN           (1 << 2)
-#define ADC_SC2_REFSEL_DEFAULT  0
+#define ADC_SC2_ACREN           (1 << 3)
+#define ADC_SC2_ACFGT           (1 << 4)
+#define ADC_SC2_ACFE            (1 << 5)
+#define ADC_SC2_ADTRG		(1 << 6) /* For hardware trigger */
 
 /* SC3 */
-#define ADC_SC3_CAL             (1 << 7)
-#define ADC_SC3_CALF            (1 << 6)
-#define ADC_SC3_ADCO            (1 << 3)
-#define ADC_SC3_AVGE            (1 << 2)
 #define ADC_SC3_AVGS11          0x03
+#define ADC_SC3_AVGE            (1 << 2)
+#define ADC_SC3_ADCO            (1 << 3)
+#define ADC_SC3_CALF            (1 << 6)
+#define ADC_SC3_CAL             (1 << 7)
 
 /*
  * Initialize ADC module, do calibration.
@@ -138,9 +143,8 @@ adc_init (void)
 
   ADC->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
   ADC->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
-  ADC->SC2 = 0;
+  ADC->SC2 = ADC_SC2_REFSEL_DEFAULT;
   ADC->SC3 = ADC_SC3_CAL | ADC_SC3_CALF | ADC_SC3_AVGE | ADC_SC3_AVGS11;
-  ADC->SC1[0] = ADC_SC1_TEMPSENSOR;
 
   /* Wait ADC completion */
   while ((ADC->SC1[0] & ADC_SC1_COCO) == 0)
@@ -171,7 +175,7 @@ adc_start (void)
 {
   ADC->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
   ADC->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
-  ADC->SC2 = 0;
+  ADC->SC2 = ADC_SC2_REFSEL_DEFAULT;
   ADC->SC3 = 0;
 }
 
