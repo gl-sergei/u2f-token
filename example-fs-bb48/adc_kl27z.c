@@ -114,7 +114,7 @@ static struct ADC *const ADC0 = (struct ADC *const)0x4003B000;
 #define ADC_CLOCK_SOURCE ADC_CLOCK_SOURCE_ASYNCH
 #define ADC_MODE         ADC_MODE_16BIT
 #define ADC_ADLSMP       ADC_ADLSMP_SHORT
-#define ADC_ADIV         ADC_ADIV_8
+#define ADC_ADIV         ADC_ADIV_1
 #define ADC_ADLPC        ADC_ADLPC_LOWPOWER
 
 /* CFG2 */
