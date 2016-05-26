@@ -1,7 +1,7 @@
 /*
  * sys.c - system routines for the initial page for STM32F103.
  *
- * Copyright (C) 2013, 2014, 2015 Flying Stone Technology
+ * Copyright (C) 2013, 2014, 2015, 2016  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
  * Copying and distribution of this file, with or without modification,
@@ -17,87 +17,8 @@
 #include <stdlib.h>
 #include "board.h"
 
-/* Adds port C for shutdown function.  */
-#undef RCC_ENR_IOP_EN
-#undef RCC_RSTR_IOP_RST
-#define RCC_ENR_IOP_EN \
-        (RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPDEN | RCC_APB2ENR_IOPEEN \
-	 | RCC_APB2ENR_IOPCEN | RCC_APB2ENR_IOPBEN)
-#define RCC_RSTR_IOP_RST \
-        (RCC_APB2RSTR_IOPARST | RCC_APB2RSTR_IOPDRST | RCC_APB2RSTR_IOPERST \
-	 | RCC_APB2RSTR_IOPCRST | RCC_APB2RSTR_IOPBRST)
+#include "mcu/clk_gpio_init-stm32.c"
 
-#include "clk_gpio_init-stm32.c"
-
-static struct GPIO *const GPIO_OTHER1 = ((struct GPIO *const) GPIOC_BASE);
-static struct GPIO *const GPIO_OTHER2 = ((struct GPIO *const) GPIOB_BASE);
-
-static void __attribute__((used))
-gpio_init_primer2 (void)
-{
-  gpio_init ();
-
-  /*
-   * Port C setup.
-   * Everything input with pull-up except:
-   * PC0  - Analog input (Touch panel L X+)
-   * PC1  - Analog input (Touch panel R X-)
-   * PC2  - Analog input (Touch panel U Y+)
-   * PC3  - Analog input (Touch panel D Y-)
-   * PC6  - Normal input because there is an external resistor.
-   * PC7  - Normal input because there is an external resistor.
-   * PC13 - Push Pull output (SHUTDOWN)
-   */
-  GPIO_OTHER1->ODR = 0xffffdfff;
-  GPIO_OTHER1->CRL = 0x44880000;
-  GPIO_OTHER1->CRH = 0x88388888;
-
-  /*
-   * Port B setup.
-   * Everything input with pull-up except:
-   * PB8  - Backlight enable output.
-   * PB13 - Alternate output  (AUDIO SPI2 SCK).
-   * PB14 - Normal input      (AUDIO SPI2 MISO).
-   * PB15 - Alternate output  (AUDIO SPI2 MOSI).
-   */
-  GPIO_OTHER2->ODR = 0xffffffff;
-  GPIO_OTHER2->CRL = 0x88888888;
-  GPIO_OTHER2->CRH = 0xb4b88883;
-}
-
-#define CORTEX_PRIORITY_BITS    4
-#define CORTEX_PRIORITY_MASK(n)  ((n) << (8 - CORTEX_PRIORITY_BITS))
-#define USB_LP_CAN1_RX0_IRQn	 20
-#define STM32_USB_IRQ_PRIORITY   11
-
-struct NVIC {
-  volatile uint32_t ISER[8];
-  volatile uint32_t unused1[24];
-  volatile uint32_t ICER[8];
-  volatile uint32_t unused2[24];
-  volatile uint32_t ISPR[8];
-  volatile uint32_t unused3[24];
-  volatile uint32_t ICPR[8];
-  volatile uint32_t unused4[24];
-  volatile uint32_t IABR[8];
-  volatile uint32_t unused5[56];
-  volatile uint32_t IPR[60];
-};
-
-static struct NVIC *const NVICBase = ((struct NVIC *const)0xE000E100);
-#define NVIC_ISER(n)	(NVICBase->ISER[n >> 5])
-#define NVIC_ICPR(n)	(NVICBase->ICPR[n >> 5])
-#define NVIC_IPR(n)	(NVICBase->IPR[n >> 2])
-
-static void
-nvic_enable_vector (uint32_t n, uint32_t prio)
-{
-  unsigned int sh = (n & 3) << 3;
-
-  NVIC_IPR (n) = (NVIC_IPR(n) & ~(0xFF << sh)) | (prio << sh);
-  NVIC_ICPR (n) = 1 << (n & 0x1F);
-  NVIC_ISER (n) = 1 << (n & 0x1F);
-}
 
 static void
 usb_cable_config (int enable)
@@ -164,13 +85,6 @@ usb_lld_sys_init (void)
 
   usb_cable_config (1);
   RCC->APB1ENR |= RCC_APB1ENR_USBEN;
-  nvic_enable_vector (USB_LP_CAN1_RX0_IRQn,
-		      CORTEX_PRIORITY_MASK (STM32_USB_IRQ_PRIORITY));
-  /*
-   * Note that we also have other IRQ(s):
-   * 	USB_HP_CAN1_TX_IRQn (for double-buffered or isochronous)
-   * 	USBWakeUp_IRQn (suspend/resume)
-   */
   RCC->APB1RSTR = RCC_APB1RSTR_USBRST;
   RCC->APB1RSTR = 0;
 }
@@ -289,16 +203,19 @@ flash_check_blank (const uint8_t *p_start, size_t size)
   return 1;
 }
 
-extern uint8_t __flash_start__, __flash_end__;
+#define FLASH_START_ADDR 0x08000000 /* Fixed for all STM32F1.  */
+#define FLASH_OFFSET     0x1000     /* First pages are not-writable.  */
+#define FLASH_START      (FLASH_START_ADDR+FLASH_OFFSET)
+#define CHIP_ID_REG      ((uint32_t *)0xe0042000)
+#define FLASH_SIZE_REG   ((uint16_t *)0x1ffff7e0)
 
 static int
 flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
 {
   int status;
-  uint32_t flash_start = (uint32_t)&__flash_start__;
-  uint32_t flash_end = (uint32_t)&__flash_end__;
+  uint32_t flash_end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
 
-  if (dst_addr < flash_start || dst_addr + len > flash_end)
+  if (dst_addr < FLASH_START || dst_addr + len > flash_end)
     return 0;
 
   while (len)
@@ -351,9 +268,13 @@ flash_protect (void)
 static void __attribute__((naked))
 flash_erase_all_and_exec (void (*entry)(void))
 {
-  uint32_t addr = (uint32_t)&__flash_start__;
-  uint32_t end = (uint32_t)&__flash_end__;
+  uint32_t addr = FLASH_START;
+  uint32_t end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
+  uint32_t page_size = 1024;
   int r;
+
+  if (((*CHIP_ID_REG) & 0xfff) == 0x0414)
+    page_size = 2048;
 
   while (addr < end)
     {
@@ -361,7 +282,7 @@ flash_erase_all_and_exec (void (*entry)(void))
       if (r != 0)
 	break;
 
-      addr += FLASH_PAGE_SIZE;
+      addr += page_size;
     }
 
   if (addr >= end)
@@ -455,13 +376,19 @@ handler vector[] __attribute__ ((section(".vectors"))) = {
   usb_lld_sys_shutdown,
   nvic_system_reset,
   clock_init,
-  gpio_init_primer2,
+  gpio_init,
   NULL,
 };
 
 const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
   3*2+2,	     /* bLength */
-  0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE*/
-  /* sys version: "2.0" */
-  '2', 0, '.', 0, '0', 0,
+  0x03,		     /* bDescriptorType = USB_STRING_DESCRIPTOR_TYPE */
+  /* sys version: "3.0" */
+  '3', 0, '.', 0, '0', 0,
 };
+
+const uint32_t __attribute__((section(".sys.board_id")))
+sys_board_id = BOARD_ID;
+
+const uint8_t __attribute__((section(".sys.board_name")))
+sys_board_name[] = BOARD_NAME;

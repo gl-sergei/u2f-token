@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include "board.h"
 
-#include "clk_gpio_init-stm32.c"
+#include "mcu/clk_gpio_init-stm32.c"
 
 
 static void

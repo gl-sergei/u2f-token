@@ -39,9 +39,9 @@
 #else
 #include "board.h"
 #if defined (MCU_KINETIS_L)
-#include "clk_gpio_init-kl.c"
+#include "mcu/clk_gpio_init-kl.c"
 #else
-#include "clk_gpio_init-stm32.c"
+#include "mcu/clk_gpio_init-stm32.c"
 #endif
 #endif
 
