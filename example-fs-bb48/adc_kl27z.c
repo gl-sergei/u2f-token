@@ -1,6 +1,7 @@
 /*
  * adc_kl27z.c - ADC driver for KL27Z
  *               In this ADC driver, there are NeuG specific parts.
+ *               It only records lower 8-bit of 16-bit data.
  *               You need to modify to use this as generic ADC driver.
  *
  * Copyright (C) 2016  Flying Stone Technology
@@ -157,6 +158,13 @@ static const uint32_t adc0_sc1_setting = ADC_SC1_TEMPSENSOR;
 
 static chopstx_intr_t adc_intr;
 
+struct adc_internal {
+  uint32_t buf[64];
+  uint8_t *p;
+  int phase : 8;
+  int count : 8;
+};
+struct adc_internal adc;
 
 /*
  * Initialize ADC module, do calibration.
@@ -165,7 +173,7 @@ static chopstx_intr_t adc_intr;
  * other threads (to be accurate).
  *
  * We configure ADC0 to kick DMA0, configure DMA0 to kick DMA1.
- * DMA0 records output of ADC0 to the ADC_BUF.
+ * DMA0 records output of ADC0 to the ADC.BUF.
  * DMA1 kicks ADC0 again to get another value.
  *
  * ADC0 --[finish conversion]--> DMA0 --[Link channel 1]--> DMA1
@@ -236,11 +244,11 @@ adc_start (void)
  * Kick getting data for COUNT times.
  * Data will be saved in ADC_BUF starting at OFFSET.
  */
-void
-adc_start_conversion (int offset, int count)
+static void
+adc_start_conversion_internal (int count)
 {
   /* DMA0 setting.  */
-  DMA0->DAR = (uint32_t)&adc_buf[offset];
+  DMA0->DAR = (uint32_t)&adc.buf[0];
   DMA0->DSR_BCR = 4 * count;
   DMA0->DCR = (1 << 31) | (1 << 30) | (1 << 29) | (0 << 20) | (1 << 19)
             | (0 << 17) | (1 <<  7) | (2 <<  4) | (1 <<  2);
@@ -248,6 +256,20 @@ adc_start_conversion (int offset, int count)
   /* Kick DMA1.  */
   DMA1->DSR_BCR = 4 * count;
   DMA1->DCR = (1 << 30) | (1 << 29) | (0 << 19) | (0 << 17) | (1 << 16) | (1 << 7);
+}
+
+
+/*
+ * Kick getting data for COUNT times.
+ * Data will be saved in ADC_BUF starting at OFFSET.
+ */
+void
+adc_start_conversion (int offset, int count)
+{
+  adc.p = (uint8_t *)&adc_buf[offset];
+  adc.phase = 0;
+  adc.count = count;
+  adc_start_conversion_internal (count);
 }
 
 
@@ -273,12 +295,26 @@ adc_stop (void)
 int
 adc_wait_completion (void)
 {
-  /* Wait DMA completion */
-  chopstx_poll (NULL, 1, &adc_intr);
+  while (1)
+    {
+      int i;
 
-  DMA0->DSR_BCR = (1 << 24);
-  DMA1->DSR_BCR = (1 << 24);
+      /* Wait DMA completion */
+      chopstx_poll (NULL, 1, &adc_intr);
 
-  adc_stop_conversion ();
+      DMA0->DSR_BCR = (1 << 24);
+      DMA1->DSR_BCR = (1 << 24);
+
+      adc_stop_conversion ();
+
+      for (i = 0; i < adc.count; i++)
+	*adc.p++ = (uint8_t)adc.buf[i];
+
+      if (++adc.phase >= 4)
+	break;
+
+      adc_start_conversion_internal (adc.count);
+    }
+
   return 0;
 }

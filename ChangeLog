@@ -3,6 +3,8 @@
 	* mcu/kl_sim.h: New (was in example-fs-bb48).
 
 	* example-fs-bb48/adc_kl27z.c: Use DMA0 and DMA1.
+	* example-fs-bb48/adc_kl27z.c (adc_wait_completion): Use only
+	least significant 8-bit (most significant for randomness).
 	* example-fs-bb48/command.c (cmd_adc): Rename from
 	cmd_temperature.
 
