@@ -3,7 +3,7 @@
 #include <chopstx.h>
 #include "tty.h"
 #include "config.h"
-#ifdef TEMPERATURE_SUPPORT
+#ifdef ADC_SUPPORT
 #include "adc.h"
 static int adc_initialized = 0;
 #endif
@@ -30,8 +30,8 @@ static const char *help_string =
 #ifdef CRC32_SUPPORT
   "crc32 string\r\n"
 #endif
-#ifdef TEMPERATURE_SUPPORT
-  "temp\r\n"
+#ifdef ADC_SUPPORT
+  "adc\r\n"
 #endif
   "help\r\n";
 
@@ -46,6 +46,7 @@ static char hexchar (uint8_t x)
     return '?';
 }
 
+#ifdef ENABLE_DECIMAL_OUTPUT
 static char *
 compose_decimal (char *s, int value)
 {
@@ -81,6 +82,7 @@ compose_decimal (char *s, int value)
 
   return s;
 }
+#endif
 
 static char *
 compose_hex (char *s, uint32_t v)
@@ -214,18 +216,12 @@ cmd_crc32  (struct tty *tty, const char *line)
 }
 #endif
 
-#ifdef TEMPERATURE_SUPPORT
-#define ADCV_TEMP25  14800 /* TYP: 716mV=14219 */
-#define ADCV_100M     3217
-
-/* m = 1.62 mV/C_degree */
-
+#ifdef ADC_SUPPORT
 static void
-cmd_temperature  (struct tty *tty, const char *line)
+cmd_adc  (struct tty *tty, const char *line)
 {
-  uint32_t v;
-  int t;
-  char string[13];
+  int i;
+  char output[73];
   char *s;
 
   (void)line;
@@ -244,21 +240,27 @@ cmd_temperature  (struct tty *tty, const char *line)
 	}
     }
 
-  adc_start_conversion (0, 1);
-  adc_wait_completion (NULL);
-  v = adc_buf[0];
+  adc_start_conversion (0, 64);
+  adc_wait_completion ();
 
-  t = 25 - (((int)v - ADCV_TEMP25) * 100 / ADCV_100M);
-
-  s = compose_hex (string, v);
-  *s++ = '\r';
-  *s++ = '\n';
-  tty_send (tty, (uint8_t *)string, s - string);
-
-  s = compose_decimal (string, t);
-  *s++ = '\r';
-  *s++ = '\n';
-  tty_send (tty, (uint8_t *)string, s - string);
+  i = 0;
+  s = output;
+  while (1)
+    {
+      s = compose_hex (s, adc_buf[i]);
+      i++;
+      if ((i % 8))
+	*s++ = ' ';
+      else
+	{
+	  *s++ = '\r';
+	  *s++ = '\n';
+	  tty_send (tty, (uint8_t *)output, s - output);
+	  s = output;
+	  if (i >= 64)
+	    break;
+	}
+    }
 }
 #endif
 
@@ -276,8 +278,8 @@ struct command_table command_table[] = {
 #ifdef CRC32_SUPPORT
   { "crc32", cmd_crc32 },
 #endif
-#ifdef TEMPERATURE_SUPPORT
-  { "temp", cmd_temperature },
+#ifdef ADC_SUPPORT
+  { "adc", cmd_adc },
 #endif
   { "help", cmd_help },
 };

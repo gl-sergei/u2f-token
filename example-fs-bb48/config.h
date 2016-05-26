@@ -1,2 +1,2 @@
 #define CRC32_SUPPORT
-#define TEMPERATURE_SUPPORT
+#define ADC_SUPPORT

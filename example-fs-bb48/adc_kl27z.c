@@ -33,6 +33,27 @@
 #include <chopstx.h>
 #include "kl_sim.h"
 
+struct DMAMUX {
+  volatile uint32_t CHCFG0;
+  volatile uint32_t CHCFG1;
+  volatile uint32_t CHCFG2;
+  volatile uint32_t CHCFG3;
+};
+static struct DMAMUX *const DMAMUX = (struct DMAMUX *const)0x40021000;
+
+#define INTR_REQ_DMA0 0
+
+struct DMA {
+  volatile uint32_t SAR;
+  volatile uint32_t DAR;
+  volatile uint32_t DSR_BCR;
+  volatile uint32_t DCR;
+};
+static struct DMA *const DMA0 = (struct DMA *const)0x40008100;
+static struct DMA *const DMA1 = (struct DMA *const)0x40008110;
+
+
+/* We don't use ADC interrupt.  Just for reference.  */
 #define INTR_REQ_ADC 15
 
 struct ADC {
@@ -70,7 +91,7 @@ struct ADC {
   volatile uint32_t CLM1;
   volatile uint32_t CLM0;
 };
-static struct ADC *const ADC = (struct ADC *const)0x4003B000;
+static struct ADC *const ADC0 = (struct ADC *const)0x4003B000;
 
 /* SC1 */
 #define ADC_SC1_DIFF            (1 << 5)
@@ -92,11 +113,7 @@ static struct ADC *const ADC = (struct ADC *const)0x4003B000;
 /**/
 #define ADC_CLOCK_SOURCE ADC_CLOCK_SOURCE_ASYNCH
 #define ADC_MODE         ADC_MODE_16BIT
-#if 0
 #define ADC_ADLSMP       ADC_ADLSMP_SHORT
-#else
-#define ADC_ADLSMP       ADC_ADLSMP_LONG
-#endif
 #define ADC_ADIV         ADC_ADIV_8
 #define ADC_ADLPC        ADC_ADLPC_LOWPOWER
 
@@ -129,41 +146,77 @@ static struct ADC *const ADC = (struct ADC *const)0x4003B000;
 #define ADC_SC3_CALF            (1 << 6)
 #define ADC_SC3_CAL             (1 << 7)
 
+#define ADC_DMA_SLOT_NUM 40
+
+/*
+ * Buffer to save ADC data.
+ */
+uint32_t adc_buf[64];
+
+static const uint32_t adc0_sc1_setting = ADC_SC1_TEMPSENSOR;
+
+static chopstx_intr_t adc_intr;
+
+
 /*
  * Initialize ADC module, do calibration.
- * This is called by MAIN, only once, before creating any other threads.
+ *
+ * This is called by MAIN, only once, hopefully before creating any
+ * other threads (to be accurate).
+ *
+ * We configure ADC0 to kick DMA0, configure DMA0 to kick DMA1.
+ * DMA0 records output of ADC0 to the ADC_BUF.
+ * DMA1 kicks ADC0 again to get another value.
+ *
+ * ADC0 --[finish conversion]--> DMA0 --[Link channel 1]--> DMA1
  */
 int
 adc_init (void)
 {
   uint32_t v;
 
-  /* Enable ADC0 clock.  */
-  SIM->SCGC6 |= (1 << 27);
+  /* Enable ADC0 and DMAMUX clock.  */
+  SIM->SCGC6 |= (1 << 27) | (1 << 1);
+  /* Enable DMA clock.  */
+  SIM->SCGC7 |= (1 << 8);
 
-  ADC->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
-  ADC->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
-  ADC->SC2 = ADC_SC2_REFSEL_DEFAULT;
-  ADC->SC3 = ADC_SC3_CAL | ADC_SC3_CALF | ADC_SC3_AVGE | ADC_SC3_AVGS11;
+  /* ADC0 setting for calibration.  */
+  ADC0->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
+  ADC0->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
+  ADC0->SC2 = ADC_SC2_REFSEL_DEFAULT;
+  ADC0->SC3 = ADC_SC3_CAL | ADC_SC3_CALF | ADC_SC3_AVGE | ADC_SC3_AVGS11;
 
   /* Wait ADC completion */
-  while ((ADC->SC1[0] & ADC_SC1_COCO) == 0)
-    if ((ADC->SC3 & ADC_SC3_CALF) != 0)
+  while ((ADC0->SC1[0] & ADC_SC1_COCO) == 0)
+    if ((ADC0->SC3 & ADC_SC3_CALF) != 0)
       /* Calibration failure */
       return -1;
 
-  if ((ADC->SC3 & ADC_SC3_CALF) != 0)
+  if ((ADC0->SC3 & ADC_SC3_CALF) != 0)
     /* Calibration failure */
     return -1;
 
   /* Configure PG by the calibration values.  */
-  v = ADC->CLP0 + ADC->CLP1 + ADC->CLP2 + ADC->CLP3 + ADC->CLP4 + ADC->CLPS;
-  ADC->PG = 0x8000 | (v >> 1);
+  v = ADC0->CLP0 + ADC0->CLP1 + ADC0->CLP2 + ADC0->CLP3 + ADC0->CLP4 + ADC0->CLPS;
+  ADC0->PG = 0x8000 | (v >> 1);
 
   /* Configure MG by the calibration values.  */
-  v = ADC->CLM0 + ADC->CLM1 + ADC->CLM2 + ADC->CLM3 + ADC->CLM4 + ADC->CLMS;
-  ADC->MG = 0x8000 | (v >> 1);
+  v = ADC0->CLM0 + ADC0->CLM1 + ADC0->CLM2 + ADC0->CLM3 + ADC0->CLM4 + ADC0->CLMS;
+  ADC0->MG = 0x8000 | (v >> 1);
 
+  ADC0->SC1[0] = ADC_SC1_ADCSTOP;
+
+  /* DMAMUX setting.  */
+  DMAMUX->CHCFG0 = (1 << 7) | ADC_DMA_SLOT_NUM;
+
+  /* DMA0 initial setting.  */
+  DMA0->SAR = (uint32_t)&ADC0->R[0];
+
+  /* DMA1 initial setting.  */
+  DMA1->SAR = (uint32_t)&adc0_sc1_setting;
+  DMA1->DAR = (uint32_t)&ADC0->SC1[0];
+  
+  chopstx_claim_irq (&adc_intr, INTR_REQ_DMA0);
   return 0;
 }
 
@@ -173,16 +226,11 @@ adc_init (void)
 void
 adc_start (void)
 {
-  ADC->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
-  ADC->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
-  ADC->SC2 = ADC_SC2_REFSEL_DEFAULT;
-  ADC->SC3 = 0;
+  ADC0->CFG1 = ADC_CLOCK_SOURCE | ADC_MODE | ADC_ADLSMP | ADC_ADIV | ADC_ADLPC;
+  ADC0->CFG2 = ADC_ADLSTS | ADC_ADHSC | ADC_ADACKEN | ADC_MUXSEL;
+  ADC0->SC2 = ADC_SC2_REFSEL_DEFAULT | ADC_SC2_DMAEN;
+  ADC0->SC3 = 0;
 }
-
-/*
- * Buffer to save ADC data.
- */
-uint32_t adc_buf[64];
 
 /*
  * Kick getting data for COUNT times.
@@ -191,14 +239,22 @@ uint32_t adc_buf[64];
 void
 adc_start_conversion (int offset, int count)
 {
-  ADC->SC1[0] = /*ADC_SC1_AIEN*/0 | ADC_SC1_TEMPSENSOR;
+  /* DMA0 setting.  */
+  DMA0->DAR = (uint32_t)&adc_buf[offset];
+  DMA0->DSR_BCR = 4 * count;
+  DMA0->DCR = (1 << 31) | (1 << 30) | (1 << 29) | (0 << 20) | (1 << 19)
+            | (0 << 17) | (1 <<  7) | (2 <<  4) | (1 <<  2);
+
+  /* Kick DMA1.  */
+  DMA1->DSR_BCR = 4 * count;
+  DMA1->DCR = (1 << 30) | (1 << 29) | (0 << 19) | (0 << 17) | (1 << 16) | (1 << 7);
 }
 
 
 static void
 adc_stop_conversion (void)
 {
-  ADC->SC1[0] = ADC_SC1_ADCSTOP;
+  ADC0->SC1[0] = ADC_SC1_ADCSTOP;
 }
 
 /*
@@ -215,13 +271,14 @@ adc_stop (void)
  * Return 1 on error.
  */
 int
-adc_wait_completion (chopstx_intr_t *intr)
+adc_wait_completion (void)
 {
-  /* Wait ADC completion */
-  while ((ADC->SC1[0] & ADC_SC1_COCO) == 0)
-    ;
+  /* Wait DMA completion */
+  chopstx_poll (NULL, 1, &adc_intr);
 
-  adc_buf[0] = ADC->R[0];
+  DMA0->DSR_BCR = (1 << 24);
+  DMA1->DSR_BCR = (1 << 24);
+
   adc_stop_conversion ();
   return 0;
 }
