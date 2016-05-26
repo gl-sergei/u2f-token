@@ -26,7 +26,7 @@
  *
  */
 
-#include "kl_sim.h"
+#include <mcu/kl_sim.h>
 
 struct MCG {
   volatile uint8_t C1;   /* MCG Control Register 1             */

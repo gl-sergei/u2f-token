@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <chopstx.h>
-#include "kl_sim.h"
+#include <mcu/kl_sim.h>
 
 struct DMAMUX {
   volatile uint32_t CHCFG0;
