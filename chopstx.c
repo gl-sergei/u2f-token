@@ -2017,7 +2017,7 @@ preempt (void)
 	"bx	r0\n"
     "1:\n\t"
 	/* Spawn an IDLE thread.  */
-	"ldr	r0, =__main_stack_end__-32\n\t"
+	"ldr	r0, =__main_stack_end__\n\t"
 	"msr	PSP, r0\n\t"
 	"mov	r1, #0\n\t"
 	"mov	r2, #0\n\t"
