@@ -7,6 +7,8 @@
 #include "adc.h"
 static int adc_initialized = 0;
 #endif
+#include "sys.h"
+#include "board.h"
 
 struct command_table
 {
@@ -33,6 +35,7 @@ static const char *help_string =
 #ifdef ADC_SUPPORT
   "adc\r\n"
 #endif
+  "sysinfo\r\n"
   "help\r\n";
 
 static char hexchar (uint8_t x)
@@ -197,6 +200,8 @@ cmd_mww (struct tty *tty, const char *line)
 #ifdef CRC32_SUPPORT
 #include "crc32.h"
 
+static unsigned int crc_value;
+
 static void
 cmd_crc32  (struct tty *tty, const char *line)
 {
@@ -204,10 +209,10 @@ cmd_crc32  (struct tty *tty, const char *line)
   char string[10];
   char *s;
 
-  crc32_init ();
+  crc32_init (&crc_value);
   while (*line)
-    crc32_u8 (*line++);
-  v = crc32_value () ^ 0xffffffff;
+    crc32_u8 (&crc_value, *line++);
+  v = crc_value ^ 0xffffffff;
 
   s = compose_hex (string, v);
   *s++ = '\r';
@@ -265,6 +270,44 @@ cmd_adc  (struct tty *tty, const char *line)
 #endif
 
 static void
+cmd_sysinfo (struct tty *tty, const char *line)
+{
+  char output[73];
+  char *s;
+  int i;
+
+  (void)line;
+  memcpy (output, "SYS version: ", 13);
+  s = output + 13; 
+  *s++ = sys_version[2];
+  *s++ = sys_version[4];
+  *s++ = sys_version[6];
+  *s++ = '\r';
+  *s++ = '\n';
+  tty_send (tty, (uint8_t *)output, s - output);
+
+  memcpy (output, "Board ID: ", 10);
+  s = output + 10; 
+  s = compose_hex (s, sys_board_id);
+  *s++ = '\r';
+  *s++ = '\n';
+  tty_send (tty, (uint8_t *)output, s - output);
+
+  memcpy (output, "Board name: ", 12);
+  s = output + 12; 
+  for (i = 0; i < (int)sizeof (output) - 2; i ++)
+    if ((*s = sys_board_name[i]) == 0)
+      break;
+    else
+      s++;
+
+  *s++ = '\r';
+  *s++ = '\n';
+  tty_send (tty, (uint8_t *)output, s - output);
+}
+
+
+static void
 cmd_help (struct tty *tty, const char *line)
 {
   (void)line;
@@ -281,6 +324,7 @@ struct command_table command_table[] = {
 #ifdef ADC_SUPPORT
   { "adc", cmd_adc },
 #endif
+  { "sysinfo", cmd_sysinfo },
   { "help", cmd_help },
 };
 

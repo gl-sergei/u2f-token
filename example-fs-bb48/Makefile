@@ -6,7 +6,7 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sample.c first-pages.c usb_kl27z.c usb-cdc.c adc_kl27z.c command.c
+CSRC = sample.c sys.c usb_kl27z.c usb-cdc.c adc_kl27z.c command.c
 
 ###################################
 CROSS = arm-none-eabi-
@@ -16,7 +16,7 @@ OBJCOPY   = $(CROSS)objcopy
 
 MCU   = cortex-m0plus
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DFREE_STANDING -DMHZ=48
+DEFS  = -DFREE_STANDING -DMHZ=48 -DHAVE_SYS_H
 OPT   = -O3 -Os -g
 LIBS  =
 

@@ -1,5 +1,20 @@
 2016-05-27  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* example-fs-bb48/command.c (cmd_sysinfo): New.
+	* example-fs-bb48/sample.ld: Update.
+	* example-fs-bb48/sys.h: New.
+	Move crc32 functions declarations here.
+	* example-fs-bb48/sys.c: Rename from first-pages.c.
+	Include mcu/clk_gpio_init-kl.c to define clock_init and
+	gpio_init.
+	(set_led): New.
+	(reset): Initialize MSP.
+	(flash_config): Include comparison key.
+	(crc32_init, crc32_u8, crc32_u32): Change the API.
+	Write them in assembler so that the size of functions
+	keep unchanged.
+	(sys_version, sys_board_id, sys_board_name, sys_vector): New.
+
 	* chopstx.c (preempt): Fix IDLE thread stack pointer.
 
 2016-05-26  NIIBE Yutaka  <gniibe@fsij.org>

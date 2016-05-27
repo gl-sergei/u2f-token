@@ -23,17 +23,28 @@ SECTIONS
 
     _text = .;
 
-    .f2 : ALIGN(16) SUBALIGN(8)
+    .text : ALIGN(16) SUBALIGN(8)
     {
         KEEP(*(.first_page.first_words))
-        KEEP(*(.first_page))
-        KEEP(*(.flash_config))
-	KEEP(*(.flash_config_page))
-    } > flash =0xffffffff
-
-    .text : ALIGN(16) SUBALIGN(16)
-    {
+        KEEP(*(.sys.version))
+        KEEP(*(.sys.board_info))
+        KEEP(*(.sys.vectors))
+	build/sys.o(.text)
+	build/sys.o(.text.*)
+	build/sys.o(.rodata)
+	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
+        KEEP(*(.flash_config))
+	KEEP(*(.fixed_function.crc32_init))
+	KEEP(*(.fixed_function.crc32_u8))
+	KEEP(*(.fixed_function.crc32_u32))
+	KEEP(*(.reset.entry))
+	/*
+	 * Because of alignment requirement
+	 * of startup.vectors, align to 256.
+	 */
+	. = ALIGN(256);
+        KEEP(*(.crc32_table))
         KEEP(*(.startup.vectors))
 	. = ALIGN(16);
         *(.text.startup.*)
