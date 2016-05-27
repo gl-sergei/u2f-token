@@ -12,7 +12,7 @@
  *
  * First two pages of Flash ROM is difficult to use because of
  * predefined purposes.  It's defined as a default vector page and
- * flash configuration page.
+ * a flash configuration page.
  *
  * We put something useful to those two pages, together with the
  * data for predefined purposes.
