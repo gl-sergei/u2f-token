@@ -198,8 +198,6 @@ cmd_mww (struct tty *tty, const char *line)
 
 
 #ifdef CRC32_SUPPORT
-#include "crc32.h"
-
 static unsigned int crc_value;
 
 static void
