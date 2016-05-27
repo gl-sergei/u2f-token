@@ -21,7 +21,7 @@
 
 	* entry.c: Follow the move of clk_gpio_init*.c
 	* example-cdc/sys.c: Likewise.
-	* example-led/sys.c: Likewise.  Update to 3.0. 
+	* example-led/sys.c: Likewise.  Update to 3.0.
 	* example-primer2/sys.c: Update.
 
 	* mcu/clk_gpio_init-stm32.c: Moved.
