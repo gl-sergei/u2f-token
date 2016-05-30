@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "sys.h"
+#include "sys-stm32f103.h"
 #include "usb_lld.h"
 
 #define USB_MAX_PACKET_SIZE 64	/* For FS device */

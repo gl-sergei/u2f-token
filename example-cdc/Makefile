@@ -4,7 +4,12 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sys.c aes-constant-ft.c sample.c usb-cdc.c usb_stm32f103.c
+CSRC = sample.c usb-cdc.c
+
+CHIP=stm32f103
+
+USE_SYS = yes
+USE_USB = yes
 
 ###################################
 CROSS = arm-none-eabi-
