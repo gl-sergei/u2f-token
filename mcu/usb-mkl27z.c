@@ -388,6 +388,11 @@ usb_interrupt_handler (void)
       usb_cb_device_reset ();
       dev_p->reset++;
     }
+  else if ((istat_value & USB_IS_TOKDNE))
+    {
+      handle_transaction (stat);
+      dev_p->tkdone++;
+    }
   else if ((istat_value & USB_IS_ERROR))
     { /* Clear Errors.  */
       USB_CTRL1->ERRSTAT = USB_CTRL1->ERRSTAT;
@@ -395,14 +400,9 @@ usb_interrupt_handler (void)
       /*reset???*/
       dev_p->error++;
     }
-  else if ((istat_value & USB_IS_TOKDNE))
-    {
-      handle_transaction (stat);
-      dev_p->tkdone++;
-    }
   else if ((istat_value & USB_IS_STALL))
     {
-      /* ??? stat includes ep_num in this case ???: No, it doesn't  */
+      /* Does STAT have ENDPOINT info in this case?: No, it doesn't.  */
 
       if (kl27z_ep_is_stall (0))
 	{ /* It's endpoint 0, recover from erorr.  */
@@ -824,6 +824,10 @@ handle_out0 (uint8_t stat)
     dev_p->state = STALLED;
 }
 
+#define USB_TOKEN_ACK   0x02
+#define USB_TOKEN_IN    0x09
+#define USB_TOKEN_SETUP 0x0d
+
 static void
 handle_transaction (uint8_t stat)
 {
@@ -835,7 +839,7 @@ handle_transaction (uint8_t stat)
       if ((stat & 0x08) == 0)
 	{
 	  ep[0].rx_odd ^= 1;
-	  if (TOK_PID (BD_table[odd].ctrl) == 0x0d)
+	  if (TOK_PID (BD_table[odd].ctrl) == USB_TOKEN_SETUP)
 	    {
 	      handle_setup0 ();
 	      USB_CTRL1->ISTAT = USB_IS_TOKDNE;
@@ -867,11 +871,36 @@ handle_transaction (uint8_t stat)
 	}
       else
 	{
-	  /* XXX: Can be NAK.  Check BDT if it's NAK or not.  */
+	  /*
+	   * IN transaction is usually in a sequence like:
+	   *
+	   *           -----time------>
+	   *   host:   IN          ACK
+	   *   device:     DATA0/1 
+	   *
+	   * It is not described in the specification (it's
+	   * ambiguous), but it is actually possible for some host
+	   * implementation to send back a NAK on erroneous case like
+	   * a device sent oversized data.
+	   *
+	   *           -----time------>
+	   *   host:   IN          NAK
+	   *   device:     DATA0/1 
+	   *
+	   * We do our best to distinguish successful tx and tx with
+	   * failure.
+	   *
+	   */
+	  uint32_t dmaerr = (USB_CTRL1->ERRSTAT & (1 << 5));
+	  int success = (dmaerr == 0);
+	  uint32_t len = (BD_table[4*ep_num+2+odd].ctrl >> 16)&0x3ff;
+
+	  if (!success)
+	    USB_CTRL1->ERRSTAT = dmaerr; /* Clear error.  */
 
 	  dev_p->send++;
 	  ep[ep_num].tx_odd ^= 1;
-	  usb_cb_tx_done (ep_num);
+	  usb_cb_tx_done (ep_num, len, success);
 	}
 
       USB_CTRL1->ISTAT = USB_IS_TOKDNE;
@@ -905,7 +934,7 @@ usb_lld_reset (uint8_t feature)
 }
 
 void
-usb_lld_setup_endpoint (int n, int rx_en, int tx_en)
+usb_lld_setup_endp (int n, int rx_en, int tx_en)
 {
   if (n == 0)
     {
@@ -1002,7 +1031,7 @@ usb_lld_reply_request (const void *buf, size_t buflen, struct req_args *a)
 }
 
 void
-usb_lld_rx_enable (int n, void *buf, size_t len)
+usb_lld_rx_enable_buf (int n, void *buf, size_t len)
 {
   int data01 = !((BD_table[4*n+!ep[n].rx_odd].ctrl >> 6)&1);
 
@@ -1018,17 +1047,10 @@ usb_lld_rx_data_len (int n)
 
 
 void
-usb_lld_tx_enable (uint8_t n, const void *buf, size_t len)
+usb_lld_tx_enable_buf (int n, const void *buf, size_t len)
 {
   int data01 = !((BD_table[4*n+2+!ep[n].tx_odd].ctrl >> 6)&1);
 
   BD_table[4*n+2+ep[n].tx_odd].ctrl = (len << 16) | 0x0088 | (data01 << 6); 
   BD_table[4*n+2+ep[n].tx_odd].buf = (void *)buf;
-}
-
-int
-usb_lld_tx_result (int ep_num)
-{
-  (void)ep_num;
-  return 0; /* XXX: return -1 when NAK */
 }

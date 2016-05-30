@@ -1,5 +1,13 @@
 2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* mcu/usb-stm32f103.c (usb_lld_setup_endpoint): Start with
+	EP_RX_NAK.
+
+	* mcu/usb-mkl27z.c (handle_transaction): Handle NAK case.
+	(usb_lld_setup_endp): Rename from usb_lld_setup_endpoint.
+	(usb_lld_rx_enable_buf): Rename from usb_lld_rx_enable.
+	(usb_lld_tx_enable_buf): Rename from usb_lld_tx_enable.
+
 	* mcu/adc-stm32f103.c: New from NeuG.
 	* mcu/stm32f103.h: New from NeuG.
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <chopstx.h>
 #include <string.h>
+#include "board.h"
 #include "usb_lld.h"
 #include "tty.h"
 
@@ -236,7 +237,7 @@ usb_cb_device_reset (void)
   usb_lld_reset (VCOM_FEATURE_BUS_POWERED);
 
   /* Initialize Endpoint 0 */
-  usb_lld_setup_endpoint (ENDP0, 1, 1);
+  usb_lld_setup_endp (ENDP0, 1, 1);
 
   chopstx_mutex_lock (&tty0.mtx);
   tty0.inputline_len = 0;
@@ -364,7 +365,7 @@ vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
   if (interface == 0)
     {
       if (!stop)
-	usb_lld_setup_endpoint (ENDP2, 0, 1);
+	usb_lld_setup_endp (ENDP2, 0, 1);
       else
 	usb_lld_stall (ENDP2);
     }
@@ -372,8 +373,8 @@ vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
     {
       if (!stop)
 	{
-	  usb_lld_setup_endpoint (ENDP1, 0, 1);
-	  usb_lld_setup_endpoint (ENDP3, 1, 0);
+	  usb_lld_setup_endp (ENDP1, 0, 1);
+	  usb_lld_setup_endp (ENDP3, 1, 0);
 	  /* Start with no data receiving (ENDP3 not enabled)*/
 	}
       else
@@ -510,11 +511,13 @@ tty_echo_char (struct tty *t, int c)
   put_char_to_ringbuffer (t, c);
 }
 
-
 void
-usb_cb_tx_done (uint8_t ep_num)
+usb_cb_tx_done (uint8_t ep_num, uint32_t len, int success)
 {
   struct tty *t = tty_get (-1, ep_num);
+
+  (void)len;
+  (void)success;		/* Always, successful.  */
 
   if (ep_num == ENDP1)
     {
@@ -608,7 +611,7 @@ usb_cb_rx_ready (uint8_t ep_num)
 
       chopstx_mutex_lock (&t->mtx);
       if (t->flag_input_avail == 0)
-	usb_lld_rx_enable (ENDP3, t->recv_buf0, 64);
+	usb_lld_rx_enable_buf (ENDP3, t->recv_buf0, 64);
       chopstx_mutex_unlock (&t->mtx);
     }
 }
@@ -687,7 +690,7 @@ tty_main (void *arg)
 	  if (len)
 	    {
 	      memcpy (t->send_buf0, line, len);
-	      usb_lld_tx_enable (ENDP1, t->send_buf0, len);
+	      usb_lld_tx_enable_buf (ENDP1, t->send_buf0, len);
 	      t->flag_send_ready = 0;
 	    }
 	}
@@ -718,7 +721,8 @@ tty_wait_connection (struct tty *t)
   t->flag_input_avail = 0;
   t->send_head = t->send_tail = 0;
   t->inputline_len = 0;
-  usb_lld_rx_enable (ENDP3, t->recv_buf0, 64);	/* Accept input for line */
+  /* Accept input for line */
+  usb_lld_rx_enable_buf (ENDP3, t->recv_buf0, 64);
   chopstx_mutex_unlock (&t->mtx);
 }
 
@@ -751,7 +755,7 @@ tty_send (struct tty *t, const uint8_t *buf, int len)
 	chopstx_cond_wait (&t->cnd, &t->mtx);
       if (r > 0)
 	{
-	  usb_lld_tx_enable (ENDP1, p, count);
+	  usb_lld_tx_enable_buf (ENDP1, p, count);
 	  t->flag_send_ready = 0;
 	}
       chopstx_mutex_unlock (&t->mtx);
@@ -827,7 +831,7 @@ tty_recv (struct tty *t, uint8_t *buf, uint32_t *timeout)
       r = t->inputline_len;
       memcpy (buf, t->inputline, r);
       t->flag_input_avail = 0;
-      usb_lld_rx_enable (ENDP3, t->recv_buf0, 64);
+      usb_lld_rx_enable_buf (ENDP3, t->recv_buf0, 64);
       t->inputline_len = 0;
     }
   else

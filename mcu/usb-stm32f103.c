@@ -972,7 +972,7 @@ void usb_lld_setup_endpoint (int ep_num, int ep_type, int ep_kind,
 
   if (ep_rx_addr)
     {
-      ep_rxtx_status |= EP_RX_VALID;
+      ep_rxtx_status |= EP_RX_NAK;
       st103_set_rx_addr (ep_num, ep_rx_addr);
       st103_set_rx_buf_size (ep_num, ep_rx_buf_size);
     }
