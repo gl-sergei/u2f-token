@@ -516,9 +516,12 @@ tty_echo_char (struct tty *t, int c)
 
 
 void
-usb_cb_tx_done (uint8_t ep_num)
+usb_cb_tx_done (uint8_t ep_num, uint32_t len, int success)
 {
   struct tty *t = tty_get (-1, ep_num);
+
+  (void)len;
+  (void)success;		/* Always, successful.  */
 
   if (ep_num == ENDP1)
     {

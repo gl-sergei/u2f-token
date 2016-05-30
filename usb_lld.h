@@ -103,6 +103,12 @@ void usb_lld_rx_enable_buf (int ep_num, void *buf, size_t len);
 void usb_lld_setup_endp (int ep_num, int rx_en, int tx_en);
 void usb_lld_stall (int ep_num);
 #else
+/* EP_TYPE[1:0] EndPoint TYPE */
+#define EP_BULK        (0x0000) /* EndPoint BULK        */
+#define EP_CONTROL     (0x0200) /* EndPoint CONTROL     */
+#define EP_ISOCHRONOUS (0x0400) /* EndPoint ISOCHRONOUS */
+#define EP_INTERRUPT   (0x0600) /* EndPoint INTERRUPT   */
+
 void usb_lld_tx_enable (int ep_num, size_t len);
 void usb_lld_rx_enable (int ep_num);
 
