@@ -22,21 +22,10 @@
 #include <stdlib.h>
 #include "board.h"
 
-#include "mcu/clk_gpio_init-kl.c"
-
-static void
-set_led (int on)
-{
-  if (on)
-    GPIOB->PCOR = (1 << 0); /* PTB0: Clear: Light on  */
-  else
-    GPIOB->PSOR = (1 << 0); /* PTB0: Set  : Light off */
-}
-
 #define ADDR_VECTORS (0x00000900)
 #define ADDR_SCR_VTOR 0xe000ed08
 
-static void __attribute__ ((naked,section(".reset.entry")))
+static void __attribute__ ((naked,section(".fixed_function.reset")))
 reset (void)
 {
   uint32_t r3 = ADDR_SCR_VTOR;
@@ -46,7 +35,7 @@ reset (void)
 		"msr	MSP, %0\n\t"	  /* Exception handler stack. */
 		"ldr	%0, [%2, #4]\n\t" /* The entry address */
 		"bx	%0\n\t"           /* Jump to the entry */
-		".align	2\n"
+		".align	2"
 		: "=r" (r3)
 		: "0" (r3), "r" (ADDR_VECTORS)
 		: "memory");
@@ -62,10 +51,45 @@ stack_entry[] __attribute__ ((section(".first_page.first_words"),used)) = {
   (uint32_t)reset,
 };
 
+#include "mcu/clk_gpio_init-kl.c"
+
+static void
+set_led (int on)
+{
+  if (on)
+    GPIOB->PCOR = (1 << 0); /* PTB0: Clear: Light on  */
+  else
+    GPIOB->PSOR = (1 << 0); /* PTB0: Set  : Light off */
+}
+
 /*
- * Here comes SYS routines and data.
+ * Here comes other SYS routines and data.
  */
 
+const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
+  3*2+2,	     /* bLength */
+  0x03,		     /* bDescriptorType = STRING_DESCRIPTOR */
+  /* sys version: "3.0" */
+  '3', 0, '.', 0, '0', 0,
+};
+
+static const uint8_t board_name_string[] = BOARD_NAME;
+
+const uint8_t __attribute__((section(".sys.board_info")))
+*const sys_board_name = board_name_string;
+
+const uint32_t __attribute__((section(".sys.board_info")))
+sys_board_id = BOARD_ID;
+
+typedef void (*handler)(void);
+
+handler sys_vector[] __attribute__ ((section(".sys.vectors"))) = {
+  clock_init,
+  gpio_init,
+  (handler)set_led,
+  NULL,
+};
+
 static uint32_t
 flash_config[] __attribute__ ((section(".flash_config"),used)) = {
   0xffffffff, 0xffffffff, /* Comparison Key */
@@ -78,6 +102,177 @@ flash_config[] __attribute__ ((section(".flash_config"),used)) = {
    * unsecure
    */
 };
+
+
+/*
+ * Flash memory routine
+ */
+struct FTFA {
+  volatile uint8_t FSTAT;
+  volatile uint8_t FCNFG;
+  volatile uint8_t FSEC;
+  volatile uint8_t FOPT;
+  /* Note: addressing (3,2,1,0, 7,6,5,4, B,A,9,8) */
+  /* Use Bx macro. */
+  volatile uint8_t FCCO[12];
+  /* Note: addressing (3,2,1,0).  Use Bx macro.  */
+  volatile uint8_t FPROT[4];
+};
+static struct FTFA *const FTFA = (struct FTFA *const)0x40020000;
+
+#define FSTAT_CCIF 0x80
+#define B3 0
+#define B2 1
+#define B1 2
+#define B0 3
+#define B7 4
+#define B6 5
+#define B5 6
+#define B4 7
+#define BB 8
+#define BA 9
+#define B9 10
+#define B8 11
+
+uint32_t __attribute__ ((naked,section(".fixed_function.flash_do_internal")))
+flash_do_internal (void)
+{
+#ifdef ORIGINAL_IN_C
+  uint8_t r;
+
+  asm volatile ("cpsid	i" : : : "memory");
+  FTFA->FSTAT |= FSTAT_CCIF;
+  while (((r = FTFA->FSTAT) & FSTAT_CCIF) == 0)
+    ;
+  r &= ~FSTAT_CCIF;
+  asm volatile ("cpsie	i" : : : "memory");
+
+  return (uint32_t)r;
+#else
+  register unsigned int r0 asm ("r0");
+  register unsigned int r1 asm ("r1") = (unsigned int)FTFA;
+  register unsigned int r2 asm ("r2") = FSTAT_CCIF;
+
+  asm volatile ("cpsid	i\n\t"
+		"ldrb	%0, [%1]\n\t"
+		"orr	%0, %2\n\t"
+		"strb	%0, [%1]\n"
+	"0:\t"
+		"ldrb	%0, [%1]\n\t"
+		"uxtb	%0, %0\n\t"
+		"tst	%0, %2\n\t"
+		"beq	0b\n\t"
+		"cpsie	i\n\t"
+		"bic	%0, %2\n\t"
+		"bx	lr"
+		: "=r" (r0)
+		: "r" (r1), "r" (r2)
+		: "memory");
+  return r0;
+#endif
+}
+
+/*
+ * Let execute flash command.
+ * Since the code should be on RAM, we copy the code onto stack
+ * and let it go.
+ */
+uint32_t __attribute__ ((naked,section(".fixed_function.flash_do")))
+flash_do (void)
+{
+  register unsigned int r0 asm ("r0");
+  register unsigned int r1 asm ("r1");
+  register unsigned int r2 asm ("r2");
+  register unsigned int r3 asm ("r3") = (unsigned int)flash_do_internal&~3;
+  /* Address of Thumb code &1 == 1, so, we clear the last bits.    ------^ */
+
+  asm volatile ("sub	sp, #32\n\t"
+		"mov	%1, sp\n\t"
+		"mov	%2, #0\n"
+	"0:\t"
+		"cmp	%2, #32\n\t"
+		"beq	1f\n\t"
+		"ldr	%0, [%3, %2]\n\t"
+		"str	%0, [%1, %2]\n\t"
+		"add	%2, #4\n\t"
+		"b	0b\n"
+	"1:\t"
+		"add	%1, #1\n\t" /* Thumb code requires LSB=1.  */
+		"mov	%3, lr\n\t"
+		"blx	%1\n\t"
+		"add	sp, #32\n\t"
+		"bx	%3"
+		: "=r" (r0), "=r" (r1), "=r" (r2), "=r" (r3)
+		: "3" (r3));
+}
+
+#define FLASH_COMMAND_PROGRAM_LONGWORD   0x06
+#define FLASH_COMMAND_ERASE_FLASH_SECTOR 0x09
+
+int __attribute__ ((naked,section(".fixed_function.flash_erase_page")))
+flash_erase_page (uint32_t addr)
+{
+#ifdef ORIGINAL_IN_C
+  FTFA->FCCO[B0] = FLASH_COMMAND_ERASE_FLASH_SECTOR;
+  FTFA->FCCO[B3] = (addr >>  0) & 0xff;
+  FTFA->FCCO[B2] = (addr >>  8) & 0xff;
+  FTFA->FCCO[B1] = (addr >> 16) & 0xff;
+  flash_do ();
+#else
+  register unsigned int r0 asm ("r0") = addr;
+  register unsigned int r1 asm ("r1");
+  register unsigned int r2 asm ("r2") = FLASH_COMMAND_ERASE_FLASH_SECTOR;
+  register unsigned int r3 asm ("r3") = (unsigned int)FTFA;
+
+  asm volatile ("strb	%2, [%3, #7]\n\t"
+		"strb	%0, [%3, #4]\n\t"
+		"lsr	%0, #8\n\t"
+		"strb	%0, [%3, #5]\n\t"
+		"lsr	%0, #8\n\t"
+		"strb	%0, [%3, #6]\n\t"
+		"b	flash_do"
+		: "=r" (r0), "=r" (r1), "=r" (r2), "=r" (r3)
+		: "0" (r0), "2" (r2), "3" (r3));
+#endif
+}
+
+int __attribute__ ((naked,section(".fixed_function.flash_program_word")))
+flash_program_word (uint32_t addr, uint32_t word)
+{
+#ifdef ORIGINAL_IN_C
+  FTFA->FCCO[B0] = FLASH_COMMAND_PROGRAM_LONGWORD;
+  FTFA->FCCO[B3] = (addr >>  0) & 0xff;
+  FTFA->FCCO[B2] = (addr >>  8) & 0xff;
+  FTFA->FCCO[B1] = (addr >> 16) & 0xff;
+  FTFA->FCCO[B4] = (word >>  0) & 0xff;
+  FTFA->FCCO[B5] = (word >>  8) & 0xff;
+  FTFA->FCCO[B6] = (word >> 16) & 0xff;
+  FTFA->FCCO[B7] = (word >> 24) & 0xff;
+  flash_do ();
+#else
+  register unsigned int r0 asm ("r0") = addr;
+  register unsigned int r1 asm ("r1") = word;
+  register unsigned int r2 asm ("r2") = FLASH_COMMAND_PROGRAM_LONGWORD;
+  register unsigned int r3 asm ("r3") = (unsigned int)FTFA;
+
+  asm volatile ("strb	%2, [%3, #7]\n\t"
+		"strb	%0, [%3, #4]\n\t"
+		"lsr	%0, #8\n\t"
+		"strb	%0, [%3, #5]\n\t"
+		"lsr	%0, #8\n\t"
+		"strb	%0, [%3, #6]\n\t"
+		"strb	%1, [%3, #11]\n\t"
+		"lsr	%1, #8\n\t"
+		"strb	%1, [%3, #10]\n\t"
+		"lsr	%1, #8\n\t"
+		"strb	%1, [%3, #9]\n\t"
+		"lsr	%1, #8\n\t"
+		"strb	%1, [%3, #8]\n\t"
+		"b	flash_do"
+		: "=r" (r0), "=r" (r1), "=r" (r2), "=r" (r3)
+		: "0" (r0), "1" (r1), "2" (r2), "3" (r3));
+#endif
+}
 
 
 /*
@@ -94,7 +289,7 @@ crc32_init  (unsigned int *p)
   asm volatile ("mov	%0, #1\n\t"
 		"neg	%0, %0\n\t"
 		"str	%0, [%1]\n\t"
-		"bx	lr\n"
+		"bx	lr"
 		: "=r" (r3)
 		: "r" (p)
 		: "memory");
@@ -125,7 +320,7 @@ crc32_u8 (unsigned int *p, unsigned char v)
 		"lsr	%2, %2, #8\n\t"
 		"eor	%2, %1\n\t"
 		"str	%2, [%4]\n\t"
-		"bx	lr\n"
+		"bx	lr"
 		: "=r" (v), "=r" (r2), "=r" (r3)
 		: "0" (v), "r" (p)
 		: "memory");
@@ -161,7 +356,7 @@ crc32_u32 (unsigned int *p, unsigned int u)
 		"mov	%5, %3\n\t"
 		"lsr	%0, %2, #24\n\t"
 		"bl	crc32_u8\n\t"
-		"pop	{%1, %2, %3, pc}\n\t"
+		"pop	{%1, %2, %3, pc}"
 		: "=r" (u), "=r" (r3), "=r" (r4), "=r" (r5)
 		: "0" (u), "r" (p)
 		: "memory");
@@ -216,29 +411,4 @@ crc32_table[256] __attribute__ ((section(".crc32_table"))) = {
   0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693, 
   0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 
   0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d,
-};
-
-
-const uint8_t sys_version[8] __attribute__((section(".sys.version"))) = {
-  3*2+2,	     /* bLength */
-  0x03,		     /* bDescriptorType = STRING_DESCRIPTOR */
-  /* sys version: "3.0" */
-  '3', 0, '.', 0, '0', 0,
-};
-
-static const uint8_t board_name_string[] = BOARD_NAME;
-
-const uint8_t __attribute__((section(".sys.board_info")))
-*const sys_board_name = board_name_string;
-
-const uint32_t __attribute__((section(".sys.board_info")))
-sys_board_id = BOARD_ID;
-
-typedef void (*handler)(void);
-
-handler sys_vector[] __attribute__ ((section(".sys.vectors"))) = {
-  clock_init,
-  gpio_init,
-  (handler)set_led,
-  NULL,
 };

@@ -36,3 +36,6 @@ set_led (int on)
 void crc32_init (unsigned int *);
 void crc32_u8 (unsigned int *, unsigned char);
 void crc32_u32 (unsigned int *, unsigned int);
+
+int flash_erase_page (uint32_t addr);
+int flash_program_word (uint32_t addr, uint32_t word);

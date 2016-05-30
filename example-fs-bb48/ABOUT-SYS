@@ -128,25 +128,25 @@ So, I decide to introduce something like SYS for Kinetis L.
 Three pages (3KiB) usage:
 
   ------------ The first page
-  End of RAM <-- not used but hardware define this
+  End of RAM <-- not used but hardware defines this
   Address of reset entry
   sys_version
   sys_board_info (id, name)
   sys_vector
-  
 
-  SYS...
+  other SYS routines and data...
 
   ------------ The second page
   FLASH CONFIG: 16-byte
   Reset entry function
-  CRC-32 routine
+  flash routines
+  CRC-32 routines
   CRC-32 table (768-byte of CRC-32 table)
 
   ------------ The third page
   MAGIC 256-byte (256-byte of the last part of CRC-32 table)
   ...
-  vectors (MSP, reset, ...) 
+  vectors (initial MSP, reset, ...) 
   ...
 
 
@@ -177,10 +177,10 @@ Three pages (3KiB) usage:
 * data: vectors for routines and data
   sys_version
   sys_board_id
+  address of sys_board_name
   address of set_led
   address of clock_init 
   address of gpio_init 
-  address of sys_board_name
   address of ...
 
 

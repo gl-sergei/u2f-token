@@ -35,10 +35,14 @@ SECTIONS
 	build/sys.o(.rodata.*)
 	. = ALIGN(1024);
         KEEP(*(.flash_config))
+	KEEP(*(.fixed_function.reset))
+	KEEP(*(.fixed_function.flash_do_internal))
+	KEEP(*(.fixed_function.flash_do))
+	KEEP(*(.fixed_function.flash_erase_page))
+	KEEP(*(.fixed_function.flash_program_word))
 	KEEP(*(.fixed_function.crc32_init))
 	KEEP(*(.fixed_function.crc32_u8))
 	KEEP(*(.fixed_function.crc32_u32))
-	KEEP(*(.reset.entry))
 	/*
 	 * Because of alignment requirement
 	 * of startup.vectors, align to 256.

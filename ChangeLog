@@ -1,3 +1,9 @@
+2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/sys.c (flash_do_internal, flash_do)
+	(flash_erase_page, flash_program_word): New.
+	* example-fs-bb48/command.c (cmd_fes, cmd_fww): New.
+
 2016-05-27  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-fs-bb48/command.c (cmd_sysinfo): New.
