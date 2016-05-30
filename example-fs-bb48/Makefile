@@ -6,7 +6,12 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sample.c sys.c usb_kl27z.c usb-cdc.c adc_kl27z.c command.c
+CSRC = sample.c usb-cdc.c command.c
+CHIP=mkl27z
+
+USE_SYS = yes
+USE_USB = yes
+USE_ADC = yes
 
 ###################################
 CROSS = arm-none-eabi-

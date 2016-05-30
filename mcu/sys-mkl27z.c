@@ -51,7 +51,7 @@ stack_entry[] __attribute__ ((section(".first_page.first_words"),used)) = {
   (uint32_t)reset,
 };
 
-#include "mcu/clk_gpio_init-kl.c"
+#include "mcu/clk_gpio_init-mkl27z.c"
 
 static void
 set_led (int on)

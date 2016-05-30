@@ -1,5 +1,5 @@
 /*
- * adc_kl27z.c - ADC driver for KL27Z
+ * adc-mkl27z.c - ADC driver for MKL27Z
  *               In this ADC driver, there are NeuG specific parts.
  *               It only records lower 8-bit of 16-bit data.
  *               You need to modify to use this as generic ADC driver.
@@ -32,7 +32,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <chopstx.h>
-#include <mcu/kl_sim.h>
+#include <mcu/mkl27z.h>
 
 struct DMAMUX {
   volatile uint32_t CHCFG0;

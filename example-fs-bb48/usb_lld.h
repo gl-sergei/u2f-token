@@ -10,12 +10,6 @@
 #define ENDP6       ((uint8_t)6)
 #define ENDP7       ((uint8_t)7)
 
-/* EP_TYPE[1:0] EndPoint TYPE */
-#define EP_BULK        (0x0000) /* EndPoint BULK        */
-#define EP_CONTROL     (0x0200) /* EndPoint CONTROL     */
-#define EP_ISOCHRONOUS (0x0400) /* EndPoint ISOCHRONOUS */
-#define EP_INTERRUPT   (0x0600) /* EndPoint INTERRUPT   */
-
 enum RECIPIENT_TYPE
 {
   DEVICE_RECIPIENT,     /* Recipient device    */

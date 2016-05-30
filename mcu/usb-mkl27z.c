@@ -1,5 +1,5 @@
 /*
- * usb_kl27z.c - USB driver for KL27Z
+ * usb-mkl27z.c - USB driver for MKL27Z
  *
  * Copyright (C) 2016  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>

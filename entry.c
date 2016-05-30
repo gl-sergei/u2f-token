@@ -33,13 +33,17 @@
 
 #ifdef HAVE_SYS_H
 #define INLINE __attribute__ ((used))
-#include "sys.h"
 #include "board.h"
+#ifdef MCU_KINETIS_L
+#include "mcu/sys-mkl27z.h"
+#else
+#include "mcu/sys-stm32.h"
 #undef STM32F10X_MD		/* Prepare for high density device, too.  */
+#endif
 #else
 #include "board.h"
 #if defined (MCU_KINETIS_L)
-#include "mcu/clk_gpio_init-kl.c"
+#include "mcu/clk_gpio_init-mkl27z.c"
 #else
 #include "mcu/clk_gpio_init-stm32.c"
 #endif

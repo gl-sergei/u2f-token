@@ -7,8 +7,13 @@
 #include "adc.h"
 static int adc_initialized = 0;
 #endif
-#include "sys.h"
 #include "board.h"
+#ifdef MCU_KINETIS_L
+#include "mcu/sys-mkl27z.h"
+#else
+#include "mcu/sys-stm32.h"
+#undef STM32F10X_MD		/* Prepare for high density device, too.  */
+#endif
 
 struct command_table
 {

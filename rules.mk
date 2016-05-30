@@ -6,6 +6,16 @@ ifneq ($(USE_EVENTFLAG),)
 CSRC += $(CHOPSTX)/eventflag.c
 endif
 
+ifneq ($(USE_SYS),)
+CSRC += $(CHOPSTX)/mcu/sys-$(CHIP).c
+endif
+ifneq ($(USE_USB),)
+CSRC += $(CHOPSTX)/mcu/usb-$(CHIP).c
+endif
+ifneq ($(USE_ADC),)
+CSRC += $(CHOPSTX)/mcu/adc-$(CHIP).c
+endif
+
 INCDIR += $(CHOPSTX)
 
 BUILDDIR = build
