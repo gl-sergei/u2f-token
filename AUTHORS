@@ -23,16 +23,21 @@ Mateusz Zalega:
 
 NIIBE Yutaka:
     Write the library:
-	chopstx.c, eventflag.c, entry.c,
-	clk_gpio_init-kl.c, clk_gpio_init-stm32.c
+	chopstx.c, entry.c, eventflag.c,
         chopstx.h, eventflag.h
+    Write the drivers mcu/*:
+    	clk_gpio_init-mkl27z.c, clk_gpio_init-stm32.c,
+	sys-stm32f103.c, sys-stm32f030.c, sys-mkl27z.c,
+	adc-stm32f103.c, adc-mkl27z.c
     Draw the logo:
 	chopstx.svg, chopstx.png
     Write examples:
-        example-led, example-cdc, example-fsm-55
-    Write board:
+        example-led, example-cdc, example-fsm-55, example-fs-bb48
+    Write board/*:
         board-fst-01.h, board-fst-01-00.h,
 	board-olimex-stm32-h103.h, board-stm8s-discovery.h
 	board-cq-starm.h, board-stbee-mini.h, board-stbee.h,
 
-	board-stm32f0-discovery.h, board-fsm-55.h
+	board-stm32f0-discovery.h, board-fsm-55.h,
+
+	board-fs-bb48.h

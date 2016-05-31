@@ -208,6 +208,8 @@ chx_prio_init (void)
 	    | (CPU_EXCEPTION_PRIORITY_PENDSV << 16));
 }
 
+void __attribute__((weak)) chx_fatal (uint32_t err_code);
+
 /**
  * chx_fatal - Fatal error point.
  * @err_code: Error code
@@ -444,8 +446,8 @@ enum  {
   THREAD_WAIT_MTX,
   THREAD_WAIT_CND,
   THREAD_WAIT_TIME,
+  THREAD_WAIT_EXIT,
   THREAD_WAIT_POLL,
-  THREAD_JOIN,
   /**/
   THREAD_EXITED=0x0E,
   THREAD_FINISHED=0x0F
@@ -1191,7 +1193,7 @@ requeue (struct chx_thread *tp)
       chx_spin_unlock (&cond->lock);
       /* We don't know who can wake up this thread.  */
     }
-  else if (tp->state == THREAD_JOIN)
+  else if (tp->state == THREAD_WAIT_EXIT)
     /* Requeue is not needed as waiting for the thread is only by one.  */
     return (struct chx_thread *)tp->v;
 
@@ -1572,7 +1574,7 @@ chopstx_join (chopstx_t thd, void **ret)
       chx_spin_lock (&q_join.lock);
       ll_prio_enqueue ((struct chx_pq *)running, &q_join.q);
       running->v = (uint32_t)tp;
-      running->state = THREAD_JOIN;
+      running->state = THREAD_WAIT_EXIT;
       tp->flag_join_req = 1;
 
       /* Priority inheritance.  */

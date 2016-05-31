@@ -83,7 +83,7 @@ void chopstx_cond_broadcast (chopstx_cond_t *cond);
  * Library provides default implementation as weak reference.
  * User can replace it.
   */
-void chx_fatal (uint32_t err_code) __attribute__((__weak__, __noreturn__));
+void chx_fatal (uint32_t err_code) __attribute__((__noreturn__));
 
 int chopstx_join (chopstx_t, void **);
 void chopstx_exit (void *retval) __attribute__((__noreturn__));
