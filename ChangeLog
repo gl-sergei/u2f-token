@@ -1,5 +1,8 @@
 2016-05-31  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* VERSION: 0.12.
+	* doc/chopstx.texi (VERSION): 0.12.
+
 	* sys.h: New.
 
 	* example-cdc, example-fs-bb48: Update.
@@ -50,8 +53,6 @@
 	Write them in assembler so that the size of functions
 	keep unchanged.
 	(sys_version, sys_board_id, sys_board_name, sys_vector): New.
-
-	* chopstx.c (preempt): Fix IDLE thread stack pointer.
 
 2016-05-26  NIIBE Yutaka  <gniibe@fsij.org>
 

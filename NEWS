@@ -1,6 +1,29 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.12
+
+  Released 2016-05-31
+
+** Provide drivers of SYS, USB and ADC
+Those were only offered as examples, but now, Chopstx provides drivers
+of SYS, USB, and ADC.  Please note that the ADC driver is not for
+general use (it's specific to NeuG to get noise).  To use them, enable
+variables in Makefile, like following.
+------------
+CHIP=stm32f103
+USE_ADC = yes
+USE_USB = yes
+USE_SYS = yes
+DEFS  = -DUSE_SYS3 
+------------
+
+** Removal of chopstx_usec_wait_var chopstx_wakeup_usec_wait
+This API was used when we need to wait something with timeout.
+Now, we have better API with chopstx_poll.  Please use chopstx_poll
+and chopstx_cond_signal.
+
+
 * Major changes in Chopstx 0.11
 
   Released 2016-05-19

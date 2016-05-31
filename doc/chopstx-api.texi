@@ -23,17 +23,6 @@ stop further execution of code.  It never returns.
 Create a thread.  Returns thread ID.
 @end deftypefun
 
-@subheading chopstx_usec_wait_var
-@anchor{chopstx_usec_wait_var}
-@deftypefun {void} {chopstx_usec_wait_var} (uint32_t * @var{var})
-@var{var}: Pointer to usec
-
-Sleep for micro seconds, specified by @var{var}.
-Another thread can clear @var{var} to stop the caller going into sleep.
-
-This function is DEPRECATED.  Please use chopstx_poll.
-@end deftypefun
-
 @subheading chopstx_usec_wait
 @anchor{chopstx_usec_wait}
 @deftypefun {void} {chopstx_usec_wait} (uint32_t @var{usec})
@@ -107,7 +96,7 @@ Wake up all threads waiting on @var{cond}.
 
 @var{irq_num}: IRQ Number (hardware specific)
 
-Claim interrupt @var{intr} with @var{irq_num} for this thread.
+Claim interrupt @var{intr} with @var{irq_num}
 @end deftypefun
 
 @subheading chopstx_intr_wait
@@ -116,8 +105,6 @@ Claim interrupt @var{intr} with @var{irq_num} for this thread.
 @var{intr}: Pointer to INTR structure
 
 Wait for the interrupt @var{intr} to be occured.
-
-This function is DEPRECATED.  Please use chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_cleanup_push
@@ -157,18 +144,6 @@ returns.
 
 Waits for the thread of @var{thd} to terminate.
 Returns 0 on success, 1 when waiting is interrupted.
-@end deftypefun
-
-@subheading chopstx_wakeup_usec_wait
-@anchor{chopstx_wakeup_usec_wait}
-@deftypefun {void} {chopstx_wakeup_usec_wait} (chopstx_t @var{thd})
-@var{thd}: Thread to be awakened
-
-Canceling the timer, wake up the sleeping thread.
-No return value.
-
-This function is DEPRECATED.  Please use chopstx_cond_signal,
-where sleeping process calls chopstx_poll.
 @end deftypefun
 
 @subheading chopstx_cancel
