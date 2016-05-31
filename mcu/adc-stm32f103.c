@@ -132,12 +132,7 @@ adc_init (void)
 }
 
 #include "board.h"
-#if defined(USE_SYS3) || defined(USE_SYS_BOARD_ID)
-#include "mcu/sys-stm32f103.h"
-# define SYS_BOARD_ID sys_board_id
-#else
-# define SYS_BOARD_ID BOARD_ID
-#endif
+#include "sys.h"
 
 static void
 get_adc_config (uint32_t config[4])
