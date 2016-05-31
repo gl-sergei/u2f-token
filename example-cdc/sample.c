@@ -8,11 +8,7 @@
 
 /* For set_led */
 #include "board.h"
-#ifdef MCU_KINETIS_L
-#include "mcu/sys-mkl27z.h"
-#else
-#include "mcu/sys-stm32f103.h"
-#endif
+#include "sys.h"
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;

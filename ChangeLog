@@ -1,3 +1,10 @@
+2016-05-31  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* sys.h: New.
+
+	* example-cdc, example-fs-bb48: Update.
+	* example-fsm-55, example-led: Update.
+
 2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/usb-stm32f103.c (usb_lld_setup_endpoint): Start with

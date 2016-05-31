@@ -1,11 +1,11 @@
 /*
  * ST32F0 memory setup.
  */
-__main_stack_size__     = 0x0100;  /* Exception handlers     */
-__process0_stack_size__  = 0x0100; /* Main program           */
-__process1_stack_size__  = 0x0100; /* first thread program */
-__process2_stack_size__  = 0x0100; /* second thread program */
-__process3_stack_size__  = 0x0100; /* third thread program */
+__main_stack_size__     = 0x0100;  /* Idle+Exception handlers */
+__process0_stack_size__  = 0x0100; /* Main program            */
+__process1_stack_size__  = 0x0100; /* first thread program    */
+__process2_stack_size__  = 0x0100; /* second thread program   */
+__process3_stack_size__  = 0x0100; /* third thread program    */
 
 MEMORY
 {

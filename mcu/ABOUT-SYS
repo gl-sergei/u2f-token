@@ -4,6 +4,49 @@ Consideration about SYS and the first pages of flash ROM
 Now, I'm developing something like SYS for Kinetis L MCU, so, I write
 this document.
 
+* Compatibility
+
+  SYS 1.0: The first verson
+  SYS 2.0: Added clock_init, gpio_init 
+  SYS 2.1: Added sys_board_id, sys_board_name 
+  SYS 3.0: Don't setup NVIC priority by usb_lld_sys_init
+
+
+* Macro definition by DEFS in Makefile
+
+  - USE_SYS_CLOCK_GPIO_SETTING
+
+    Define this macro to ask chopstx/entry.c (the runtime code before
+    MAIN function) to use function entries in SYS for clock_init and
+    gpio_init.
+
+    If not defined, entry.c includes the code for clock_init and
+    gpio_init which might be different to a board, and use them (entries
+    in SYS will not be used).  This works well with the ROM of SYS
+    1.0.
+
+    Note that SYS entries of clock_init and gpio_init were introduced
+    in SYS 2.0.  So, enable this macro only if the ROM is SYS 2.0 or
+    later.
+
+  - USE_SYS_BOARD_ID
+
+    Define this macro in a driver to get "sys_board_id" in SYS, so
+    that the driver can support various boards at runtime by changing
+    the settings according to the board.
+
+    A simple driver could only support a single board, by the compile
+    time (BOARD_ID in board-*.h) choice of of a settings.
+
+    Note that SYS entries of sys_board_id and sys_board_name were
+    introduced in SYS 2.1.  So, enable this macro only if the ROM is
+    SYS 2.1 or later.
+
+  - USE_SYS3
+
+    By defining this, it will have same effect of defining both of
+    USE_SYS_CLOCK_GPIO_SETTING and USE_SYS_BOARD_ID internally.
+
 
 About SYS on STM32F103
 ======================
@@ -184,5 +227,13 @@ Three pages (3KiB) usage:
   address of ...
 
 
+
+An Example of No-use of SYS
+===========================
+
+See example-fsm-55 for an example of no use of SYS.
+
+While chopstx/entry.c defines vectors in ROM and RAM, those are simply
+discarded by example-fsm-55/hacker-emblem.ld.
 
 --

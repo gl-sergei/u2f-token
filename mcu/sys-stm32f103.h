@@ -12,8 +12,10 @@
 #define BOARD_ID_NITROKEY_START    0xad1e7ebd
 
 extern const uint8_t sys_version[8];
+#if defined(USE_SYS3) || defined(USE_SYS_BOARD_ID)
 extern const uint32_t sys_board_id;
 extern const uint8_t sys_board_name[];
+#endif
 
 typedef void (*handler)(void);
 extern handler vector[16];
@@ -109,22 +111,18 @@ nvic_system_reset (void)
   (*vector[12]) ();
 }
 
-/*
- * Users can override INLINE by 'attribute((used))' to have an
- * implementation defined.
- */
-#if !defined(INLINE)
-#define INLINE __inline__
-#endif
+#ifdef REQUIRE_CLOCK_GPIO_SETTING_IN_SYS
+/* Provide the function entries.  */
 
-static INLINE void
+static void __attribute__ ((used))
 clock_init (void)
 {
   (*vector[13]) ();
 }
 
-static INLINE void
+static void __attribute__ ((used))
 gpio_init (void)
 {
   (*vector[14]) ();
 }
+#endif

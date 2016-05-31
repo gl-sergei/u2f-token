@@ -5,16 +5,16 @@ PROJECT = hacker-emblem
 CHOPSTX = ..
 LDSCRIPT= hacker-emblem.ld
 
-CSRC = sys.c hh.c
+CSRC = reset.c hh.c
 
 # Hacker Emblem and "Happy Hacking!" demonstration
-# CSRC = sys.c hh.c
+# CSRC = reset.c hh.c
 
 # Debian logo demonstration
-# CSRC = sys.c debian-logo.c
+# CSRC = reset.c debian-logo.c
 
 # "Hiroshi & Ayumi with Tulip" demonstration
-# CSRC = sys.c hiroshi-ayumi.c
+# CSRC = reset.c hiroshi-ayumi.c
 
 ###################################
 CROSS = arm-none-eabi-
@@ -36,7 +36,7 @@ board.h:
 	@echo Please make a symbolic link \'board.h\' to a file in ../board;
 	@exit 1
 
-sys.c: board.h
+reset.c: board.h
 
 distclean: clean
 	rm -f board.h

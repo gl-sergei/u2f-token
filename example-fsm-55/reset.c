@@ -1,5 +1,5 @@
 /*
- * sys.c - No system routines, but only RESET handler for STM32F030.
+ * reset.c - No system routines, but only RESET handler for STM32F030.
  *
  * Copyright (C) 2015 Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
@@ -70,7 +70,7 @@ typedef void (*handler)(void);
 extern uint8_t __main_stack_end__;
 
 handler vector[] __attribute__ ((section(".vectors"))) = {
-  (handler)&__main_stack_end__,
+  (handler)(&__main_stack_end__ - 32),
   reset,
   nmi,		/* nmi */
   hard_fault,		/* hard fault */

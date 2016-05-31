@@ -362,7 +362,7 @@ reset (void)
 	"1:	.word	0x20000000"
 		: /* no output */ : /* no input */ : "memory");
 #else
-  extern const unsigned long *FT0, *FT1, *FT2;
+  extern const uint32_t FT0[256], FT1[256], FT2[256];
   asm volatile ("cpsid	i\n\t"		/* Mask all interrupts. */
 		"ldr	r0, 1f\n\t"     /* r0 = SCR */
 		"mov	r1, pc\n\t"	/* r1 = (PC + 0x1000) & ~0x0fff */

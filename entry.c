@@ -31,21 +31,20 @@
 #include <stdlib.h>
 #include <chopstx.h>
 
-#ifdef HAVE_SYS_H
-#define INLINE __attribute__ ((used))
 #include "board.h"
-#ifdef MCU_KINETIS_L
-#include "mcu/sys-mkl27z.h"
+#if defined(USE_SYS3) || defined(USE_SYS_CLOCK_GPIO_SETTING)
+#define REQUIRE_CLOCK_GPIO_SETTING_IN_SYS
+#include "sys.h"
+/*
+ * Avoid medium density specific code and prepare for high density
+ * device, too.
+ */
+#undef STM32F10X_MD
 #else
-#include "mcu/sys-stm32f103.h"
-#undef STM32F10X_MD		/* Prepare for high density device, too.  */
-#endif
-#else
-#include "board.h"
 #if defined (MCU_KINETIS_L)
 #include "mcu/clk_gpio_init-mkl27z.c"
 #else
-#include "mcu/clk_gpio_init-stm32f103.c"
+#include "mcu/clk_gpio_init-stm32.c"
 #endif
 #endif
 

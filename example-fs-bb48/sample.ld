@@ -1,11 +1,11 @@
 /*
  * MK27Z memory setup.
  */
-__main_stack_size__      = 0x0100; /* Exception handlers     */
-__process0_stack_size__  = 0x0300; /* Main program           */
-__process1_stack_size__  = 0x0200; /* first thread program   */
-__process2_stack_size__  = 0x0100; /* second thread program  */
-__process3_stack_size__  = 0x0200; /* third thread program   */
+__main_stack_size__      = 0x0100; /* Idle+Exception handlers */
+__process0_stack_size__  = 0x0300; /* Main program            */
+__process1_stack_size__  = 0x0200; /* first thread program    */
+__process2_stack_size__  = 0x0100; /* second thread program   */
+__process3_stack_size__  = 0x0200; /* third thread program    */
 
 MEMORY
 {

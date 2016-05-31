@@ -5,8 +5,13 @@ PROJECT = lcd
 CHOPSTX = ..
 NEUGSRC = ./neug/src
 LDSCRIPT= lcd.ld
-CSRC = sys.c aes-constant-ft.c primer2-switches.c primer2-ts.c lcd.c main.c \
-       adc_stm32f103.c neug.c sha256.c
+CSRC = primer2-switches.c primer2-ts.c lcd.c main.c \
+       neug.c sha256.c
+
+CHIP=stm32f103
+USE_SYS = yes
+USE_USB = yes
+USE_ADC = yes
 
 ###################################
 CROSS = arm-none-eabi-
@@ -15,8 +20,8 @@ LD   = $(CROSS)gcc
 OBJCOPY   = $(CROSS)objcopy
 MCU   = cortex-m3
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48
-# DEFS  = -DFREE_STANDING -DHAVE_SYS_H -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
+DEFS  = -DUSE_SYS3 -DFREE_STANDING -DMHZ=48
+# DEFS  = -DFREE_STANDING -DUSE_SYS3 -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
 OPT   = -O3 -Os -g
 INCDIR = $(NEUGSRC)
 LIBS  =

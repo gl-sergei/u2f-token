@@ -8,8 +8,10 @@ PROJECT = sample
 CHOPSTX = ..
 LDSCRIPT= sample.ld
 ### LDSCRIPT= sample.ld.m3
-CSRC = sys.c sample.c
-### CSRC = sys.c aes-constant-ft.c sample.c
+CSRC = sample.c
+
+CHIP=stm32f030
+USE_SYS = yes
 
 ###################################
 CROSS = arm-none-eabi-
@@ -20,8 +22,8 @@ OBJCOPY   = $(CROSS)objcopy
 ### MCU   = cortex-m3
 MCU   = cortex-m0
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DHAVE_SYS_H -DFREE_STANDING -DMHZ=48
-### DEFS  = -DFREE_STANDING -DHAVE_SYS_H -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
+DEFS  = -DUSE_SYS3 -DFREE_STANDING -DMHZ=48
+### DEFS  = -DFREE_STANDING -DUSE_SYS3 -DBUSY_LOOP -DCHX_FLAGS_MAIN=CHOPSTX_SCHED_RR
 OPT   = -O3 -Os -g
 LIBS  =
 
