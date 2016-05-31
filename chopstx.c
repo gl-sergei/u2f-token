@@ -1458,7 +1458,6 @@ chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
  *
  * Wait for the interrupt @intr to be occured.
  *
- * This function is DEPRECATED.  Please use chopstx_poll.
  */
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
@@ -2017,7 +2016,7 @@ preempt (void)
 	"bx	r0\n"
     "1:\n\t"
 	/* Spawn an IDLE thread.  */
-	"ldr	r0, =__main_stack_end__\n\t"
+	"ldr	r0, =__main_stack_end__-32\n\t"
 	"msr	PSP, r0\n\t"
 	"mov	r1, #0\n\t"
 	"mov	r2, #0\n\t"
