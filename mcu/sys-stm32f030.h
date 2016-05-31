@@ -113,22 +113,18 @@ nvic_system_reset (void)
   (*vector[12]) ();
 }
 
-/*
- * Users can override INLINE by 'attribute((used))' to have an
- * implementation defined.
- */
-#if !defined(INLINE)
-#define INLINE __inline__
-#endif
+#ifdef REQUIRE_CLOCK_GPIO_SETTING_IN_SYS
+/* Provide the function entries.  */
 
-static INLINE void
+static void __attribute__ ((used))
 clock_init (void)
 {
   (*vector[13]) ();
 }
 
-static INLINE void
+static void __attribute__ ((used))
 gpio_init (void)
 {
   (*vector[14]) ();
 }
+#endif
