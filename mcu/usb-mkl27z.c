@@ -896,11 +896,14 @@ handle_transaction (uint8_t stat)
 	  uint32_t len = (BD_table[4*ep_num+2+odd].ctrl >> 16)&0x3ff;
 
 	  if (!success)
-	    USB_CTRL1->ERRSTAT = dmaerr; /* Clear error.  */
+	    {
+	      USB_CTRL1->ERRSTAT = dmaerr; /* Clear error.  */
+	      dev_p->error++;
+	    }
 
 	  dev_p->send++;
 	  ep[ep_num].tx_odd ^= 1;
-	  usb_cb_tx_done (ep_num, len, success);
+	  usb_cb_tx_done (ep_num, len);
 	}
 
       USB_CTRL1->ISTAT = USB_IS_TOKDNE;

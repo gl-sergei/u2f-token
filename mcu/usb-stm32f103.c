@@ -888,7 +888,7 @@ usb_handle_transfer (uint16_t istr_value)
 	  uint32_t len = st103_get_tx_count (ep_index);
 
 	  st103_ep_clear_ctr_tx (ep_index);
-	  usb_cb_tx_done (ep_index, len, 1);
+	  usb_cb_tx_done (ep_index, len);
 	}
     }
 }
