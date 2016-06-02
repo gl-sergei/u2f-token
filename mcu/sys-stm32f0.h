@@ -16,8 +16,12 @@
 #endif
 
 extern const uint8_t sys_version[8];
+#if defined(USE_SYS3) || defined(USE_SYS_BOARD_ID)
 extern const uint32_t sys_board_id;
 extern const uint8_t sys_board_name[];
+#else
+# define SYS_BOARD_ID BOARD_ID
+#endif
 
 typedef void (*handler)(void);
 extern handler vector[16];

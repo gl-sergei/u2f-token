@@ -1,3 +1,18 @@
+2016-06-02  Niibe Yutaka  <gniibe@fsij.org>
+
+	* contrib/adc-mkl27z.c: Move from mcu.
+	* contrib/adc-stm32f103.c: Move from mcu.
+
+	* example-led/Makefile (CHIP): Define as stm32f0.
+
+	* mcu/sys-stm32f0.h: Rename from sys-stm32f030.h,
+	as we share it among STM32F030 and STM32F050.
+	* mcu/sys-stm32f0.c: Likewise.
+
+	* board/board-stm32f0-discovery.h (MCU_STM32F0): Define.
+
+	* sys.h: Support STM32F0.
+
 2016-06-01  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.h (chx_fatal): Remove weak attribute from declaration.

@@ -10,7 +10,7 @@ LDSCRIPT= sample.ld
 ### LDSCRIPT= sample.ld.m3
 CSRC = sample.c
 
-CHIP=stm32f030
+CHIP=stm32f0
 USE_SYS = yes
 
 ###################################

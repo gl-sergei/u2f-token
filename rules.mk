@@ -13,7 +13,7 @@ ifneq ($(USE_USB),)
 CSRC += $(CHOPSTX)/mcu/usb-$(CHIP).c
 endif
 ifneq ($(USE_ADC),)
-CSRC += $(CHOPSTX)/mcu/adc-$(CHIP).c
+CSRC += $(CHOPSTX)/contrib/adc-$(CHIP).c
 endif
 
 INCDIR += $(CHOPSTX)
