@@ -117,7 +117,7 @@ main (int argc, const char *argv[])
   m = 50;
   while (1)
     {
-      uint8_t s[LINEBUFSIZE];
+      char s[LINEBUFSIZE];
 
       u = 1;
       tty_wait_connection (tty);

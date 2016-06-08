@@ -1,3 +1,11 @@
+2016-06-08  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c: Rewrite to be event driven API.
+
+	* example-cdc/usb-cdc.c: Update to new USB API.
+	* example-cdc/tty.h: Change tty API to be C string (char*)
+	friendly.
+
 2016-06-02  Niibe Yutaka  <gniibe@fsij.org>
 
 	* contrib/adc-mkl27z.c: Move from mcu.

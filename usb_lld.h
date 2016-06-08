@@ -37,45 +37,52 @@ enum DESCRIPTOR_TYPE
 #define USB_SETUP_SET(req) ((req & REQUEST_DIR) == 0)
 #define USB_SETUP_GET(req) ((req & REQUEST_DIR) != 0)
 
-enum
-{
-  USB_UNSUPPORT = 0,
-  USB_SUCCESS = 1,
-};
-
-struct req_args {
+struct device_req {
+  uint8_t type;
+  uint8_t request;
   uint16_t value;
   uint16_t index;
   uint16_t len;
 };
 
-void usb_cb_device_reset (void);
-int usb_cb_setup (uint8_t req, uint8_t req_no, struct req_args *arg);
-int usb_cb_interface (uint8_t cmd, struct req_args *arg);
-int usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
-			   struct req_args *arg);
-int usb_cb_handle_event (uint8_t event_type, uint16_t value);
-void usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no,
-			       struct req_args *arg);
-void usb_cb_tx_done (uint8_t ep_num, uint32_t len);
-void usb_cb_rx_ready (uint8_t ep_num);
+struct ctrl_data {
+  uint8_t *addr;
+  uint16_t len;
+  uint8_t require_zlp;
+};
 
-enum {
-  USB_EVENT_ADDRESS,
-  USB_EVENT_CONFIG,
-  USB_EVENT_SUSPEND,
-  USB_EVENT_WAKEUP,
-  USB_EVENT_STALL,
+struct usb_dev {
+  uint8_t configuration;
+  uint8_t feature;
+  uint8_t state;
+  struct device_req dev_req;
+  struct ctrl_data ctrl_data;
 };
 
 enum {
-  USB_SET_INTERFACE,
-  USB_GET_INTERFACE,
-  USB_QUERY_INTERFACE,
+  USB_EVENT_NONE=0,		/* Processed in lower layer.  */
+  /* Device reset and suspend.  */
+  USB_EVENT_DEVICE_RESET,
+  USB_EVENT_DEVICE_SUSPEND,
+  /* Device Requests (Control WRITE Transfer): Standard */
+  USB_EVENT_SET_CONFIGURATION,
+  USB_EVENT_SET_INTERFACE,
+  USB_EVENT_SET_FEATURE_DEVICE,
+  USB_EVENT_SET_FEATURE_ENDPOINT,
+  USB_EVENT_CLEAR_FEATURE_DEVICE,
+  USB_EVENT_CLEAR_FEATURE_ENDPOINT,
+  /* Device Requests (Control READ Transfer): Standard */
+  USB_EVENT_GET_STATUS_INTERFACE,
+  USB_EVENT_GET_DESCRIPTOR,
+  USB_EVENT_GET_INTERFACE,
+  /* Device Requests (Control READ/WRITE Transfer): Non-Standard */
+  USB_EVENT_CTRL_REQUEST,
+  USB_EVENT_CTRL_WRITE_FINISH,
+  /* Device addressed.  */
+  USB_EVENT_DEVICE_ADDRESSED,
 };
 
-enum DEVICE_STATE
-{
+enum DEVICE_STATE {
   UNCONNECTED,
   ATTACHED,
   POWERED,
@@ -84,17 +91,32 @@ enum DEVICE_STATE
   CONFIGURED
 };
 
-void usb_lld_init (uint8_t feature);
-int usb_lld_reply_request (const void *buf, size_t buflen,
-			   struct req_args *arg);
-int usb_lld_rx_data_len (int ep_num);
-void usb_lld_reset (uint8_t feature);
-void usb_lld_set_configuration (uint8_t config);
-uint8_t usb_lld_current_configuration (void);
+void usb_lld_init (struct usb_dev *dev, uint8_t feature);
+
+/*
+ * Return value is encoded integer:
+ *     event-no:    8-bit, 0 if TX/RX
+ *     tx/rx-flag:  1-bit, 0 if rx, 1 if tx
+ *     endpoint no: 7-bit
+ *     length:      16-bit
+ */
+#define USB_EVENT_TXRX(e) ((e >> 23) & 1)
+#define USB_EVENT_LEN(e) (e & 0xffff)
+#define USB_EVENT_ENDP(e) ((e >> 16) & 0x7f)
+#define USB_EVENT_ID(e) ((e >> 24))
+int usb_lld_event_handler (struct usb_dev *dev);
+
+int usb_lld_reply_request (struct usb_dev *dev,
+			   const void *buf, size_t buflen);
+int usb_lld_set_data_to_recv (struct usb_dev *dev, void *p, size_t len);
+void usb_lld_ctrl_error (struct usb_dev *dev);
+void usb_lld_ctrl_good (struct usb_dev *dev);
+
+void usb_lld_reset (struct usb_dev *dev, uint8_t feature);
+void usb_lld_set_configuration (struct usb_dev *dev, uint8_t config);
+uint8_t usb_lld_current_configuration (struct usb_dev *dev);
 void usb_lld_prepare_shutdown (void);
 void usb_lld_shutdown (void);
-void usb_interrupt_handler (void);
-void usb_lld_set_data_to_recv (void *p, size_t len);
 
 #ifdef MCU_KINETIS_L
 void usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len);
@@ -118,10 +140,9 @@ void usb_lld_setup_endpoint (int ep_num, int ep_type, int ep_kind,
 void usb_lld_stall_tx (int ep_num);
 void usb_lld_stall_rx (int ep_num);
 
-int usb_lld_tx_data_len (int ep_num);
 void usb_lld_txcpy (const void *src, int ep_num, int offset, size_t len);
 void usb_lld_write (uint8_t ep_num, const void *buf, size_t len);
+void usb_lld_rxcpy (uint8_t *dst, int ep_num, int offset, size_t len);
 void usb_lld_to_pmabuf (const void *src, uint16_t addr, size_t n);
 void usb_lld_from_pmabuf (void *dst, uint16_t addr, size_t n);
-void usb_lld_rxcpy (uint8_t *dst, int ep_num, int offset, size_t len);
 #endif

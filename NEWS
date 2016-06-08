@@ -1,6 +1,15 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 0.13
+
+  Released 2016-06-xx
+
+** New USB API
+Since USB driver is included, it should be good one.  It used to be
+interrupt based API with callbacks.  Now, it's event driven API.
+
+
 * Major changes in Chopstx 0.12
 
   Released 2016-05-31
