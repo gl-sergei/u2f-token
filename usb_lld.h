@@ -122,7 +122,7 @@ void usb_lld_shutdown (void);
 void usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len);
 void usb_lld_rx_enable_buf (int ep_num, void *buf, size_t len);
 
-void usb_lld_setup_endp (int ep_num, int rx_en, int tx_en);
+void usb_lld_setup_endp (struct usb_dev *dev, int ep_num, int rx_en, int tx_en);
 void usb_lld_stall (int ep_num);
 #else
 /* EP_TYPE[1:0] EndPoint TYPE */

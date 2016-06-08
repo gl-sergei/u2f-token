@@ -151,7 +151,7 @@ main (int argc, const char *argv[])
   m = 50;
   while (1)
     {
-      uint8_t s[LINEBUFSIZE];
+      char s[LINEBUFSIZE];
 
     connection_loop:
       u = 1;
@@ -175,7 +175,7 @@ main (int argc, const char *argv[])
 	  uint32_t usec;
 
 	  /* Prompt */
-	  if (tty_send (tty, (uint8_t *)"> ", 2) < 0)
+	  if (tty_send (tty, "> ", 2) < 0)
 	    break;
 
 	  usec = 3000000;	/* 3.0 seconds */

@@ -23,7 +23,7 @@ struct command_table
 static void
 put_line (struct tty *tty, const char *line)
 {
-  tty_send (tty, (uint8_t *)line, strlen (line));
+  tty_send (tty, line, strlen (line));
 }
 
 static const char *help_string = 
@@ -203,7 +203,7 @@ cmd_mdw (struct tty *tty, const char *line)
 
       *s++ = '\r';
       *s++ = '\n';
-      tty_send (tty, (uint8_t *)output, s - output);
+      tty_send (tty, output, s - output);
     }
 }
 
@@ -326,7 +326,7 @@ cmd_crc32  (struct tty *tty, const char *line)
   s = compose_hex (string, v);
   *s++ = '\r';
   *s++ = '\n';
-  tty_send (tty, (uint8_t *)string, sizeof (string));
+  tty_send (tty, string, sizeof (string));
 }
 #endif
 
@@ -369,7 +369,7 @@ cmd_adc  (struct tty *tty, const char *line)
 	{
 	  *s++ = '\r';
 	  *s++ = '\n';
-	  tty_send (tty, (uint8_t *)output, s - output);
+	  tty_send (tty, output, s - output);
 	  s = output;
 	  if (i >= 64)
 	    break;
@@ -393,14 +393,14 @@ cmd_sysinfo (struct tty *tty, const char *line)
   *s++ = sys_version[6];
   *s++ = '\r';
   *s++ = '\n';
-  tty_send (tty, (uint8_t *)output, s - output);
+  tty_send (tty, output, s - output);
 
   memcpy (output, "Board ID: ", 10);
   s = output + 10; 
   s = compose_hex (s, sys_board_id);
   *s++ = '\r';
   *s++ = '\n';
-  tty_send (tty, (uint8_t *)output, s - output);
+  tty_send (tty, output, s - output);
 
   memcpy (output, "Board name: ", 12);
   s = output + 12; 
@@ -412,7 +412,7 @@ cmd_sysinfo (struct tty *tty, const char *line)
 
   *s++ = '\r';
   *s++ = '\n';
-  tty_send (tty, (uint8_t *)output, s - output);
+  tty_send (tty, output, s - output);
 }
 
 
@@ -470,10 +470,10 @@ cmd_dispatch (struct tty *tty, const char *line)
     (*command_table[i].handler) (tty, p);
   else
     {
-      uint8_t crlf[] = { '\r', '\n' };
+      char crlf[] = { '\r', '\n' };
 
       put_line (tty, "No such command: ");
-      tty_send (tty, (const uint8_t *)line, n);
+      tty_send (tty, line, n);
       tty_send (tty, crlf, sizeof (crlf));
     }
 }

@@ -31,7 +31,7 @@ static const struct line_coding line_coding0 = {
  *
  * In that case, add argument to TTY_OPEN function and
  * modify TTY_GET function to get the TTY structure.  Functions which
- * directy accesses TTY0 (usb_cb_device_reset and usb_cb_handle_event)
+ * directy accesses TTY0 (usb_device_reset and usb_set_configuration)
  * should be modified, too.
  *
  * Modification of TTY_MAIN thread will be also needed to echo back
@@ -231,13 +231,13 @@ static const uint8_t vcom_string3[28] = {
 #define NUM_INTERFACES 2
 
 
-void
-usb_cb_device_reset (void)
+static void
+usb_device_reset (struct usb_dev *dev)
 {
-  usb_lld_reset (VCOM_FEATURE_BUS_POWERED);
+  usb_lld_reset (dev, VCOM_FEATURE_BUS_POWERED);
 
   /* Initialize Endpoint 0 */
-  usb_lld_setup_endp (ENDP0, 1, 1);
+  usb_lld_setup_endp (dev, ENDP0, 1, 1);
 
   chopstx_mutex_lock (&tty0.mtx);
   tty0.inputline_len = 0;
@@ -253,13 +253,15 @@ usb_cb_device_reset (void)
 
 #define CDC_CTRL_DTR            0x0001
 
-void
-usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, struct req_args *arg)
+static void
+usb_ctrl_write_finish (struct usb_dev *dev)
 {
-  uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
+  struct device_req *arg = &dev->dev_req;
+  uint8_t type_rcp = arg->type & (REQUEST_TYPE|RECIPIENT);
 
   if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT) && arg->index == 0
-      && USB_SETUP_SET (req) && req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
+      && USB_SETUP_SET (arg->type)
+      && arg->request == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
     {
       struct tty *t = tty_get (arg->index, 0);
 
@@ -274,58 +276,64 @@ usb_cb_ctrl_write_finish (uint8_t req, uint8_t req_no, struct req_args *arg)
 
 
 static int
-vcom_port_data_setup (uint8_t req, uint8_t req_no, struct req_args *arg)
+vcom_port_data_setup (struct usb_dev *dev)
 {
-  if (USB_SETUP_GET (req))
+  struct device_req *arg = &dev->dev_req;
+
+  if (USB_SETUP_GET (arg->type))
     {
       struct tty *t = tty_get (arg->index, 0);
 
-      if (req_no == USB_CDC_REQ_GET_LINE_CODING)
-	return usb_lld_reply_request (&t->line_coding,
-				      sizeof (struct line_coding), arg);
+      if (arg->request == USB_CDC_REQ_GET_LINE_CODING)
+	return usb_lld_reply_request (dev, &t->line_coding,
+				      sizeof (struct line_coding));
     }
   else  /* USB_SETUP_SET (req) */
     {
-      if (req_no == USB_CDC_REQ_SET_LINE_CODING
+      if (arg->request == USB_CDC_REQ_SET_LINE_CODING
 	  && arg->len == sizeof (struct line_coding))
 	{
 	  struct tty *t = tty_get (arg->index, 0);
 
-	  usb_lld_set_data_to_recv (&t->line_coding,
-				    sizeof (struct line_coding));
-	  return USB_SUCCESS;
+	  return usb_lld_set_data_to_recv (dev, &t->line_coding,
+					   sizeof (struct line_coding));
 	}
-      else if (req_no == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
-	return USB_SUCCESS;
+      else if (arg->request == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
+	return 0;
     }
 
-  return USB_UNSUPPORT;
+  return -1;
 }
 
-int
-usb_cb_setup (uint8_t req, uint8_t req_no, struct req_args *arg)
+static int
+usb_setup (struct usb_dev *dev)
 {
-  uint8_t type_rcp = req & (REQUEST_TYPE|RECIPIENT);
+  struct device_req *arg = &dev->dev_req;
+  uint8_t type_rcp = arg->type & (REQUEST_TYPE|RECIPIENT);
 
   if (type_rcp == (CLASS_REQUEST | INTERFACE_RECIPIENT) && arg->index == 0)
-    return vcom_port_data_setup (req, req_no, arg);
+    return vcom_port_data_setup (dev);
 
-  return USB_UNSUPPORT;
+  return -1;
 }
 
-int
-usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
-		       struct req_args *arg)
+static int
+usb_get_descriptor (struct usb_dev *dev)
 {
+  struct device_req *arg = &dev->dev_req;
+  uint8_t rcp = arg->type & RECIPIENT;
+  uint8_t desc_type = (arg->value >> 8);
+  uint8_t desc_index = (arg->value & 0xff);
+
   if (rcp != DEVICE_RECIPIENT)
-    return USB_UNSUPPORT;
+    return -1;
 
   if (desc_type == DEVICE_DESCRIPTOR)
-    return usb_lld_reply_request (vcom_device_desc, sizeof (vcom_device_desc),
-				  arg);
+    return usb_lld_reply_request (dev,
+				  vcom_device_desc, sizeof (vcom_device_desc));
   else if (desc_type == CONFIG_DESCRIPTOR)
-    return usb_lld_reply_request (vcom_config_desc, sizeof (vcom_config_desc),
-				  arg);
+    return usb_lld_reply_request (dev,
+				  vcom_config_desc, sizeof (vcom_config_desc));
   else if (desc_type == STRING_DESCRIPTOR)
     {
       const uint8_t *str;
@@ -350,22 +358,23 @@ usb_cb_get_descriptor (uint8_t rcp, uint8_t desc_type, uint8_t desc_index,
 	  size = sizeof (vcom_string3);
 	  break;
 	default:
-	  return USB_UNSUPPORT;
+	  return -1;
 	}
 
-      return usb_lld_reply_request (str, size, arg);
+      return usb_lld_reply_request (dev, str, size);
     }
 
-  return USB_UNSUPPORT;
+  return -1;
 }
 
 static void
-vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
+vcom_setup_endpoints_for_interface (struct usb_dev *dev,
+				    uint16_t interface, int stop)
 {
   if (interface == 0)
     {
       if (!stop)
-	usb_lld_setup_endp (ENDP2, 0, 1);
+	usb_lld_setup_endp (dev, ENDP2, 0, 1);
       else
 	usb_lld_stall (ENDP2);
     }
@@ -373,8 +382,8 @@ vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
     {
       if (!stop)
 	{
-	  usb_lld_setup_endp (ENDP1, 0, 1);
-	  usb_lld_setup_endp (ENDP3, 1, 0);
+	  usb_lld_setup_endp (dev, ENDP1, 0, 1);
+	  usb_lld_setup_endp (dev, ENDP3, 1, 0);
 	  /* Start with no data receiving (ENDP3 not enabled)*/
 	}
       else
@@ -385,83 +394,84 @@ vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
     }
 }
 
-int
-usb_cb_handle_event (uint8_t event_type, uint16_t value)
+static int
+usb_set_configuration (struct usb_dev *dev)
 {
   int i;
   uint8_t current_conf;
 
-  switch (event_type)
+  current_conf = usb_lld_current_configuration (dev);
+  if (current_conf == 0)
     {
-    case USB_EVENT_ADDRESS:
+      if (dev->dev_req.value != 1)
+	return -1;
+
+      usb_lld_set_configuration (dev, 1);
+      for (i = 0; i < NUM_INTERFACES; i++)
+	vcom_setup_endpoints_for_interface (dev, i, 0);
+      chopstx_mutex_lock (&tty0.mtx);
+      tty0.device_state = CONFIGURED;
+      chopstx_cond_signal (&tty0.cnd);
+      chopstx_mutex_unlock (&tty0.mtx);
+    }
+  else if (current_conf != dev->dev_req.value)
+    {
+      if (dev->dev_req.value != 0)
+	return -1;
+
+      usb_lld_set_configuration (dev, 0);
+      for (i = 0; i < NUM_INTERFACES; i++)
+	vcom_setup_endpoints_for_interface (dev, i, 1);
       chopstx_mutex_lock (&tty0.mtx);
       tty0.device_state = ADDRESSED;
+      chopstx_cond_signal (&tty0.cnd);
       chopstx_mutex_unlock (&tty0.mtx);
-      return USB_SUCCESS;
-    case USB_EVENT_CONFIG:
-      current_conf = usb_lld_current_configuration ();
-      if (current_conf == 0)
-	{
-	  if (value != 1)
-	    return USB_UNSUPPORT;
-
-	  usb_lld_set_configuration (1);
-	  for (i = 0; i < NUM_INTERFACES; i++)
-	    vcom_setup_endpoints_for_interface (i, 0);
-	  chopstx_mutex_lock (&tty0.mtx);
-	  tty0.device_state = CONFIGURED;
-	  chopstx_mutex_unlock (&tty0.mtx);
-	}
-      else if (current_conf != value)
-	{
-	  if (value != 0)
-	    return USB_UNSUPPORT;
-
-	  usb_lld_set_configuration (0);
-	  for (i = 0; i < NUM_INTERFACES; i++)
-	    vcom_setup_endpoints_for_interface (i, 1);
-	  chopstx_mutex_lock (&tty0.mtx);
-	  tty0.device_state = ADDRESSED;
-	  chopstx_mutex_unlock (&tty0.mtx);
-	}
-      /* Do nothing when current_conf == value */
-      return USB_SUCCESS;
-    default:
-      break;
     }
 
-  return USB_UNSUPPORT;
+  return 0;
 }
 
 
-int
-usb_cb_interface (uint8_t cmd, struct req_args *arg)
+static int
+usb_set_interface (struct usb_dev *dev)
 {
-  const uint8_t zero = 0;
-  uint16_t interface = arg->index;
-  uint16_t alt = arg->value;
+  uint16_t interface = dev->dev_req.index;
+  uint16_t alt = dev->dev_req.value;
 
   if (interface >= NUM_INTERFACES)
-    return USB_UNSUPPORT;
+    return -1;
 
-  switch (cmd)
+  if (alt != 0)
+    return -1;
+  else
     {
-    case USB_SET_INTERFACE:
-      if (alt != 0)
-	return USB_UNSUPPORT;
-      else
-	{
-	  vcom_setup_endpoints_for_interface (interface, 0);
-	  return USB_SUCCESS;
-	}
-
-    case USB_GET_INTERFACE:
-      return usb_lld_reply_request (&zero, 1, arg);
-
-    default:
-    case USB_QUERY_INTERFACE:
-      return USB_SUCCESS;
+      vcom_setup_endpoints_for_interface (dev, interface, 0);
+      return 0;
     }
+}
+
+static int
+usb_get_interface (struct usb_dev *dev)
+{
+  const uint8_t zero = 0;
+  uint16_t interface = dev->dev_req.index;
+
+  if (interface >= NUM_INTERFACES)
+    return -1;
+
+  /* We don't have alternate interface, so, always return 0.  */
+  return usb_lld_reply_request (dev, &zero, 1);
+}
+static int
+usb_get_status_interface (struct usb_dev *dev)
+{
+  const uint16_t status_info = 0;
+  uint16_t interface = dev->dev_req.index;
+
+  if (interface >= NUM_INTERFACES)
+    return -1;
+
+  return usb_lld_reply_request (dev, &status_info, 2);
 }
 
 
@@ -511,8 +521,8 @@ tty_echo_char (struct tty *t, int c)
   put_char_to_ringbuffer (t, c);
 }
 
-void
-usb_cb_tx_done (uint8_t ep_num, uint32_t len)
+static void
+usb_tx_done (uint8_t ep_num, uint16_t len)
 {
   struct tty *t = tty_get (-1, ep_num);
 
@@ -594,17 +604,16 @@ tty_input_char (struct tty *t, int c)
   return r;
 }
 
-void
-usb_cb_rx_ready (uint8_t ep_num)
+static void
+usb_rx_ready (uint8_t ep_num, uint16_t len)
 {
   struct tty *t = tty_get (-1, ep_num);
 
   if (ep_num == ENDP3)
     {
-      int i, r;
+      int i;
 
-      r = usb_lld_rx_data_len (ENDP3);
-      for (i = 0; i < r; i++)
+      for (i = 0; i < len; i++)
 	if (tty_input_char (t, t->recv_buf0[i]))
 	  break;
 
@@ -646,6 +655,8 @@ static void *
 tty_main (void *arg)
 {
   struct tty *t = arg;
+  struct usb_dev dev;
+  int e;
 
 #if defined(OLDER_SYS_H)
   /*
@@ -654,9 +665,9 @@ tty_main (void *arg)
    *
    * When USB interrupt occurs between usb_lld_init (which assumes
    * ISR) and chopstx_claim_irq (which clears pending interrupt),
-   * invocation of usb_interrupt_handler won't occur.
+   * invocation of usb_lld_event_handler won't occur.
    *
-   * Calling usb_interrupt_handler is no harm even if there were no
+   * Calling usb_lld_event_handler is no harm even if there were no
    * interrupts, thus, we call it unconditionally here, just in case
    * if there is a request.
    *
@@ -665,19 +676,117 @@ tty_main (void *arg)
    * chopstx_claim_irq after usb_lld_init overrides that.
    *
    */
-  usb_lld_init (VCOM_FEATURE_BUS_POWERED);
+  usb_lld_init (&dev, VCOM_FEATURE_BUS_POWERED);
   chopstx_claim_irq (&usb_intr, INTR_REQ_USB);
-  usb_interrupt_handler ();
+  goto event_handle;
 #else
   chopstx_claim_irq (&usb_intr, INTR_REQ_USB);
-  usb_lld_init (VCOM_FEATURE_BUS_POWERED);
+  usb_lld_init (&dev, VCOM_FEATURE_BUS_POWERED);
 #endif
 
   while (1)
     {
       chopstx_poll (NULL, 1, &usb_intr);
       if (usb_intr.ready)
-	usb_interrupt_handler ();
+	{
+	  uint8_t ep_num;
+#if defined(OLDER_SYS_H)
+	event_handle:
+#endif
+	  /*
+	   * When interrupt is detected, call usb_lld_event_handler.
+	   * The event may be one of following:
+	   *    (1) Transfer to endpoint (bulk or interrupt)
+	   *        In this case EP_NUM is encoded in the variable E.
+	   *    (2) "NONE" event: some trasfer was done, but all was
+	   *        done by lower layer, no other work is needed in
+	   *        upper layer.
+	   *    (3) Device events: Reset or Suspend
+	   *    (4) Device requests to the endpoint zero.
+	   *        
+	   */
+	  e = usb_lld_event_handler (&dev);
+	  ep_num = USB_EVENT_ENDP (e);
+
+	  if (ep_num != 0)
+	    {
+	      if (USB_EVENT_TXRX (e))
+		usb_tx_done (ep_num, USB_EVENT_LEN (e));
+	      else
+		usb_rx_ready (ep_num, USB_EVENT_LEN (e));
+	    }
+	  else
+	    switch (USB_EVENT_ID (e))
+	      {
+	      case USB_EVENT_DEVICE_RESET:
+		usb_device_reset (&dev);
+		continue;
+
+	      case USB_EVENT_GET_DESCRIPTOR:
+		if (usb_get_descriptor (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		continue;
+
+		/* The addres is assigned to the device.  We don't
+		 * need to do anything for this actually, but in this
+		 * application, we maintain the USB status of the
+		 * device.  Usually, just "continue" as EVENT_NONE is
+		 * OK.
+		 */
+	      case USB_EVENT_DEVICE_ADDRESSED:
+		chopstx_mutex_lock (&tty0.mtx);
+		tty0.device_state = ADDRESSED;
+		chopstx_cond_signal (&tty0.cnd);
+		chopstx_mutex_unlock (&tty0.mtx);
+		continue;
+
+	      case USB_EVENT_SET_CONFIGURATION:
+		if (usb_set_configuration (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		else
+		  usb_lld_ctrl_good (&dev);
+		continue;
+
+	      case USB_EVENT_SET_INTERFACE:
+		if (usb_set_interface (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		else
+		  usb_lld_ctrl_good (&dev);
+		continue;
+
+		/* Non standard device request.  */
+	      case USB_EVENT_CTRL_REQUEST:
+		if (usb_setup (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		else
+		  usb_lld_ctrl_good (&dev);
+		continue;
+
+		/* Control WRITE transfer finished.  */
+	      case USB_EVENT_CTRL_WRITE_FINISH:
+		usb_ctrl_write_finish (&dev);
+		continue;
+
+	      case USB_EVENT_GET_STATUS_INTERFACE:
+		if (usb_get_status_interface (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		continue;
+
+	      case USB_EVENT_GET_INTERFACE:
+		if (usb_get_interface (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		continue;
+
+	      case USB_EVENT_NONE:
+	      case USB_EVENT_SET_FEATURE_DEVICE:
+	      case USB_EVENT_SET_FEATURE_ENDPOINT:
+	      case USB_EVENT_CLEAR_FEATURE_DEVICE:
+	      case USB_EVENT_CLEAR_FEATURE_ENDPOINT:
+	      case USB_EVENT_DEVICE_SUSPEND:
+	      default:
+		continue;
+	      }
+	}
 
       chopstx_mutex_lock (&t->mtx);
       if (t->device_state == CONFIGURED && t->flag_connected
@@ -720,8 +829,7 @@ tty_wait_connection (struct tty *t)
   t->flag_input_avail = 0;
   t->send_head = t->send_tail = 0;
   t->inputline_len = 0;
-  /* Accept input for line */
-  usb_lld_rx_enable_buf (ENDP3, t->recv_buf0, 64);
+  usb_lld_rx_enable_buf (ENDP3, t->recv_buf0, 64); /* Accept input for line */
   chopstx_mutex_unlock (&t->mtx);
 }
 
@@ -738,10 +846,10 @@ check_tx (struct tty *t)
 }
 
 int
-tty_send (struct tty *t, const uint8_t *buf, int len)
+tty_send (struct tty *t, const char *buf, int len)
 {
   int r;
-  const uint8_t *p;
+  const char *p;
   int count;
 
   p = buf;
@@ -800,7 +908,7 @@ check_rx (void *arg)
  *
  */
 int
-tty_recv (struct tty *t, uint8_t *buf, uint32_t *timeout)
+tty_recv (struct tty *t, char *buf, uint32_t *timeout)
 {
   int r;
   chopstx_poll_cond_t poll_desc;
