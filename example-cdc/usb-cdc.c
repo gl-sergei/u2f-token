@@ -739,7 +739,7 @@ tty_main (void *arg)
 		/* The addres is assigned to the device.  We don't
 		 * need to do anything for this actually, but in this
 		 * application, we maintain the USB status of the
-		 * device.  Usually, just "continue" as EVENT_NONE is
+		 * device.  Usually, just "continue" as EVENT_OK is
 		 * OK.
 		 */
 		chopstx_mutex_lock (&tty0.mtx);
@@ -791,7 +791,7 @@ tty_main (void *arg)
 		usb_ctrl_write_finish (&dev);
 		continue;
 
-	      case USB_EVENT_NONE:
+	      case USB_EVENT_OK:
 	      case USB_EVENT_DEVICE_SUSPEND:
 	      default:
 		continue;

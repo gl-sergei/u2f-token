@@ -60,7 +60,7 @@ struct usb_dev {
 };
 
 enum {
-  USB_EVENT_NONE=0,		/* Processed in lower layer.  */
+  USB_EVENT_OK=0,		/* Processed in lower layer.  */
   /* Device reset and suspend.  */
   USB_EVENT_DEVICE_RESET,
   USB_EVENT_DEVICE_SUSPEND,

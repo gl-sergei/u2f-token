@@ -722,22 +722,22 @@ tty_main (void *arg)
 		usb_device_reset (&dev);
 		continue;
 
-	      case USB_EVENT_GET_DESCRIPTOR:
-		if (usb_get_descriptor (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
-
+	      case USB_EVENT_DEVICE_ADDRESSED:
 		/* The addres is assigned to the device.  We don't
 		 * need to do anything for this actually, but in this
 		 * application, we maintain the USB status of the
-		 * device.  Usually, just "continue" as EVENT_NONE is
+		 * device.  Usually, just "continue" as EVENT_OK is
 		 * OK.
 		 */
-	      case USB_EVENT_DEVICE_ADDRESSED:
 		chopstx_mutex_lock (&tty0.mtx);
 		tty0.device_state = ADDRESSED;
 		chopstx_cond_signal (&tty0.cnd);
 		chopstx_mutex_unlock (&tty0.mtx);
+		continue;
+
+	      case USB_EVENT_GET_DESCRIPTOR:
+		if (usb_get_descriptor (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
 		continue;
 
 	      case USB_EVENT_SET_CONFIGURATION:
@@ -750,15 +750,10 @@ tty_main (void *arg)
 		  usb_lld_ctrl_error (&dev);
 		continue;
 
-		/* Non standard device request.  */
 	      case USB_EVENT_CTRL_REQUEST:
+		/* Device specific device request.  */
 		if (usb_setup (&dev) < 0)
 		  usb_lld_ctrl_error (&dev);
-		continue;
-
-		/* Control WRITE transfer finished.  */
-	      case USB_EVENT_CTRL_WRITE_FINISH:
-		usb_ctrl_write_finish (&dev);
 		continue;
 
 	      case USB_EVENT_GET_STATUS_INTERFACE:
@@ -771,11 +766,19 @@ tty_main (void *arg)
 		  usb_lld_ctrl_error (&dev);
 		continue;
 
-	      case USB_EVENT_NONE:
 	      case USB_EVENT_SET_FEATURE_DEVICE:
 	      case USB_EVENT_SET_FEATURE_ENDPOINT:
 	      case USB_EVENT_CLEAR_FEATURE_DEVICE:
 	      case USB_EVENT_CLEAR_FEATURE_ENDPOINT:
+		usb_lld_ctrl_ack (&dev);
+		continue;
+
+	      case USB_EVENT_CTRL_WRITE_FINISH:
+		/* Control WRITE transfer finished.  */
+		usb_ctrl_write_finish (&dev);
+		continue;
+
+	      case USB_EVENT_OK:
 	      case USB_EVENT_DEVICE_SUSPEND:
 	      default:
 		continue;

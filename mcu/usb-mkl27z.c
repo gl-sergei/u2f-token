@@ -332,7 +332,7 @@ usb_lld_ctrl_ack (struct usb_dev *dev)
   /* Zero length packet for ACK.  */
   dev->state = WAIT_STATUS_IN;
   kl27z_prepare_ep0_in (&dev->dev_req, 0, DATA1);
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 
@@ -392,7 +392,7 @@ usb_lld_event_handler (struct usb_dev *dev)
       USB_CTRL1->ISTAT = USB_IS_STALL;
     }
 
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 
@@ -736,7 +736,7 @@ handle_setup0 (struct usb_dev *dev)
       if ((r = (*handler) (dev)) < 0)
 	{
 	  usb_lld_ctrl_error (dev);
-	  return USB_EVENT_NONE;
+	  return USB_EVENT_OK;
 	}
       else
 	return r;
@@ -829,7 +829,7 @@ handle_transaction (struct usb_dev *dev, uint8_t stat)
 	    {
 	      handle_out0 (dev, stat);
 	      USB_CTRL1->ISTAT = USB_IS_TOKDNE;
-	      return USB_EVENT_NONE;
+	      return USB_EVENT_OK;
 	    }
 	}
       else
@@ -963,7 +963,7 @@ usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
 
   kl27z_prepare_ep0_out (p, len, DATA1);
   dev->state = OUT_DATA;
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 /*
@@ -1006,7 +1006,7 @@ usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
   data_p->len -= len;
   data_p->addr += len;
 
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 void

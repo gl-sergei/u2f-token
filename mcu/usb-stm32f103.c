@@ -359,7 +359,7 @@ usb_lld_ctrl_ack (struct usb_dev *dev)
   dev->state = WAIT_STATUS_IN;
   st103_set_tx_count (ENDP0, 0);
   st103_ep_set_rxtx_status (ENDP0, EP_RX_NAK, EP_TX_VALID);
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 void usb_lld_init (struct usb_dev *dev, uint8_t feature)
@@ -416,7 +416,7 @@ usb_lld_event_handler (struct usb_dev *dev)
 	return usb_handle_transfer (dev, istr_value);
     }
 
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 static void handle_datastage_out (struct usb_dev *dev)
@@ -797,7 +797,7 @@ static int handle_setup0 (struct usb_dev *dev)
       if ((r = (*handler) (dev)) < 0)
 	{
 	  usb_lld_ctrl_error (dev);
-	  return USB_EVENT_NONE;
+	  return USB_EVENT_OK;
 	}
       else
 	return r;
@@ -885,7 +885,7 @@ usb_handle_transfer (struct usb_dev *dev, uint16_t istr_value)
 	  else
 	    {
 	      handle_out0 (dev);
-	      return USB_EVENT_NONE;
+	      return USB_EVENT_OK;
 	    }
 	}
     }
@@ -908,7 +908,7 @@ usb_handle_transfer (struct usb_dev *dev, uint16_t istr_value)
 	}
     }
 
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 void usb_lld_reset (struct usb_dev *dev, uint8_t feature)
@@ -1016,7 +1016,7 @@ int usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
   struct ctrl_data *data_p = &dev->ctrl_data;
   data_p->addr = p;
   data_p->len = len;
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
 
 void usb_lld_to_pmabuf (const void *src, uint16_t addr, size_t n)
@@ -1136,5 +1136,5 @@ usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
 
   st103_set_tx_count (ENDP0, len);
   st103_ep_set_rxtx_status (ENDP0, EP_RX_NAK, EP_TX_VALID);
-  return USB_EVENT_NONE;
+  return USB_EVENT_OK;
 }
