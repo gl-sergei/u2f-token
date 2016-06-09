@@ -353,15 +353,13 @@ usb_lld_ctrl_error (struct usb_dev *dev)
   st103_ep_set_rxtx_status (ENDP0, EP_RX_STALL, EP_TX_STALL);
 }
 
-void
-usb_lld_ctrl_good (struct usb_dev *dev)
+int
+usb_lld_ctrl_ack (struct usb_dev *dev)
 {
-  if (dev->dev_req.len == 0)
-    {
-      dev->state = WAIT_STATUS_IN;
-      st103_set_tx_count (ENDP0, 0);
-      st103_ep_set_rxtx_status (ENDP0, EP_RX_NAK, EP_TX_VALID);
-    }
+  dev->state = WAIT_STATUS_IN;
+  st103_set_tx_count (ENDP0, 0);
+  st103_ep_set_rxtx_status (ENDP0, EP_RX_NAK, EP_TX_VALID);
+  return USB_EVENT_NONE;
 }
 
 void usb_lld_init (struct usb_dev *dev, uint8_t feature)
@@ -418,7 +416,7 @@ usb_lld_event_handler (struct usb_dev *dev)
 	return usb_handle_transfer (dev, istr_value);
     }
 
-  return 0;
+  return USB_EVENT_NONE;
 }
 
 static void handle_datastage_out (struct usb_dev *dev)
@@ -522,7 +520,7 @@ static int std_get_status (struct usb_dev *dev)
 	  else /* Self-powered */
 	    status_info &= ~1;
 
-	  return usb_lld_reply_request (dev, &status_info, 2);
+	  return usb_lld_ctrl_send (dev, &status_info, 2);
 	}
     }
   else if (rcp == INTERFACE_RECIPIENT)
@@ -557,7 +555,7 @@ static int std_get_status (struct usb_dev *dev)
 	    status_info |= 1; /* OUT Endpoint stalled */
 	}
 
-      return usb_lld_reply_request (dev, &status_info, 2);
+      return usb_lld_ctrl_send (dev, &status_info, 2);
     }
 
   return -1;
@@ -673,7 +671,7 @@ static int std_set_address (struct usb_dev *dev)
 
   if (rcp == DEVICE_RECIPIENT && arg->len == 0 && arg->value <= 127
       && arg->index == 0 && dev->configuration == 0)
-    return USB_EVENT_NONE;
+    return usb_lld_ctrl_ack (dev);
 
   return -1;
 }
@@ -699,7 +697,7 @@ static int std_get_configuration (struct usb_dev *dev)
     return -1;
 
   if (rcp == DEVICE_RECIPIENT)
-    return usb_lld_reply_request (dev, &dev->configuration, 1);
+    return usb_lld_ctrl_send (dev, &dev->configuration, 1);
 
   return -1;
 }
@@ -796,14 +794,10 @@ static int handle_setup0 (struct usb_dev *dev)
 	default: handler = std_none;  break;
 	}
 
-      if ((r = (*handler) (dev)) <= 0)
+      if ((r = (*handler) (dev)) < 0)
 	{
-	  /* Handling finished in standard way.  */
-	  if (r == 0)
-	    usb_lld_ctrl_good (dev);
-	  else
-	    usb_lld_ctrl_error (dev);
-	  return 0;
+	  usb_lld_ctrl_error (dev);
+	  return USB_EVENT_NONE;
 	}
       else
 	return r;
@@ -891,7 +885,7 @@ usb_handle_transfer (struct usb_dev *dev, uint16_t istr_value)
 	  else
 	    {
 	      handle_out0 (dev);
-	      return 0;
+	      return USB_EVENT_NONE;
 	    }
 	}
     }
@@ -914,7 +908,7 @@ usb_handle_transfer (struct usb_dev *dev, uint16_t istr_value)
 	}
     }
 
-  return 0;
+  return USB_EVENT_NONE;
 }
 
 void usb_lld_reset (struct usb_dev *dev, uint8_t feature)
@@ -1017,12 +1011,12 @@ uint8_t usb_lld_current_configuration (struct usb_dev *dev)
   return dev->configuration;
 }
 
-int usb_lld_set_data_to_recv (struct usb_dev *dev, void *p, size_t len)
+int usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
 {
   struct ctrl_data *data_p = &dev->ctrl_data;
   data_p->addr = p;
   data_p->len = len;
-  return 0;
+  return USB_EVENT_NONE;
 }
 
 void usb_lld_to_pmabuf (const void *src, uint16_t addr, size_t n)
@@ -1106,7 +1100,7 @@ void usb_lld_from_pmabuf (void *dst, uint16_t addr, size_t n)
  * BUFLEN: size of the data.
  */
 int
-usb_lld_reply_request (struct usb_dev *dev, const void *buf, size_t buflen)
+usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
 {
   struct ctrl_data *data_p = &dev->ctrl_data;
   uint32_t len_asked = dev->dev_req.len;

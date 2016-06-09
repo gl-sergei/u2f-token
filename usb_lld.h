@@ -106,11 +106,27 @@ void usb_lld_init (struct usb_dev *dev, uint8_t feature);
 #define USB_EVENT_ID(e) ((e >> 24))
 int usb_lld_event_handler (struct usb_dev *dev);
 
-int usb_lld_reply_request (struct usb_dev *dev,
-			   const void *buf, size_t buflen);
-int usb_lld_set_data_to_recv (struct usb_dev *dev, void *p, size_t len);
+/*
+ * Control Endpoint ENDP0 does device requests handling.
+ * In response to an event of
+ *     USB_EVENT_SET_CONFIGURATION
+ *     USB_EVENT_SET_INTERFACE
+ *     USB_EVENT_SET_FEATURE_DEVICE
+ *     USB_EVENT_SET_FEATURE_ENDPOINT
+ *     USB_EVENT_CLEAR_FEATURE_DEVICE
+ *     USB_EVENT_CLEAR_FEATURE_ENDPOINT
+ *     USB_EVENT_GET_STATUS_INTERFACE
+ *     USB_EVENT_GET_DESCRIPTOR
+ *     USB_EVENT_GET_INTERFACE
+ *     USB_EVENT_CTRL_REQUEST
+ *  a single action should be done, which is SEND, RECV, or,
+ *  ACKNOWLEDGE (no data to be sent, or to be received).
+ *  Otherwise, it's an error.
+ */
+int usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen);
+int usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len);
+int usb_lld_ctrl_ack (struct usb_dev *dev);
 void usb_lld_ctrl_error (struct usb_dev *dev);
-void usb_lld_ctrl_good (struct usb_dev *dev);
 
 void usb_lld_reset (struct usb_dev *dev, uint8_t feature);
 void usb_lld_set_configuration (struct usb_dev *dev, uint8_t config);

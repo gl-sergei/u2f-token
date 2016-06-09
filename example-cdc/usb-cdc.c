@@ -293,8 +293,8 @@ vcom_port_data_setup (struct usb_dev *dev)
       struct tty *t = tty_get (arg->index, 0);
 
       if (arg->request == USB_CDC_REQ_GET_LINE_CODING)
-	return usb_lld_reply_request (dev, &t->line_coding,
-				      sizeof (struct line_coding));
+	return usb_lld_ctrl_send (dev, &t->line_coding,
+				  sizeof (struct line_coding));
     }
   else  /* USB_SETUP_SET (req) */
     {
@@ -303,11 +303,11 @@ vcom_port_data_setup (struct usb_dev *dev)
 	{
 	  struct tty *t = tty_get (arg->index, 0);
 
-	  return usb_lld_set_data_to_recv (dev, &t->line_coding,
-					   sizeof (struct line_coding));
+	  return usb_lld_ctrl_recv (dev, &t->line_coding,
+				    sizeof (struct line_coding));
 	}
       else if (arg->request == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
-	return 0;
+	return usb_lld_ctrl_ack (dev);
     }
 
   return -1;
@@ -337,11 +337,11 @@ usb_get_descriptor (struct usb_dev *dev)
     return -1;
 
   if (desc_type == DEVICE_DESCRIPTOR)
-    return usb_lld_reply_request (dev,
-				  vcom_device_desc, sizeof (vcom_device_desc));
+    return usb_lld_ctrl_send (dev,
+			      vcom_device_desc, sizeof (vcom_device_desc));
   else if (desc_type == CONFIG_DESCRIPTOR)
-    return usb_lld_reply_request (dev,
-				  vcom_config_desc, sizeof (vcom_config_desc));
+    return usb_lld_ctrl_send (dev,
+			      vcom_config_desc, sizeof (vcom_config_desc));
   else if (desc_type == STRING_DESCRIPTOR)
     {
       const uint8_t *str;
@@ -369,7 +369,7 @@ usb_get_descriptor (struct usb_dev *dev)
 	  return -1;
 	}
 
-      return usb_lld_reply_request (dev, str, size);
+      return usb_lld_ctrl_send (dev, str, size);
     }
 
   return -1;
@@ -435,6 +435,7 @@ usb_set_configuration (struct usb_dev *dev)
       chopstx_mutex_unlock (&tty0.mtx);
     }
 
+  usb_lld_ctrl_ack (dev);
   return 0;
 }
 
@@ -453,6 +454,7 @@ usb_set_interface (struct usb_dev *dev)
   else
     {
       vcom_setup_endpoints_for_interface (interface, 0);
+      usb_lld_ctrl_ack (dev);
       return 0;
     }
 }
@@ -467,7 +469,7 @@ usb_get_interface (struct usb_dev *dev)
     return -1;
 
   /* We don't have alternate interface, so, always return 0.  */
-  return usb_lld_reply_request (dev, &zero, 1);
+  return usb_lld_ctrl_send (dev, &zero, 1);
 }
 
 static int
@@ -479,7 +481,7 @@ usb_get_status_interface (struct usb_dev *dev)
   if (interface >= NUM_INTERFACES)
     return -1;
 
-  return usb_lld_reply_request (dev, &status_info, 2);
+  return usb_lld_ctrl_send (dev, &status_info, 2);
 }
 
 
@@ -733,49 +735,38 @@ tty_main (void *arg)
 		usb_device_reset (&dev);
 		continue;
 
-	      case USB_EVENT_GET_DESCRIPTOR:
-		if (usb_get_descriptor (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
-
+	      case USB_EVENT_DEVICE_ADDRESSED:
 		/* The addres is assigned to the device.  We don't
 		 * need to do anything for this actually, but in this
 		 * application, we maintain the USB status of the
 		 * device.  Usually, just "continue" as EVENT_NONE is
 		 * OK.
 		 */
-	      case USB_EVENT_DEVICE_ADDRESSED:
 		chopstx_mutex_lock (&tty0.mtx);
 		tty0.device_state = ADDRESSED;
 		chopstx_cond_signal (&tty0.cnd);
 		chopstx_mutex_unlock (&tty0.mtx);
 		continue;
 
+	      case USB_EVENT_GET_DESCRIPTOR:
+		if (usb_get_descriptor (&dev) < 0)
+		  usb_lld_ctrl_error (&dev);
+		continue;
+
 	      case USB_EVENT_SET_CONFIGURATION:
 		if (usb_set_configuration (&dev) < 0)
 		  usb_lld_ctrl_error (&dev);
-		else
-		  usb_lld_ctrl_good (&dev);
 		continue;
 
 	      case USB_EVENT_SET_INTERFACE:
 		if (usb_set_interface (&dev) < 0)
 		  usb_lld_ctrl_error (&dev);
-		else
-		  usb_lld_ctrl_good (&dev);
 		continue;
 
-		/* Non standard device request.  */
 	      case USB_EVENT_CTRL_REQUEST:
+		/* Device specific device request.  */
 		if (usb_setup (&dev) < 0)
 		  usb_lld_ctrl_error (&dev);
-		else
-		  usb_lld_ctrl_good (&dev);
-		continue;
-
-		/* Control WRITE transfer finished.  */
-	      case USB_EVENT_CTRL_WRITE_FINISH:
-		usb_ctrl_write_finish (&dev);
 		continue;
 
 	      case USB_EVENT_GET_STATUS_INTERFACE:
@@ -788,11 +779,19 @@ tty_main (void *arg)
 		  usb_lld_ctrl_error (&dev);
 		continue;
 
-	      case USB_EVENT_NONE:
 	      case USB_EVENT_SET_FEATURE_DEVICE:
 	      case USB_EVENT_SET_FEATURE_ENDPOINT:
 	      case USB_EVENT_CLEAR_FEATURE_DEVICE:
 	      case USB_EVENT_CLEAR_FEATURE_ENDPOINT:
+		usb_lld_ctrl_ack (&dev);
+		continue;
+
+	      case USB_EVENT_CTRL_WRITE_FINISH:
+		/* Control WRITE transfer finished.  */
+		usb_ctrl_write_finish (&dev);
+		continue;
+
+	      case USB_EVENT_NONE:
 	      case USB_EVENT_DEVICE_SUSPEND:
 	      default:
 		continue;

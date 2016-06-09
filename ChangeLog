@@ -1,3 +1,13 @@
+2016-06-09  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c (usb_lld_ctrl_recv): Rename.
+	(usb_lld_ctrl_send): Rename.
+	(usb_lld_ctrl_ack): Rename and let have return value.
+	* mcu/usb-mkl27z.c: Likewise.
+
+	* example-cdc/usb-cdc.c: Follow the change of API.
+	* example-fs-bb48/usb-cdc.c: Likewise.
+
 2016-06-08  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/usb-stm32f103.c: Rewrite to be event driven API.
