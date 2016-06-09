@@ -1,5 +1,5 @@
 /*
- * clk_gpio_init-kl.c - Clock and GPIO initialization for Kinetis L.
+ * clk_gpio_init-mkl27z.c - Clock and GPIO initialization for Kinetis L.
  *
  * Copyright (C) 2016  Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
