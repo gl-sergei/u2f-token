@@ -1016,6 +1016,8 @@ int usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
   struct ctrl_data *data_p = &dev->ctrl_data;
   data_p->addr = p;
   data_p->len = len;
+  dev->state = OUT_DATA;
+  st103_ep_set_rx_status (ENDP0, EP_RX_VALID);
   return USB_EVENT_OK;
 }
 
