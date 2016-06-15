@@ -1,3 +1,7 @@
+2016-06-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_exit): Add "naked" attribute.
+
 2016-06-14  Niibe Yutaka  <gniibe@fsij.org>
 
 	* mcu/usb-stm32f103.c (usb_lld_ctrl_recv): Fix the state and make
