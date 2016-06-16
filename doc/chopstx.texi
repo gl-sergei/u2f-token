@@ -1,7 +1,7 @@
 \input texinfo                      @c -*-texinfo-*-
 @c %**start of header
 @setfilename chopstx.info
-@set VERSION 0.12
+@set VERSION 1.0
 @settitle Chopstx Reference Manual
 @c Unify some of the indices.
 @syncodeindex tp fn
@@ -83,8 +83,9 @@ Indexes
 @node Introduction
 @chapter Introduction
 
-Chopstx is an RT thread library for ARM Cortex-M0 and Cortex-M3.
-Specifically, it is used for STM32F030, STM32F103, and KL27Z.
+Chopstx is an RT thread library for ARM Cortex-M0, Cortex-M0plus and
+Cortex-M3.  Specifically, it is used for STM32F030, MKL27Z and
+STM32F103.
 
 While most RTOSes come with many features, drivers, and stacks,
 Chopstx just offers a RT thread library.

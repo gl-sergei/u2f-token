@@ -1,15 +1,19 @@
 NEWS - Noteworthy changes
 
 
-* Major changes in Chopstx 0.13
+* Major changes in Chopstx 1.0
 
-  Released 2016-06-xx
+  Released 2016-06-16
 
 ** New USB API
 Now, USB driver is included in Chopstx.  So, it should be good one.
 It used to be the code which was derived from interrupt driven API
 with callbacks.  It's changed to event driven API, so that a user can
 do as wish, beyond the restriction of callbacks.
+
+** New board support: FST-01G
+FST-01G is a new revision of original FST-01 with fixed pull-up of
+D+ line.
 
 
 * Major changes in Chopstx 0.12

@@ -1,5 +1,8 @@
 2016-06-16  Niibe Yutaka  <gniibe@fsij.org>
 
+	* VERSION: 1.0.
+	* doc/chopstx.texi (VERSION): 1.0.
+
 	* board/board-fst-01g.h: New.
 
 2016-06-15  Niibe Yutaka  <gniibe@fsij.org>
