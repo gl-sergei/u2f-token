@@ -1,3 +1,7 @@
+2016-06-16  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-fst-01g.h: New.
+
 2016-06-15  Niibe Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_exit): Add "naked" attribute.
