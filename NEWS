@@ -1,6 +1,17 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 1.1
+
+  Released 2016-07-XX
+
+** API change: chopstx_poll
+In version 1.0, chopstx_poll has variable arguments.  It found
+that it's challenging for ffi or lower level C implementation.
+An example is that a program touches FPU registers for varargs.
+So, we decided to avoid use of varargs in Chopstx.
+
+
 * Major changes in Chopstx 1.0
 
   Released 2016-06-16

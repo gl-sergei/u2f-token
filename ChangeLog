@@ -1,3 +1,14 @@
+2016-06-28  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (struct chx_poll_head): Declare here.
+
+	* chopstx.c (chopstx_poll): Don't use varargs, but use
+	an array of pointer.
+	(chopstx_intr_wait): Follow the change of chopstx_poll.
+	* eventflag.c (eventflag_wait_timeout): Likewise.
+	* contrib/adc-stm32f103.c (adc_wait_completion): Likewise.
+	* contrib/adc-mkl27z.c (adc_wait_completion): Likewise.
+
 2016-06-16  Niibe Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 1.0.

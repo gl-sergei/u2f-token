@@ -335,11 +335,6 @@ struct chx_thread {		/* inherits PQ */
   struct chx_cleanup *clp;
 };
 
-struct chx_poll_head {
-  uint16_t type;
-  uint16_t ready;
-};
-
 
 static void
 chx_cpu_sched_lock (void)
@@ -1464,7 +1459,7 @@ chx_intr_hook (struct chx_px *px, struct chx_poll_head *pd)
 void
 chopstx_intr_wait (chopstx_intr_t *intr)
 {
-  chopstx_poll (NULL, 1, intr);
+  chopstx_poll (NULL, 1, (struct chx_poll_head **)&intr);
 }
 
 
@@ -1749,17 +1744,17 @@ chx_proxy_init (struct chx_px *px, uint32_t *cp)
  * chopstx_poll - wait for condition variable, thread's exit, or IRQ
  * @usec_p: Pointer to usec for timeout.  Forever if NULL.
  * @n: Number of poll descriptors
- * @VARARGS: Pointers to an object which should be one of:
+ * @pd_array: Pointer to an array of poll descriptor pointer which
+ * should be one of:
  *           chopstx_poll_cond_t, chopstx_poll_join_t, or chopstx_intr_t.
  *
  * Returns number of active descriptors.
  */
 int
-chopstx_poll (uint32_t *usec_p, int n, ...)
+chopstx_poll (uint32_t *usec_p, int n, struct chx_poll_head *pd_array[])
 {
   uint32_t counter = 0;
   int i;
-  va_list ap;
   struct chx_px px[n];
   struct chx_poll_head *pd;
   int r = 0;
@@ -1769,10 +1764,9 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
   for (i = 0; i < n; i++)
     chx_proxy_init (&px[i], &counter);
 
-  va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pd = va_arg (ap, struct chx_poll_head *);
+      pd = pd_array[i];
       pd->ready = 0;
       px[i].ready_p = &pd->ready;
       if (pd->type == CHOPSTX_POLL_COND)
@@ -1782,7 +1776,6 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       else
 	chx_join_hook (&px[i], pd);
     }
-  va_end (ap);
 
   chx_cpu_sched_lock ();
   chx_spin_lock (&px->lock);
@@ -1818,11 +1811,9 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       while (r == 0);
     }
 
-  va_start (ap, n);
   for (i = 0; i < n; i++)
     {
-      pd = va_arg (ap, struct chx_poll_head *);
-
+      pd = pd_array[i];
       chx_cpu_sched_lock ();
       chx_spin_lock (&px[i].lock);
       if (pd->type == CHOPSTX_POLL_COND)
@@ -1864,7 +1855,6 @@ chopstx_poll (uint32_t *usec_p, int n, ...)
       chx_spin_unlock (&px[i].lock);
       chx_cpu_sched_unlock ();
     }
-  va_end (ap);
 
   if (r < 0)
     chopstx_exit (CHOPSTX_CANCELED);

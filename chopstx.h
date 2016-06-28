@@ -121,6 +121,11 @@ enum {
   CHOPSTX_POLL_JOIN,
 };
 
+struct chx_poll_head {
+  uint16_t type;
+  uint16_t ready;
+};
+
 struct chx_poll_cond {
   uint16_t type;
   uint16_t ready;
@@ -153,6 +158,6 @@ void chopstx_claim_irq (chopstx_intr_t *intr, uint8_t irq_num);
 void chopstx_intr_wait (chopstx_intr_t *intr); /* DEPRECATED */
 
 
-int chopstx_poll (uint32_t *usec_p, int n, ...);
+int chopstx_poll (uint32_t *usec_p, int n, struct chx_poll_head *pd_array[]);
 
 #define CHOPSTX_THREAD_SIZE 64

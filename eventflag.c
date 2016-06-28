@@ -111,9 +111,10 @@ eventmask_t
 eventflag_wait_timeout (struct eventflag *ev, uint32_t usec)
 {
   chopstx_poll_cond_t poll_desc;
+  struct chx_poll_head *pd_array[1] = { (struct chx_poll_head *)&poll_desc };
 
   eventflag_prepare_poll (ev, &poll_desc);
-  chopstx_poll (&usec, 1, &poll_desc);
+  chopstx_poll (&usec, 1, pd_array);
   return eventflag_get (ev);
 }
 

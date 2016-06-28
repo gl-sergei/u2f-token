@@ -295,12 +295,13 @@ adc_stop (void)
 int
 adc_wait_completion (void)
 {
+  struct chx_poll_head *pd_array[1] = { (struct chx_poll_head *)&adc_intr };
+  int i;
+
   while (1)
     {
-      int i;
-
       /* Wait DMA completion */
-      chopstx_poll (NULL, 1, &adc_intr);
+      chopstx_poll (NULL, 1, pd_array);
 
       DMA0->DSR_BCR = (1 << 24);
       DMA1->DSR_BCR = (1 << 24);
