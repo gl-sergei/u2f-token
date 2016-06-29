@@ -1,3 +1,7 @@
+2016-06-29  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_setpriority): Fix sched_lock/unlock.
+
 2016-06-28  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.h (struct chx_poll_head): Declare here.

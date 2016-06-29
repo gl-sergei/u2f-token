@@ -1880,10 +1880,20 @@ chopstx_setpriority (chopstx_prio_t prio)
 {
   struct chx_thread *tp = running;
 
-  tp->prio_orig = prio;
-  if (prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    chx_cpu_sched_lock ();
-  tp->prio = prio;
+  if (tp->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION
+      && prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    {
+      chx_cpu_sched_lock ();
+      tp->prio = tp->prio_orig = prio;
+    }
+  else if (tp->prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION
+      && prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    {
+      tp->prio = tp->prio_orig = prio;
+      chx_cpu_sched_unlock ();
+    }
+  else
+    tp->prio = tp->prio_orig = prio;
 }
 
 /*
