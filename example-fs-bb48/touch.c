@@ -11,7 +11,7 @@ struct TPM {
   volatile uint32_t C0V;
   volatile uint32_t C1SC;
   volatile uint32_t C1V;
-  uint32_t rsvd0[14];
+  uint32_t rsvd0[13];
   volatile uint32_t STATUS;
   uint32_t rsvd1[7];
   volatile uint32_t POL;
