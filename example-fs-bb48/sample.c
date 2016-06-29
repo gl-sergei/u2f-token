@@ -117,6 +117,8 @@ static char hexchar (uint8_t x)
 }
 
 
+extern void touch_init (void);
+
 int
 main (int argc, const char *argv[])
 {
@@ -143,6 +145,8 @@ main (int argc, const char *argv[])
   chopstx_mutex_unlock (&mtx);
 
   u = 1;
+
+  touch_init ();
 
   tty = tty_open ();
   tty_wait_configured (tty);

@@ -51,7 +51,6 @@ static char hexchar (uint8_t x)
     return '?';
 }
 
-#ifdef ENABLE_DECIMAL_OUTPUT
 static char *
 compose_decimal (char *s, int value)
 {
@@ -87,7 +86,7 @@ compose_decimal (char *s, int value)
 
   return s;
 }
-#endif
+
 
 static char *
 compose_hex (char *s, uint32_t v)
@@ -140,6 +139,31 @@ get_hex (struct tty *tty, const char *s, uint32_t *v_p)
 
   *v_p = v;
   return s;
+}
+
+
+static void
+cmd_touch (struct tty *tty, const char *line)
+{
+  int i;
+  extern uint16_t touch_get (void);
+
+  (void)line;
+  put_line (tty, "Please touch the bear, type Enter to finish.\r\n");
+
+  for (i = 0; i < 20; i++)
+    {
+      uint16_t v;
+      char output[8];
+      char *s;
+
+      chopstx_usec_wait (1000*1000);
+      v = touch_get ();
+      s = compose_decimal (output, v);
+      *s++ = '\r';
+      *s++ = '\n';
+      tty_send (tty, output, s - output);
+    }
 }
 
 
@@ -425,6 +449,7 @@ cmd_help (struct tty *tty, const char *line)
 
 
 struct command_table command_table[] = {
+  { "touch", cmd_touch },
   { "mdw", cmd_mdw },
   { "mww", cmd_mww },
   { "fes", cmd_fes },

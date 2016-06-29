@@ -1,5 +1,8 @@
 2016-06-29  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* example-fs-bb48: Update.
+	* example-fs-bb48/touch.c: New.
+
 	* chopstx.c (chopstx_setpriority): Fix sched_lock/unlock.
 
 2016-06-28  NIIBE Yutaka  <gniibe@fsij.org>

@@ -29,3 +29,41 @@ struct SIM {
   volatile uint32_t SRVCOP;   /* Service COP                             */
 };
 static struct SIM *const SIM = (struct SIM *const)0x40047000;
+
+/* Port control. */
+struct PORT {
+  volatile uint32_t PCR0;  volatile uint32_t PCR1;
+  volatile uint32_t PCR2;  volatile uint32_t PCR3;
+  volatile uint32_t PCR4;  volatile uint32_t PCR5;
+  volatile uint32_t PCR6;  volatile uint32_t PCR7;
+  volatile uint32_t PCR8;  volatile uint32_t PCR9;
+  volatile uint32_t PCR10; volatile uint32_t PCR11;
+  volatile uint32_t PCR12; volatile uint32_t PCR13;
+  volatile uint32_t PCR14; volatile uint32_t PCR15;
+  volatile uint32_t PCR16; volatile uint32_t PCR17;
+  volatile uint32_t PCR18; volatile uint32_t PCR19;
+  volatile uint32_t PCR20; volatile uint32_t PCR21;
+  volatile uint32_t PCR22; volatile uint32_t PCR23;
+  volatile uint32_t PCR24; volatile uint32_t PCR25;
+  volatile uint32_t PCR26; volatile uint32_t PCR27;
+  volatile uint32_t PCR28; volatile uint32_t PCR29;
+  volatile uint32_t PCR30; volatile uint32_t PCR31;
+  volatile uint32_t GPCLR; volatile uint32_t GPCHR;
+  uint32_t reserved[6];
+  volatile uint32_t ISFR;
+};
+static struct PORT *const PORTB = (struct PORT *const)0x4004A000;
+static struct PORT *const PORTD = (struct PORT *const)0x4004C000;
+static struct PORT *const PORTE = (struct PORT *const)0x4004D000;
+
+struct GPIO {
+  volatile uint32_t PDOR; /* Port Data Output Register    */
+  volatile uint32_t PSOR; /* Port Set Output Register     */
+  volatile uint32_t PCOR; /* Port Clear Output Register   */
+  volatile uint32_t PTOR; /* Port Toggle Output Register  */
+  volatile uint32_t PDIR; /* Port Data Input Register     */
+  volatile uint32_t PDDR; /* Port Data Direction Register */
+};
+static struct GPIO *const GPIOB = (struct GPIO *const)0x400FF040;
+static struct GPIO *const GPIOD = (struct GPIO *const)0x400FF0C0;
+static struct GPIO *const GPIOE = (struct GPIO *const)0x400FF100;
