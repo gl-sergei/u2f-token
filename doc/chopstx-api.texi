@@ -176,10 +176,14 @@ Returns old state which is 0 when it was enabled.
 
 @subheading chopstx_poll
 @anchor{chopstx_poll}
-@deftypefun {int} {chopstx_poll} (uint32_t * @var{usec_p}, int @var{n},  @var{...})
+@deftypefun {int} {chopstx_poll} (uint32_t * @var{usec_p}, int @var{n}, struct chx_poll_head * [] @var{pd_array})
 @var{usec_p}: Pointer to usec for timeout.  Forever if NULL.
 
 @var{n}: Number of poll descriptors
+
+@var{pd_array}: Pointer to an array of poll descriptor pointer which
+should be one of:
+chopstx_poll_cond_t, chopstx_poll_join_t, or chopstx_intr_t.
 
 Returns number of active descriptors.
 @end deftypefun
