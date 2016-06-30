@@ -1,3 +1,8 @@
+2016-06-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c (tty_recv, tty_main): Follow the change of
+	chopstx_poll.
+
 2016-06-29  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-fs-bb48: Update.

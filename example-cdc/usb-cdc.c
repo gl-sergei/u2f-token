@@ -699,7 +699,7 @@ tty_main (void *arg)
 
   while (1)
     {
-      chopstx_poll (NULL, 1, &usb_intr);
+      chopstx_intr_wait (&usb_intr);
       if (usb_intr.ready)
 	{
 	  uint8_t ep_num;
@@ -928,7 +928,10 @@ tty_recv (struct tty *t, char *buf, uint32_t *timeout)
 
   while (1)
     {
-      chopstx_poll (timeout, 1, &poll_desc);
+      struct chx_poll_head *pd_array[1] = {
+	(struct chx_poll_head *)&poll_desc
+      };
+      chopstx_poll (timeout, 1, pd_array);
       chopstx_mutex_lock (&t->mtx);
       r = check_rx (t);
       chopstx_mutex_unlock (&t->mtx);
