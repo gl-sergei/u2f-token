@@ -35,8 +35,8 @@ struct GPIO {
 
 #define GPIO_SPEAKER_PIN    1
 
-static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
-static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
+static struct GPIO *const GPIO_LED = ((struct GPIO *)GPIO_LED_BASE);
+static struct GPIO *const GPIO_OTHER = ((struct GPIO *)GPIO_OTHER_BASE);
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd;

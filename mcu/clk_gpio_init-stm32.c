@@ -100,7 +100,7 @@ struct RCC {
 };
 
 #define RCC_BASE		(AHBPERIPH_BASE + 0x1000)
-static struct RCC *const RCC = ((struct RCC *const)RCC_BASE);
+static struct RCC *const RCC = (struct RCC *)RCC_BASE;
 
 #define RCC_APB1ENR_USBEN	0x00800000
 #define RCC_APB1RSTR_USBRST	0x00800000
@@ -163,7 +163,7 @@ struct SYSCFG {
 #define SYSCFG_CFGR1_MEM_MODE 0x03
 
 #define SYSCFG_BASE	(APBPERIPH_BASE + 0x00010000)
-static struct SYSCFG *const SYSCFG = ((struct SYSCFG *const) SYSCFG_BASE);
+static struct SYSCFG *const SYSCFG = (struct SYSCFG *)SYSCFG_BASE;
 #endif
 
 struct FLASH {
@@ -179,7 +179,7 @@ struct FLASH {
 };
 
 #define FLASH_R_BASE	(AHBPERIPH_BASE + 0x2000)
-static struct FLASH *const FLASH = ((struct FLASH *const) FLASH_R_BASE);
+static struct FLASH *const FLASH = (struct FLASH *)FLASH_R_BASE;
 
 static void __attribute__((used))
 clock_init (void)
@@ -279,7 +279,7 @@ struct AFIO
 };
 
 #define AFIO_BASE 0x40010000
-static struct AFIO *const AFIO = (struct AFIO *const)AFIO_BASE;
+static struct AFIO *const AFIO = (struct AFIO *)AFIO_BASE;
 
 #define AFIO_MAPR_TIM3_REMAP_PARTIALREMAP 0x00000800
 #define AFIO_MAPR_SWJ_CFG_DISABLE         0x04000000
@@ -308,12 +308,12 @@ struct GPIO {
 #define GPIOE		((struct GPIO *) GPIOE_BASE)
 #endif
 
-static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
+static struct GPIO *const GPIO_LED = (struct GPIO *)GPIO_LED_BASE;
 #ifdef GPIO_USB_BASE
-static struct GPIO *const GPIO_USB = ((struct GPIO *const) GPIO_USB_BASE);
+static struct GPIO *const GPIO_USB = (struct GPIO *)GPIO_USB_BASE;
 #endif
 #ifdef GPIO_OTHER_BASE
-static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
+static struct GPIO *const GPIO_OTHER = (struct GPIO *)GPIO_OTHER_BASE;
 #endif
 
 static void __attribute__((used))

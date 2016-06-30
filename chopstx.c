@@ -104,9 +104,9 @@
  * System tick
  */
 /* SysTick registers.  */
-static volatile uint32_t *const SYST_CSR = (uint32_t *const)0xE000E010;
-static volatile uint32_t *const SYST_RVR = (uint32_t *const)0xE000E014;
-static volatile uint32_t *const SYST_CVR = (uint32_t *const)0xE000E018;
+static volatile uint32_t *const SYST_CSR = (uint32_t *)0xE000E010;
+static volatile uint32_t *const SYST_RVR = (uint32_t *)0xE000E014;
+static volatile uint32_t *const SYST_CVR = (uint32_t *)0xE000E018;
 
 static void
 chx_systick_reset (void)
@@ -158,7 +158,7 @@ struct NVIC {
   volatile uint32_t IPR[60];
 };
 
-static struct NVIC *const NVIC = (struct NVIC *const)0xE000E100;
+static struct NVIC *const NVIC = (struct NVIC *)0xE000E100;
 #define NVIC_ISER(n)	(NVIC->ISER[n >> 5])
 #define NVIC_ICER(n)	(NVIC->ICER[n >> 5])
 #define NVIC_ICPR(n)	(NVIC->ICPR[n >> 5])
@@ -192,12 +192,12 @@ chx_set_intr_prio (uint8_t n)
     | (CPU_EXCEPTION_PRIORITY_INTERRUPT << sh);
 }
 
-static volatile uint32_t *const ICSR = (uint32_t *const)0xE000ED04;
+static volatile uint32_t *const ICSR = (uint32_t *)0xE000ED04;
 
 /* Priority control.  */
-static uint32_t *const AIRCR = (uint32_t *const)0xE000ED0C;
-static uint32_t *const SHPR2 = (uint32_t *const)0xE000ED1C;
-static uint32_t *const SHPR3 = (uint32_t *const)0xE000ED20;
+static uint32_t *const AIRCR = (uint32_t *)0xE000ED0C;
+static uint32_t *const SHPR2 = (uint32_t *)0xE000ED1C;
+static uint32_t *const SHPR3 = (uint32_t *)0xE000ED20;
 
 static void
 chx_prio_init (void)

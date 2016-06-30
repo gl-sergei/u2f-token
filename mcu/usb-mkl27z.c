@@ -50,7 +50,7 @@ struct USB_CONF {
   uint8_t rsvd2[3];          /*                                     */
   volatile uint8_t ADDINFO;  /* Peripheral Additional Info register */
 };
-static struct USB_CONF *const USB_CONF = (struct USB_CONF *) 0x40072000;
+static struct USB_CONF *const USB_CONF = (struct USB_CONF *)0x40072000;
 
 struct USB_CTRL0 {
   volatile uint8_t OTGCTL;   /* OTG Control register                */

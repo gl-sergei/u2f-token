@@ -19,7 +19,7 @@ struct RCC {
 };
 
 #define RCC_BASE		(AHBPERIPH_BASE + 0x1000)
-static struct RCC *const RCC = ((struct RCC *const)RCC_BASE);
+static struct RCC *const RCC = (struct RCC *)RCC_BASE;
 
 #define RCC_AHBENR_DMA1EN       0x00000001
 #define RCC_AHBENR_CRCEN        0x00000040
@@ -38,7 +38,7 @@ struct CRC {
 };
 
 #define CRC_BASE              (AHBPERIPH_BASE + 0x3000)
-static struct CRC *const CRC = ((struct CRC *const)CRC_BASE);
+static struct CRC *const CRC = (struct CRC *)CRC_BASE;
 
 
 struct ADC {
@@ -67,8 +67,8 @@ struct ADC {
 #define ADC1_BASE             (APB2PERIPH_BASE + 0x2400)
 #define ADC2_BASE             (APB2PERIPH_BASE + 0x2800)
 
-static struct ADC *const ADC1 = (struct ADC *const)ADC1_BASE;
-static struct ADC *const ADC2 = (struct ADC *const)ADC2_BASE;
+static struct ADC *const ADC1 = (struct ADC *)ADC1_BASE;
+static struct ADC *const ADC2 = (struct ADC *)ADC2_BASE;
 
 #define  ADC_CR1_DUALMOD_0       0x00010000
 #define  ADC_CR1_DUALMOD_1       0x00020000
@@ -167,11 +167,11 @@ struct DMA {
 #define  DMA_ISR_TEIF7                       0x08000000
 
 #define DMA1_BASE             (AHBPERIPH_BASE + 0x0000)
-static struct DMA *const DMA1 = (struct DMA *const)DMA1_BASE;
+static struct DMA *const DMA1 = (struct DMA *)DMA1_BASE;
 
 #define DMA1_Channel1_BASE    (AHBPERIPH_BASE + 0x0008)
 static struct DMA_Channel *const DMA1_Channel1 =
-  (struct DMA_Channel *const)DMA1_Channel1_BASE;
+  (struct DMA_Channel *)DMA1_Channel1_BASE;
 
 /* System Control Block */
 struct SCB
@@ -201,4 +201,4 @@ struct SCB
 
 #define SCS_BASE 0xE000E000
 #define SCB_BASE (SCS_BASE + 0x0D00)
-static struct SCB *const SCB = (struct SCB *const)SCB_BASE;
+static struct SCB *const SCB = (struct SCB *)SCB_BASE;

@@ -316,7 +316,7 @@ struct SCB
 
 #define SCS_BASE	(0xE000E000)
 #define SCB_BASE	(SCS_BASE +  0x0D00)
-static struct SCB *const SCB = ((struct SCB *const) SCB_BASE);
+static struct SCB *const SCB = (struct SCB *)SCB_BASE;
 
 #define SYSRESETREQ 0x04
 static void

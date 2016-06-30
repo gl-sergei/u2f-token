@@ -34,8 +34,8 @@ struct GPIO {
 #define GPIOF_BASE	(AHB2PERIPH_BASE + 0x1400)
 #define GPIOF		((struct GPIO *) GPIOF_BASE)
 
-static struct GPIO *const GPIO_LED = ((struct GPIO *const) GPIO_LED_BASE);
-static struct GPIO *const GPIO_OTHER = ((struct GPIO *const) GPIO_OTHER_BASE);
+static struct GPIO *const GPIO_LED = ((struct GPIO *)GPIO_LED_BASE);
+static struct GPIO *const GPIO_OTHER = ((struct GPIO *)GPIO_OTHER_BASE);
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0, cnd1;
@@ -438,7 +438,7 @@ struct SCB
 
 #define SCS_BASE	(0xE000E000)
 #define SCB_BASE	(SCS_BASE +  0x0D00)
-static struct SCB *const SCB = ((struct SCB *const) SCB_BASE);
+static struct SCB *const SCB = ((struct SCB *)SCB_BASE);
 
 #define SCB_SCR_SLEEPDEEP (1 << 2)
 
