@@ -118,7 +118,7 @@ struct FTFA {
   /* Note: addressing (3,2,1,0).  Use Bx macro.  */
   volatile uint8_t FPROT[4];
 };
-static struct FTFA *const FTFA = (struct FTFA *const)0x40020000;
+static struct FTFA *const FTFA = (struct FTFA *)0x40020000;
 
 #define FSTAT_CCIF 0x80
 #define B3 0
@@ -297,7 +297,7 @@ crc32_init  (unsigned int *p)
 }
 
 #ifdef ORIGINAL_IN_C
-const unsigned int *const crc32_table= (const unsigned int *const)0x00000500;
+const unsigned int *const crc32_table= (const unsigned int *)0x00000500;
 #endif
 
 void __attribute__ ((naked,section(".fixed_function.crc32_u8")))

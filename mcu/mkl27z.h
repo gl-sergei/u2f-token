@@ -28,7 +28,6 @@ struct SIM {
   volatile uint32_t COPC;     /* COP Control Register                    */
   volatile uint32_t SRVCOP;   /* Service COP                             */
 };
-static struct SIM *const SIM = (struct SIM *const)0x40047000;
 
 /* Port control. */
 struct PORT {
@@ -52,9 +51,6 @@ struct PORT {
   uint32_t reserved[6];
   volatile uint32_t ISFR;
 };
-static struct PORT *const PORTB = (struct PORT *const)0x4004A000;
-static struct PORT *const PORTD = (struct PORT *const)0x4004C000;
-static struct PORT *const PORTE = (struct PORT *const)0x4004D000;
 
 struct GPIO {
   volatile uint32_t PDOR; /* Port Data Output Register    */
@@ -64,6 +60,11 @@ struct GPIO {
   volatile uint32_t PDIR; /* Port Data Input Register     */
   volatile uint32_t PDDR; /* Port Data Direction Register */
 };
-static struct GPIO *const GPIOB = (struct GPIO *const)0x400FF040;
-static struct GPIO *const GPIOD = (struct GPIO *const)0x400FF0C0;
-static struct GPIO *const GPIOE = (struct GPIO *const)0x400FF100;
+
+static struct SIM *const SIM = (struct SIM *)0x40047000;
+static struct PORT *const PORTB = (struct PORT *)0x4004A000;
+static struct PORT *const PORTD = (struct PORT *)0x4004C000;
+static struct PORT *const PORTE = (struct PORT *)0x4004D000;
+static struct GPIO *const GPIOB = (struct GPIO *)0x400FF040;
+static struct GPIO *const GPIOD = (struct GPIO *)0x400FF0C0;
+static struct GPIO *const GPIOE = (struct GPIO *)0x400FF100;

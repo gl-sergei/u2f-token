@@ -1,4 +1,4 @@
-const unsigned int *const crc32_table= (const unsigned int *const)0x00000480;
+const unsigned int *const crc32_table= (const unsigned int *)0x00000480;
 
 void
 crc32_init (unsigned int *p)

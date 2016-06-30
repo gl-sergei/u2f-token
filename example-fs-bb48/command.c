@@ -142,6 +142,43 @@ get_hex (struct tty *tty, const char *s, uint32_t *v_p)
 }
 
 
+#define TOUCH_VALUE_HIGH 195
+#define TOUCH_VALUE_LOW  150
+static void
+cmd_button (struct tty *tty, const char *line)
+{
+  int i = 0;
+  extern uint16_t touch_get (void);
+  uint16_t v0 = 0;
+  int touched = 0;
+
+  (void)line;
+  put_line (tty, "Please touch the bear.\r\n");
+
+  while (i < 16)
+    {
+      uint16_t v = touch_get ();
+      v0 = (v0 * 2 + v)/3;
+
+      if (touched == 0 && v0 > TOUCH_VALUE_HIGH)
+	{
+	  tty_send (tty, "!", 1);
+	  touched = 1;
+	}
+      else if (touched == 1 && v0 < TOUCH_VALUE_LOW)
+	{
+	  tty_send (tty, ".", 1);
+	  touched = 0;
+	  i++;
+	}
+
+      chopstx_usec_wait (10*1000);
+    }
+
+  tty_send (tty, "\r\n", 2);
+}
+
+
 static void
 cmd_touch (struct tty *tty, const char *line)
 {
@@ -149,7 +186,7 @@ cmd_touch (struct tty *tty, const char *line)
   extern uint16_t touch_get (void);
 
   (void)line;
-  put_line (tty, "Please touch the bear, type Enter to finish.\r\n");
+  put_line (tty, "Please touch the bear.\r\n");
 
   for (i = 0; i < 20; i++)
     {
@@ -449,6 +486,7 @@ cmd_help (struct tty *tty, const char *line)
 
 
 struct command_table command_table[] = {
+  { "button", cmd_button },
   { "touch", cmd_touch },
   { "mdw", cmd_mdw },
   { "mww", cmd_mww },

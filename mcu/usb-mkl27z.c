@@ -50,12 +50,12 @@ struct USB_CONF {
   uint8_t rsvd2[3];          /*                                     */
   volatile uint8_t ADDINFO;  /* Peripheral Additional Info register */
 };
-static struct USB_CONF *const USB_CONF = (struct USB_CONF *const) 0x40072000;
+static struct USB_CONF *const USB_CONF = (struct USB_CONF *) 0x40072000;
 
 struct USB_CTRL0 {
   volatile uint8_t OTGCTL;   /* OTG Control register                */
 };
-static struct USB_CTRL0 *const USB_CTRL0 = (struct USB_CTRL0 *const)0x4007201c;
+static struct USB_CTRL0 *const USB_CTRL0 = (struct USB_CTRL0 *)0x4007201c;
 
 struct USB_CTRL1 {
   volatile uint8_t ISTAT;    /* Interrupt Status register           */
@@ -82,7 +82,7 @@ struct USB_CTRL1 {
   uint8_t rsvd15[3];         /*                                     */
   volatile uint8_t BDTPAGE3; /* BDT Page Register 3                 */
 };
-static struct USB_CTRL1 *const USB_CTRL1 = (struct USB_CTRL1 *const)0x40072080;
+static struct USB_CTRL1 *const USB_CTRL1 = (struct USB_CTRL1 *)0x40072080;
 
 /* Interrupt source bits */
 #define USB_IS_STALL  (1 << 7)
@@ -98,7 +98,7 @@ struct USB_ENDPT {
   volatile uint8_t EP;  /* Endpoint Control register */
   uint8_t rsvd17[3];
 };
-static struct USB_ENDPT *const USB_ENDPT = (struct USB_ENDPT *const)0x400720c0;
+static struct USB_ENDPT *const USB_ENDPT = (struct USB_ENDPT *)0x400720c0;
 
 struct USB_CTRL2 {
   volatile uint8_t USBCTRL;  /* USB Control register                */
@@ -111,7 +111,7 @@ struct USB_CTRL2 {
   uint8_t rsvd36[7];         /*                                     */
   volatile uint8_t USBFRMADJUST;           /* Frame Adjut Register  */
 };
-static struct USB_CTRL2 *const USB_CTRL2 = (struct USB_CTRL2 *const)0x40072100;
+static struct USB_CTRL2 *const USB_CTRL2 = (struct USB_CTRL2 *)0x40072100;
 
 /* Buffer Descriptor */
 struct BD {
@@ -136,7 +136,7 @@ struct BD {
 
 extern uint8_t __usb_bdt__;
 
-static struct BD *const BD_table = (struct BD *const)&__usb_bdt__;
+static struct BD *const BD_table = (struct BD *)&__usb_bdt__;
 
 static void
 kl27z_usb_init (void)

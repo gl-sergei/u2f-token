@@ -38,7 +38,7 @@ struct MCG {
   uint8_t reserved2[15]; /*                                    */
   volatile uint8_t MC;   /* MCG Miscellaneous Control Register */
 };
-static struct MCG *const MCG = (struct MCG *const)0x40064000;
+static struct MCG *const MCG = (struct MCG *)0x40064000;
 
 struct USB_CLK_RECOVER {
   volatile uint8_t CTRL;           /* USB Clock             */
@@ -51,7 +51,7 @@ struct USB_CLK_RECOVER {
                                    /*     interrupt status  */
 };
 static struct USB_CLK_RECOVER *const USB_CLK_RECOVER =
-  (struct USB_CLK_RECOVER *const)0x40072140;
+  (struct USB_CLK_RECOVER *)0x40072140;
 
 static void __attribute__((used))
 clock_init (void)
@@ -71,7 +71,7 @@ clock_init (void)
 
   SIM->SCGC4 = (1 << 18);	/* Enable USB FS clock        */
   SIM->SCGC5 = (1 << 10);	/* Enable Port B clock        */
-  SIM->SCGC6 = (1 << 25);	/* Enable TPM1 clock          */
+  SIM->SCGC6 = (1 << 25)|1;	/* Enable TPM1 clock          */
   SIM->COPC = 0;		/* COP disabled               */
 
   /* Crystal-less USB setup.  */
