@@ -113,7 +113,7 @@ typedef struct chx_cleanup {
 void chopstx_cleanup_push (chopstx_cleanup_t *clp);
 void chopstx_cleanup_pop (int execute);
 
-void chopstx_setpriority (chopstx_prio_t);
+chopstx_prio_t chopstx_setpriority (chopstx_prio_t);
 
 enum {
   CHOPSTX_POLL_COND = 0,

@@ -27,6 +27,10 @@ static chopstx_intr_t tpm1_intr;
 uint16_t
 touch_get (void)
 {
+  chopstx_prio_t prio_old;
+
+  prio_old = chopstx_setpriority (CHOPSTX_PRIO_INHIBIT_PREEMPTION);
+
   /* Assert LOW.  */ 
   PORTB->PCR1 = (1<<8) /* GPIO                  */
               | (0<<6) /* DriveStrengthEnable=0 */
@@ -50,6 +54,8 @@ touch_get (void)
               | (0<<1) /* pull enable = 0       */ 
               | (0<<0) /* puddselect= 0         */
               ;
+
+  chopstx_setpriority (prio_old);
 
   chopstx_intr_wait (&tpm1_intr);
   /* Clear overflow and CH1 capture.  */

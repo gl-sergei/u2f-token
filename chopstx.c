@@ -1868,6 +1868,7 @@ chopstx_poll (uint32_t *usec_p, int n, struct chx_poll_head *pd_array[])
  * @prio: priority
  *
  * Change the schedule priority with @prio.
+ * Returns the old priority.
  *
  * In general, it is not recommended to use this function because
  * dynamically changing schedule priorities complicates the system.
@@ -1875,25 +1876,33 @@ chopstx_poll (uint32_t *usec_p, int n, struct chx_poll_head *pd_array[])
  * which starts its execution with priority of CHX_PRIO_MAIN_INIT, and
  * let it change its priority after initialization of other threads.
  */
-void
-chopstx_setpriority (chopstx_prio_t prio)
+chopstx_prio_t
+chopstx_setpriority (chopstx_prio_t prio_new)
 {
   struct chx_thread *tp = running;
+  chopstx_prio_t prio_orig, prio_cur;
 
-  if (tp->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION
-      && prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    {
-      chx_cpu_sched_lock ();
-      tp->prio = tp->prio_orig = prio;
-    }
-  else if (tp->prio >= CHOPSTX_PRIO_INHIBIT_PREEMPTION
-      && prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
-    {
-      tp->prio = tp->prio_orig = prio;
-      chx_cpu_sched_unlock ();
-    }
+  chx_cpu_sched_lock ();
+  prio_orig = tp->prio_orig;
+  prio_cur = tp->prio;
+
+  tp->prio_orig = prio_new;
+  if (prio_cur == prio_orig)
+    /* No priority inheritance is active.  */
+    tp->prio = prio_new;
   else
-    tp->prio = tp->prio_orig = prio;
+    /* Priority inheritance is active.  */
+    /* In this case, only when new priority is greater, change the
+       priority of this thread.  */
+    if (prio_new > prio_cur)
+      tp->prio = prio_new;
+
+  if (tp->prio < prio_cur)
+    chx_sched (CHX_YIELD);
+  else if (tp->prio < CHOPSTX_PRIO_INHIBIT_PREEMPTION)
+    chx_cpu_sched_unlock ();
+
+  return prio_orig;
 }
 
 /*
