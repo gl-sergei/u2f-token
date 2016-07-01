@@ -88,14 +88,14 @@ gpio_init (void)
               | (0<<4) /* PassiveFilterEnable=0 */
               | (1<<2) /* SlewRateEnable = slow */
               | (0<<1) /* pull enable = 0       */ 
-              | (0<<0) /* puddselect= 0         */
+              | (0<<0) /* pull up select= 0     */
               ;
   PORTB->PCR1 = (1<<8) /* GPIO                  */
               | (0<<6) /* DriveStrengthEnable=0 */
               | (0<<4) /* PassiveFilterEnable=0 */
               | (1<<2) /* SlewRateEnable = slow */
               | (0<<1) /* pull enable = 0       */ 
-              | (0<<0) /* puddselect= 0         */
+              | (0<<0) /* pull up select= 0     */
               ;
 
   GPIOB->PDDR = (1 << 1) | (1 << 0); /* PTB0, PTB1 : Output    */

@@ -142,8 +142,8 @@ get_hex (struct tty *tty, const char *s, uint32_t *v_p)
 }
 
 
-#define TOUCH_VALUE_HIGH 195
-#define TOUCH_VALUE_LOW  150
+#define TOUCH_VALUE_HIGH 100
+#define TOUCH_VALUE_LOW  50
 static void
 cmd_button (struct tty *tty, const char *line)
 {
