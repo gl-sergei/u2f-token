@@ -190,10 +190,9 @@ Returns number of active descriptors.
 
 @subheading chopstx_setpriority
 @anchor{chopstx_setpriority}
-@deftypefun {void} {chopstx_setpriority} (chopstx_prio_t @var{prio})
-@var{prio}: priority
-
+@deftypefun {chopstx_prio_t} {chopstx_setpriority} (chopstx_prio_t @var{prio_new})
 Change the schedule priority with @var{prio}.
+Returns the old priority.
 
 In general, it is not recommended to use this function because
 dynamically changing schedule priorities complicates the system.

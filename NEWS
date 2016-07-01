@@ -3,13 +3,18 @@ NEWS - Noteworthy changes
 
 * Major changes in Chopstx 1.1
 
-  Released 2016-07-XX
+  Released 2016-07-01
 
 ** API change: chopstx_poll
-In version 1.0, chopstx_poll has variable arguments.  It found
-that it's challenging for ffi or lower level C implementation.
-An example is that a program touches FPU registers for varargs.
-So, we decided to avoid use of varargs in Chopstx.
+In version 1.0, chopstx_poll has variable arguments.  It found that
+it's challenging for ffi or lower level C implementation, if C
+compiler is new for the specific MCU target.  Another example is that
+a program touches FPU registers for varargs, even if no argument is
+float.  So, we decided to avoid use of varargs in Chopstx.
+
+** API change: chopstx_setpriority
+In version 1.0, chopstx_setpriority does not return value.  It is
+changed to return old value of the priority.
 
 
 * Major changes in Chopstx 1.0

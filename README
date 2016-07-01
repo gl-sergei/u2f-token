@@ -1,6 +1,6 @@
 Chopstx - Threads and only Threads
-							 Version 1.0
-							  2016-06-16
+							 Version 1.1
+							  2016-07-01
 							Niibe Yutaka
 					     Flying Stone Technology
 
@@ -45,8 +45,9 @@ For STM32 Primer2, see the directory: example-primer2.
 Future Works
 ============
 
-Convenience function to determine the bottom of thread stack, thread
-local storage would be next things to be done.
+Convenience function to determine the bottom of thread stack,
+configuration of thread size by comiler's output would be next things
+to be done.
 
 Experimental SMP port for Cortex-A7 is under development.  For SMP,
 more careful considerations for shared access to objects of struct

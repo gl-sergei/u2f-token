@@ -1,5 +1,8 @@
 2016-07-01  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* VERSION: 1.1.
+	* doc/chopstx.texi (VERSION): 1.1.
+
 	* chopstx.c (chopstx_setpriority): Change the API.
 
 2016-06-30  NIIBE Yutaka  <gniibe@fsij.org>
