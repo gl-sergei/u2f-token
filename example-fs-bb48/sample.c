@@ -75,14 +75,14 @@ blk (void *arg)
 #define PRIO_PWM 3
 #define PRIO_BLK 2
 
-extern uint8_t __process1_stack_base__, __process1_stack_size__;
-extern uint8_t __process2_stack_base__, __process2_stack_size__;
+extern uint8_t __process1_stack_base__[], __process1_stack_size__[];
+extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
 
-const uint32_t __stackaddr_pwm = (uint32_t)&__process1_stack_base__;
-const size_t __stacksize_pwm = (size_t)&__process1_stack_size__;
+#define STACK_ADDR_PWM ((uint32_t)__process1_stack_base__)
+#define STACK_SIZE_PWM ((uint32_t)__process1_stack_size__)
 
-const uint32_t __stackaddr_blk = (uint32_t)&__process2_stack_base__;
-const size_t __stacksize_blk = (size_t)&__process2_stack_size__;
+#define STACK_ADDR_BLK ((uint32_t)__process2_stack_base__)
+#define STACK_SIZE_BLK ((uint32_t)__process2_stack_size__)
 
 
 static char hexchar (uint8_t x)
@@ -114,8 +114,8 @@ main (int argc, const char *argv[])
 
   m = 10;
 
-  chopstx_create (PRIO_PWM, __stackaddr_pwm, __stacksize_pwm, pwm, NULL);
-  chopstx_create (PRIO_BLK, __stackaddr_blk, __stacksize_blk, blk, NULL);
+  chopstx_create (PRIO_PWM, STACK_ADDR_PWM, STACK_SIZE_PWM, pwm, NULL);
+  chopstx_create (PRIO_BLK, STACK_ADDR_BLK, STACK_SIZE_BLK, blk, NULL);
 
   chopstx_usec_wait (200*1000);
 

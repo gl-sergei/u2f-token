@@ -166,14 +166,14 @@ button (void *arg)
 #define PRIO_LED 3
 #define PRIO_BUTTON 2
 
-extern uint8_t __process1_stack_base__, __process1_stack_size__;
-extern uint8_t __process2_stack_base__, __process2_stack_size__;
+extern uint8_t __process1_stack_base__[], __process1_stack_size__[];
+extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
 
-const uint32_t __stackaddr_led = (uint32_t)&__process1_stack_base__;
-const size_t __stacksize_led = (size_t)&__process1_stack_size__;
+#define STACK_ADDR_LED ((uint32_t)__process1_stack_base__)
+#define STACK_SIZE_LED ((uint32_t)__process1_stack_size__)
 
-const uint32_t __stackaddr_button = (uint32_t)&__process2_stack_base__;
-const size_t __stacksize_button = (size_t)&__process2_stack_size__;
+#define STACK_ADDR_BUTTON ((uint32_t)__process2_stack_base__)
+#define STACK_SIZE_BUTTON ((uint32_t)__process2_stack_size__)
 
 #define DATA55(x0,x1,x2,x3,x4) (x0<<20)|(x1<<15)|(x2<<10)|(x3<< 5)|(x4<< 0)
 #define SIZE55(img) (sizeof (img) / sizeof (uint32_t))
@@ -370,10 +370,10 @@ main (int argc, const char *argv[])
   chopstx_cond_init (&cnd0);
   chopstx_cond_init (&cnd1);
 
-  led_thd = chopstx_create (PRIO_LED, __stackaddr_led,
-			    __stacksize_led, led, NULL);
-  button_thd = chopstx_create (PRIO_BUTTON, __stackaddr_button,
-			       __stacksize_button, button, NULL);
+  led_thd = chopstx_create (PRIO_LED, STACK_ADDR_LED,
+			    STACK_SIZE_LED, led, NULL);
+  button_thd = chopstx_create (PRIO_BUTTON, STACK_ADDR_BUTTON,
+			       STACK_SIZE_BUTTON, button, NULL);
 
   chopstx_usec_wait (200*1000);
 

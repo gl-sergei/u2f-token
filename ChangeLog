@@ -1,3 +1,9 @@
+2016-07-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/stm32f103.h: Add more from Gnuk 1.1.9.
+	* example-cdc, example-fs-bb48, example-fsm-55, example-led:
+	Update for stack addr/size.
+
 2016-07-01  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 1.1.

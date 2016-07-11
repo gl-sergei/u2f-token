@@ -642,9 +642,9 @@ static void *tty_main (void *arg);
 #define INTR_REQ_USB 20
 #define PRIO_TTY      4
 
-extern uint8_t __process3_stack_base__, __process3_stack_size__;
-const uint32_t __stackaddr_tty = (uint32_t)&__process3_stack_base__;
-const size_t __stacksize_tty = (size_t)&__process3_stack_size__;
+extern uint8_t __process3_stack_base__[], __process3_stack_size__[];
+#define STACK_ADDR_TTY ((uint32_t)__process3_stack_base__)
+#define STACK_SIZE_TTY ((uint32_t)__process3_stack_size__)
 
 struct tty *
 tty_open (void)
@@ -659,7 +659,7 @@ tty_open (void)
   tty0.device_state = UNCONNECTED;
   memcpy (&tty0.line_coding, &line_coding0, sizeof (struct line_coding));
 
-  chopstx_create (PRIO_TTY, __stackaddr_tty, __stacksize_tty, tty_main, &tty0);
+  chopstx_create (PRIO_TTY, STACK_ADDR_TTY, STACK_SIZE_TTY, tty_main, &tty0);
   return &tty0;
 }
 

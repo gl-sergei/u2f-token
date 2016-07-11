@@ -88,10 +88,10 @@ led_enable_column (uint8_t col)
 
 #define PRIO_LED 3
 
-extern uint8_t __process1_stack_base__, __process1_stack_size__;
+extern uint8_t __process1_stack_base__[], __process1_stack_size__[];
 
-const uint32_t stackaddr_led = (uint32_t)&__process1_stack_base__;
-const size_t stacksize_led = (size_t)&__process1_stack_size__;
+#define STACK_ADDR_LED ((uint32_t)__process1_stack_base__)
+#define STACK_SIZE_LED ((uint32_t)__process1_stack_size__)
 
 static void *
 led (void *arg)
@@ -119,10 +119,10 @@ led (void *arg)
 
 
 #define PRIO_SPK 4
-extern uint8_t __process2_stack_base__, __process2_stack_size__;
+extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
 
-const uint32_t stackaddr_spk = (uint32_t)&__process2_stack_base__;
-const size_t stacksize_spk = (size_t)&__process2_stack_size__;
+#define STACK_ADDR_SPK ((uint32_t)__process2_stack_base__)
+#define STACK_SIZE_SPK ((uint32_t)__process2_stack_size__)
 
 static chopstx_mutex_t spk_mtx;
 static chopstx_cond_t spk_cnd;
@@ -193,10 +193,10 @@ spk (void *arg)
 
 
 #define PRIO_MUSIC 2
-extern uint8_t __process3_stack_base__, __process3_stack_size__;
+extern uint8_t __process3_stack_base__[], __process3_stack_size__[];
 
-const uint32_t stackaddr_music = (uint32_t)&__process3_stack_base__;
-const size_t stacksize_music = (size_t)&__process3_stack_size__;
+#define STACK_ADDR_MUSIC ((uint32_t)__process3_stack_base__)
+#define STACK_SIZE_MUSIC ((uint32_t)__process3_stack_size__)
 
 #define C 0
 #define D 1
@@ -254,7 +254,7 @@ music (void *arg)
   chopstx_cond_init (&spk_cnd);
   chopstx_cond_init (&spk_cnd_no_tone);
 
-  chopstx_create (PRIO_SPK, stackaddr_spk, stacksize_spk, spk, NULL);
+  chopstx_create (PRIO_SPK, STACK_ADDR_SPK, STACK_SIZE_SPK, spk, NULL);
 
   while (1)
     {
@@ -350,8 +350,8 @@ main (int argc, const char *argv[])
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd);
 
-  chopstx_create (PRIO_LED, stackaddr_led, stacksize_led, led, NULL);
-  chopstx_create (PRIO_MUSIC, stackaddr_music, stacksize_music, music, NULL);
+  chopstx_create (PRIO_LED, STACK_ADDR_LED, STACK_SIZE_LED, led, NULL);
+  chopstx_create (PRIO_MUSIC, STACK_ADDR_MUSIC, STACK_SIZE_MUSIC, music, NULL);
 
   chopstx_usec_wait (200*1000);
 
