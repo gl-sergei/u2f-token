@@ -1559,6 +1559,8 @@ chopstx_join (chopstx_t thd, void **ret)
    * We don't offer deadlock detection.  It's users' responsibility.
    */
 
+  chopstx_testcancel ();
+
   chx_cpu_sched_lock ();
   if (tp->flag_detached)
     {
@@ -1661,7 +1663,7 @@ chopstx_cancel (chopstx_t thd)
       return;
     }
 
-  /* Cancellation points: cond_wait, usec_wait, and poll.  */
+  /* Cancellation points: cond_wait, usec_wait, join, and poll.  */
   if (tp->state == THREAD_WAIT_CND)
     {
       struct chx_cond *cond = (struct chx_cond *)tp->parent;
@@ -1672,6 +1674,12 @@ chopstx_cancel (chopstx_t thd)
     }
   else if (tp->state == THREAD_WAIT_TIME)
     chx_timer_dequeue (tp);
+  else if (tp->state == THREAD_WAIT_EXIT)
+    {
+      chx_spin_lock (&q_join.lock);
+      ll_dequeue ((struct chx_pq *)tp);
+      chx_spin_unlock (&q_join.lock);
+    }
   else if (tp->state == THREAD_WAIT_POLL)
     {
       if (tp->parent == &q_timer.q)

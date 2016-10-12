@@ -1,3 +1,8 @@
+2016-10-12  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_join, chopstx_cancel): chopstx_join is
+	cancellation point.
+
 2016-07-11  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/stm32f103.h: Add more from Gnuk 1.1.9.
