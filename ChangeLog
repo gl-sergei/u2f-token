@@ -1,3 +1,8 @@
+2016-10-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.2.
+	* doc/chopstx.texi (VERSION): 1.2.
+
 2016-10-12  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chopstx_join, chopstx_cancel): chopstx_join is

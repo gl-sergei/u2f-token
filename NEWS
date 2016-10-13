@@ -1,6 +1,14 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 1.2
+
+  Released 2016-10-13
+
+** Fix: chopstx_join
+chopstx_join is now cancellation point.
+
+
 * Major changes in Chopstx 1.1
 
   Released 2016-07-01
