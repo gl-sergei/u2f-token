@@ -22,7 +22,7 @@
  * PA4 - floating input
  * PA5 - floating input
  * PA6 - floating input
- * PA7 - Push pull output   (LED1 1:ON 0:OFF)
+ * PA7 - Push pull output   (Red LED1 1:ON 0:OFF)
  * PA8 - floating input (smartcard, SCDSA)
  * PA9 - floating input
  * PA10 - floating input
@@ -37,13 +37,13 @@
  * PA14 - input with pull-up.
  * PA15 - Push pull output   (USB 1:ON 0:OFF)
  */
-#define VAL_GPIO_USB_ODR            0xFFFFE7FF
+#define VAL_GPIO_USB_ODR            0xFFFFE77F
 #define VAL_GPIO_USB_CRL            0x34444488      /*  PA7...PA0 */
 #define VAL_GPIO_USB_CRH            0x38811444      /* PA15...PA8 */
 
 /*
  * Port B setup.
- * PB0  - Push pull output   (LED2 1:ON 0:OFF)
+ * PB0  - Push pull output   (Green LED2 1:ON 0:OFF)
  * ------------------------ Default
  * PBx  - input with pull-up.
  */

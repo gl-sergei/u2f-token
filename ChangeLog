@@ -1,3 +1,8 @@
+2016-12-08  Szczepan Zalega <szczepan@nitrokey.com>
+
+	* board/board-nitrokey-start.h (VAL_GPIO_USB_ODR): Switch off red
+	LED for Nitrokey Start.
+
 2016-10-13  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 1.2.
