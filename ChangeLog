@@ -1,3 +1,7 @@
+2017-02-01  Paul Fertser <fercerpav@gmail.com>
+
+	* board/board-blue-pill.h: New.
+
 2016-12-08  Szczepan Zalega <szczepan@nitrokey.com>
 
 	* board/board-nitrokey-start.h (VAL_GPIO_USB_ODR): Switch off red

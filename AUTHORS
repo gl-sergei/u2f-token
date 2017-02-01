@@ -42,6 +42,10 @@ NIIBE Yutaka:
 
 	board-fs-bb48.h
 
+Paul Fertser:
+    Added Blue Pill support.
+	board/board-blue-pill.h
+
 Szczepan Zalega:
     Modified Nitrokey-Start support.
 	board/board-nitrokey-start.h
