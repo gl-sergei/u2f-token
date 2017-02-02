@@ -1,7 +1,7 @@
 \input texinfo                      @c -*-texinfo-*-
 @c %**start of header
 @setfilename chopstx.info
-@set VERSION 1.2
+@set VERSION 1.3
 @settitle Chopstx Reference Manual
 @c Unify some of the indices.
 @syncodeindex tp fn

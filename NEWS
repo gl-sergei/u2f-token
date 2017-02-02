@@ -1,6 +1,14 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 1.3
+
+  Released 2017-02-02
+
+** New board support: Blue Pill
+It is contributed by Paul Fertser.
+
+
 * Major changes in Chopstx 1.2
 
   Released 2016-10-13

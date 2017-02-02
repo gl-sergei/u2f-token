@@ -1,3 +1,8 @@
+2017-02-02  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.3.
+	* doc/chopstx.texi (VERSION): 1.3.
+
 2017-02-01  Paul Fertser <fercerpav@gmail.com>
 
 	* board/board-blue-pill.h: New.
