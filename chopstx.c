@@ -918,8 +918,8 @@ chx_wakeup (struct chx_pq *pq)
     }
   else
     {
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
       tp = (struct chx_thread *)pq;
+      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
       chx_ready_enqueue (tp);
       if (tp->prio > running->prio)
 	yield = 1;
