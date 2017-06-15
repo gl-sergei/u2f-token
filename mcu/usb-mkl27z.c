@@ -445,7 +445,7 @@ handle_datastage_in (struct usb_dev *dev, uint8_t stat)
 	{
 	  /* No more data to send, proceed to receive OUT acknowledge.  */
 	  dev->state = WAIT_STATUS_OUT;
-	  kl27z_prepare_ep0_out (&dev->dev_req, 8, DATA1);
+	  kl27z_prepare_ep0_out (&dev->dev_req, 0, DATA1);
 	}
 
       return;
@@ -470,12 +470,13 @@ std_none (struct usb_dev *dev)
   return -1;
 }
 
+static uint16_t status_info;
+
 static int
 std_get_status (struct usb_dev *dev)
 {
   struct device_req *arg = &dev->dev_req;
   uint8_t rcp = arg->type & RECIPIENT;
-  uint16_t status_info = 0;
 
   if (arg->value != 0 || arg->len != 2 || (arg->index >> 8) != 0
       || USB_SETUP_SET (arg->type))
@@ -1000,8 +1001,7 @@ usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
       dev->state = IN_DATA;
     }
 
-  if (len)
-    kl27z_prepare_ep0_in (data_p->addr, len, DATA1);
+  kl27z_prepare_ep0_in (data_p->addr, len, DATA1);
 
   data_p->len -= len;
   data_p->addr += len;
