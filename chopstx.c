@@ -1,7 +1,7 @@
 /*
  * chopstx.c - Threads and only threads.
  *
- * Copyright (C) 2013, 2014, 2015, 2016
+ * Copyright (C) 2013, 2014, 2015, 2016, 2017
  *               Flying Stone Technology
  * Author: NIIBE Yutaka <gniibe@fsij.org>
  *
@@ -911,7 +911,7 @@ chx_wakeup (struct chx_pq *pq)
 	  if (tp->parent == &q_timer.q)
 	    chx_timer_dequeue (tp);
 	  chx_ready_enqueue (tp);
-	  if (tp->prio > running->prio)
+	  if (!running || tp->prio > running->prio)
 	    yield = 1;
 	}
       chx_spin_unlock (&px->lock);
@@ -921,7 +921,7 @@ chx_wakeup (struct chx_pq *pq)
       tp = (struct chx_thread *)pq;
       ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
       chx_ready_enqueue (tp);
-      if (tp->prio > running->prio)
+      if (!running || tp->prio > running->prio)
 	yield = 1;
     }
 

@@ -1,5 +1,7 @@
 2017-06-16  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx.c (chx_wakeup): Fix for RUNNING==NULL.
+
 	* mcu/usb-mkl27z.c (std_get_status): Use staic var, not auto.
 
 2017-05-18  NIIBE Yutaka  <gniibe@fsij.org>
