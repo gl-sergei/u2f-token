@@ -1,3 +1,13 @@
+2017-06-21  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct chx_pq): Use uintptr_t for V.
+	(struct chx_px): Likewise.
+	(struct chx_thread): Likewise.
+	(chx_sched): Use uintptr_t for the return value.
+	(chx_exit): Use the field V for holding exit value.
+	(chopstx_create): Use uintptr_t for STACK_ADDR.
+	(chopstx_join): Use the field V for exit value.
+
 2017-06-16  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_wakeup): Fix for RUNNING==NULL.

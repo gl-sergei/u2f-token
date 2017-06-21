@@ -34,7 +34,7 @@
 #include <chopstx.h>
 
 /*
- * Thread priority: higer has higher precedence.
+ * Thread priority: greater (as integer) has higher precedence.
  */
 #if !defined(CHX_PRIO_MAIN_INIT)
 #define CHX_PRIO_MAIN_INIT 1
@@ -49,6 +49,10 @@
 #endif
 
 #define MAX_PRIO (255+1)
+
+#ifndef MHZ
+#define MHZ 72
+#endif
 
 /*
  * Exception priority: lower has higher precedence.
@@ -129,10 +133,6 @@ chx_systick_get (void)
 {
   return *SYST_CVR;
 }
-
-#ifndef MHZ
-#define MHZ 72
-#endif
 
 static uint32_t usec_to_ticks (uint32_t usec)
 {
@@ -277,7 +277,6 @@ struct chx_stack_regs {
 /*
  * Constants for ARM.
  */
-#define REG_EXIT 4		/* R8 */
 #define REG_SP 8
 
 #define REG_R0   0
@@ -297,7 +296,7 @@ struct chx_pq {
   uint32_t                  : 8;
   uint32_t prio             : 8;
   struct chx_qh *parent;
-  uint32_t v;
+  uintptr_t v;
 };
 
 struct chx_px {			/* inherits PQ */
@@ -309,7 +308,7 @@ struct chx_px {			/* inherits PQ */
   uint32_t                  : 8;
   uint32_t prio             : 8;
   struct chx_qh *parent;
-  uint32_t v;
+  uintptr_t v;
   struct chx_thread *master;
   uint32_t *counter_p;
   uint16_t *ready_p;
@@ -329,7 +328,7 @@ struct chx_thread {		/* inherits PQ */
   uint32_t prio_orig        : 8;
   uint32_t prio             : 8;
   struct chx_qh *parent;
-  uint32_t v;
+  uintptr_t v;
   struct tcontext tc;
   struct chx_mtx *mutex_list;
   struct chx_cleanup *clp;
@@ -728,7 +727,7 @@ chx_request_preemption (uint16_t prio)
  *          0 on normal wakeup.
  *         -1 on cancellation.
  */
-static int __attribute__ ((naked, noinline))
+static uintptr_t __attribute__ ((naked, noinline))
 chx_sched (uint32_t yield)
 {
   register struct chx_thread *tp asm ("r0");
@@ -884,7 +883,7 @@ chx_sched (uint32_t yield)
 		: "memory");
 #endif
 
-  return (uint32_t)tp;
+  return (uintptr_t)tp;
 }
 
 
@@ -929,21 +928,18 @@ chx_wakeup (struct chx_pq *pq)
 }
 
 
-/* The RETVAL is saved into register R8.  */
+/* The RETVAL is saved into ->v.  */
 static void __attribute__((noreturn))
 chx_exit (void *retval)
 {
-  register uint32_t r8 asm ("r8");
   struct chx_pq *p;
-
-  asm volatile ("mov	%0, %1" : "=r" (r8) : "r" (retval));
 
   chx_cpu_sched_lock ();
   if (running->flag_join_req)
     {		       /* wake up a thread which requests to join */
       chx_spin_lock (&q_join.lock);
       for (p = q_join.q.next; p != (struct chx_pq *)&q_join.q; p = p->next)
-	if (p->v == (uint32_t)running)
+	if (p->v == (uintptr_t)running)
 	  {			/* should be one at most. */
 	    ll_dequeue (p);
 	    chx_wakeup (p);
@@ -958,7 +954,7 @@ chx_exit (void *retval)
     running->state = THREAD_FINISHED;
   else
     running->state = THREAD_EXITED;
-  asm volatile ("" : : "r" (r8) : "memory");
+  running->v = (uintptr_t)retval;
   chx_sched (CHX_SLEEP);
   /* never comes here. */
   for (;;);
@@ -1019,7 +1015,7 @@ extern void cause_link_time_error_unexpected_size_of_struct_chx_thread (void);
  */
 chopstx_t
 chopstx_create (uint32_t flags_and_prio,
-		uint32_t stack_addr, size_t stack_size,
+		uintptr_t stack_addr, size_t stack_size,
 		voidfunc thread_entry, void *arg)
 {
   struct chx_thread *tp;
@@ -1045,6 +1041,7 @@ chopstx_create (uint32_t flags_and_prio,
 
   memset (&tp->tc, 0, sizeof (tp->tc));
   tp->tc.reg[REG_SP] = (uint32_t)stack;
+
   tp->next = tp->prev = (struct chx_pq *)tp;
   tp->mutex_list = NULL;
   tp->clp = NULL;
@@ -1576,7 +1573,7 @@ chopstx_join (chopstx_t thd, void **ret)
 	chx_timer_dequeue (running);
       chx_spin_lock (&q_join.lock);
       ll_prio_enqueue ((struct chx_pq *)running, &q_join.q);
-      running->v = (uint32_t)tp;
+      running->v = (uintptr_t)tp;
       running->state = THREAD_WAIT_EXIT;
       tp->flag_join_req = 1;
 
@@ -1600,7 +1597,7 @@ chopstx_join (chopstx_t thd, void **ret)
     {
       tp->state = THREAD_FINISHED;
       if (ret)
-	*ret = (void *)tp->tc.reg[REG_EXIT]; /* R8 */
+	*ret = (void *)tp->v;
     }
 
   return r;
@@ -1633,7 +1630,7 @@ chx_join_hook (struct chx_px *px, struct chx_poll_head *pd)
     { /* Not yet exited.
        * Register the proxy to wait for TP's exit.
        */
-      px->v = (uint32_t)tp;
+      px->v = (uintptr_t)tp;
       chx_spin_lock (&q_join.lock);
       ll_prio_enqueue ((struct chx_pq *)px, &q_join.q);
       chx_spin_unlock (&q_join.lock);

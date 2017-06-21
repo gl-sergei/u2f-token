@@ -39,7 +39,7 @@ extern chopstx_t chopstx_main;
 /* NOTE: This signature is different to PTHREAD's one.  */
 chopstx_t
 chopstx_create (uint32_t flags_and_prio,
-		uint32_t stack_addr, size_t stack_size,
+		uintptr_t stack_addr, size_t stack_size,
 		void *(thread_entry) (void *), void *);
 #define CHOPSTX_PRIO_BITS 8
 #define CHOPSTX_DETACHED 0x10000
