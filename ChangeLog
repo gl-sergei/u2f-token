@@ -1,3 +1,10 @@
+2017-06-22  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_sched): Use ->V for return value.
+	(svc): Ditto.
+	(chx_wakeup): Set -> for the return value of chx_sched.
+	(chopstx_mutex_lock, chopstx_cancel): Likewise.
+
 2017-06-21  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (struct chx_pq): Use uintptr_t for V.

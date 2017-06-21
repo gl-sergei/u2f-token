@@ -816,8 +816,11 @@ chx_sched (uint32_t yield)
 
 		/* Normal context switch */
 	"0:\n\t"
+		"add	r0, #16\n\t" /* ->V */
+		"ldr	r1, [r0]\n\t"
+		"str	r1, [sp]\n\t"
 		/**/
-		"add	r0, #20\n\t"
+		"add	r0, #4\n\t"
 		"ldm	r0!, {r4, r5, r6, r7}\n\t"
 		"ldm	r0!, {r1, r2, r3}\n\t"
 		"mov	r8, r1\n\t"
@@ -906,7 +909,7 @@ chx_wakeup (struct chx_pq *pq)
       tp = px->master;
       if (tp->state == THREAD_WAIT_POLL)
 	{
-	  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
+	  tp->v = (uintptr_t)1;
 	  if (tp->parent == &q_timer.q)
 	    chx_timer_dequeue (tp);
 	  chx_ready_enqueue (tp);
@@ -918,7 +921,7 @@ chx_wakeup (struct chx_pq *pq)
   else
     {
       tp = (struct chx_thread *)pq;
-      ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = 1;
+      tp->v = (uintptr_t)1;
       chx_ready_enqueue (tp);
       if (!running || tp->prio > running->prio)
 	yield = 1;
@@ -1229,7 +1232,7 @@ chopstx_mutex_lock (chopstx_mutex_t *mutex)
 	  if (tp0->state == THREAD_WAIT_TIME
 	      || tp0->state == THREAD_WAIT_POLL)
 	    {
-	      ((struct chx_stack_regs *)tp0->tc.reg[REG_SP])->reg[REG_R0] = 1;
+	      tp0->v = (uintptr_t)1;
 	      if (tp0->parent == &q_timer.q)
 		chx_timer_dequeue (tp0);
 
@@ -1688,7 +1691,7 @@ chopstx_cancel (chopstx_t thd)
       return;
     }
 
-  ((struct chx_stack_regs *)tp->tc.reg[REG_SP])->reg[REG_R0] = -1;
+  tp->v = (uintptr_t)-1;
   chx_ready_enqueue (tp);
   if (tp->prio > running->prio)
     chx_sched (CHX_YIELD);
@@ -2111,6 +2114,10 @@ svc (void)
     }
 
   asm volatile (
+	"cbz	r0, 0f\n\t"
+	"ldr	r1, [r0, #16]\n\t" /* ->V */
+	"str	r1, [sp]\n\t"
+    "0:\n\t"
 	"b	.L_CONTEXT_SWITCH"
 	: /* no output */ : "r" (tp) : "memory");
 }
