@@ -1497,12 +1497,6 @@ chopstx_cleanup_pop (int execute)
 }
 
 
-/*
- *  We put "naked" attribute to chopstx_exit function.  Since it never
- *  returns, function prologue is not needed.
- */
-void chopstx_exit (void *retval) __attribute__ ((naked));
-
 /**
  * chopstx_exit - Terminate the execution of running thread
  * @retval: Return value (to be caught by a joining thread)

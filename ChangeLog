@@ -4,6 +4,7 @@
 	(svc): Ditto.
 	(chx_wakeup): Set -> for the return value of chx_sched.
 	(chopstx_mutex_lock, chopstx_cancel): Likewise.
+	(chopstx_exit): Remove naked attribute.
 
 2017-06-21  NIIBE Yutaka  <gniibe@fsij.org>
 
