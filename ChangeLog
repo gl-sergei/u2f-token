@@ -1,5 +1,7 @@
 2017-06-23  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* chopstx-gnu-linux.c, chopstx-gnu-linux.h: New.
+
 	* chopstx.c (chx_init): Use chx_init_arch.
 	(chopstx_create): Use chopstx_create_arch.
 	(chx_systick_reset, chx_systick_reload, chx_systick_get)
