@@ -1,3 +1,16 @@
+2017-06-23  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_init): Use chx_init_arch.
+	(chopstx_create): Use chopstx_create_arch.
+	(chx_systick_reset, chx_systick_reload, chx_systick_get)
+	(usec_to_ticks, chx_enable_intr, chx_clr_intr, chx_disable_intr)
+	(chx_set_intr_prio, chx_prio_init, chx_cpu_sched_lock)
+	(chx_cpu_sched_unlock, idle, chx_handle_intr)
+	(chx_request_preemption, chx_sched, preempt, svc): Move to...
+	* chopstx-cortex-m.c: ... here.
+	(chx_init_arch, chopstx_create_arch): New.
+	* chopstx-cortex-m.h: New for tcontext_t.
+
 2017-06-22  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx.c (chx_sched): Use ->V for return value.
