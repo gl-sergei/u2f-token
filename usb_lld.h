@@ -134,12 +134,19 @@ uint8_t usb_lld_current_configuration (struct usb_dev *dev);
 void usb_lld_prepare_shutdown (void);
 void usb_lld_shutdown (void);
 
-#ifdef MCU_KINETIS_L
+#if defined(MCU_KINETIS_L)
 void usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len);
 void usb_lld_rx_enable_buf (int ep_num, void *buf, size_t len);
 
 void usb_lld_setup_endp (struct usb_dev *dev, int ep_num, int rx_en, int tx_en);
 void usb_lld_stall (int ep_num);
+#elif defined(GNU_LINUX_EMULATION)
+void usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len);
+void usb_lld_rx_enable_buf (int ep_num, void *buf, size_t len);
+
+void usb_lld_setup_endp (struct usb_dev *dev, int ep_num, int rx_en, int tx_en);
+void usb_lld_stall_tx (int ep_num);
+void usb_lld_stall_rx (int ep_num);
 #else
 /* EP_TYPE[1:0] EndPoint TYPE */
 #define EP_BULK        (0x0000) /* EndPoint BULK        */
