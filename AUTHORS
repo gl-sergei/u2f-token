@@ -42,6 +42,9 @@ NIIBE Yutaka:
 
 	board-fs-bb48.h
 
+    Under contract of g10 Code GmbH, wrote:
+        mcu/usb-usbip.c
+
 Paul Fertser:
     Added Blue Pill support.
 	board/board-blue-pill.h

@@ -1,3 +1,11 @@
+2017-06-26  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c: New.
+
+	* rules.mk: Support EMULATION.
+
+	* entry.c (main): Support GNU_LINUX_EMULATION.
+
 2017-06-23  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* chopstx-gnu-linux.c, chopstx-gnu-linux.h: New.
