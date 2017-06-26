@@ -1,5 +1,7 @@
 2017-06-26  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* board/board-gnu-linux.h: New.
+
 	* mcu/usb-usbip.c: New.
 
 	* rules.mk: Support EMULATION.
