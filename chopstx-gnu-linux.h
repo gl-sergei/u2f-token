@@ -1,3 +1,4 @@
+#include <ucontext.h>
 /*
  * The thread context: specific to GNU/Linux.
  *

@@ -30,7 +30,7 @@ struct chx_qh {
   struct chx_pq *next, *prev;
 };
 
-typedef uint32_t chopstx_t;
+typedef uintptr_t chopstx_t;
 typedef uint8_t chopstx_prio_t;
 
 extern chopstx_t chopstx_main;

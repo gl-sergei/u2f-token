@@ -146,7 +146,7 @@ chx_handle_intr (uint32_t irq_num)
 static ucontext_t idle_tc;
 static char idle_stack[4096];
 
-static struct chx_thread main_thread;
+struct chx_thread main_thread;
 
 void
 chx_sigmask (ucontext_t *uc)
@@ -163,6 +163,7 @@ chx_sigmask (ucontext_t *uc)
 static void
 sigalrm_handler (int sig, siginfo_t *siginfo, void *arg)
 {
+  extern void chx_timer_expired (void);
   ucontext_t *uc = arg;
   (void)sig;
   (void)siginfo;
@@ -321,6 +322,7 @@ static struct chx_thread *
 chopstx_create_arch (uintptr_t stack_addr, size_t stack_size,
 		     voidfunc thread_entry, void *arg)
 {
+  struct chx_thread *tp;
   tp = malloc (sizeof (struct chx_thread));
   if (!tp)
     chx_fatal (CHOPSTX_ERR_THREAD_CREATE);
