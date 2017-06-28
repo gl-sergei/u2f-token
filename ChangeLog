@@ -1,3 +1,8 @@
+2017-06-28  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (struct usbip_msg_cmd, struct usbip_msg_rep):
+	Use different struct for command and reply.
+
 2017-06-27  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-cdc-gnu-linux/README: New.

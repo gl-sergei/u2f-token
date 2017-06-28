@@ -235,14 +235,22 @@ attach_device (char busid[32], size_t *len_p)
 
 #define URB_DATA_SIZE 65535
 
-struct usbip_msg_ctl {
+struct usbip_msg_cmd {
+  uint32_t devid;
+  uint32_t dir;
+  uint32_t ep;
+  uint32_t flags;
+  uint32_t len;
+  uint32_t rsvd[3];
+};
+
+struct usbip_msg_rep {
   uint32_t devid;
   uint32_t dir;
   uint32_t ep;
   uint32_t status;
   uint32_t len;
-  uint32_t rsvd[2];
-  uint32_t err_cnt;
+  uint32_t rsvd[5];
 };
 
 static pthread_mutex_t urb_mutex;
@@ -436,25 +444,18 @@ static void
 usbip_finish_urb (struct urb *urb, int r)
 {
   struct usbip_msg_head msg;
-  struct usbip_msg_ctl msg_ctl;
-  const char zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  struct usbip_msg_rep msg_rep;
 
   msg.cmd = htonl (REP_URB_SUBMIT);
   msg.seq = htonl (urb->seq);
 
-  msg_ctl.devid = 0;
-  msg_ctl.dir = 0;
-  msg_ctl.ep = 0;
-  msg_ctl.len = htonl (urb->len);/*???*/
-  msg_ctl.rsvd[0] = msg_ctl.rsvd[1] = 0;
-  msg_ctl.err_cnt = 0;
+  memset (&msg_rep, 0, sizeof (msg_rep));
+  msg_rep.len = htonl (urb->len);
 
   fprintf (stderr, "ufu: %d (%d)\n", r, urb->seq);
 
   if (r < 0)
-    msg_ctl.status = htonl (r);
-  else
-    msg_ctl.status = 0;
+    msg_rep.status = htonl (r);
 
   pthread_mutex_lock (&fd_mutex);
   if ((size_t)send (fd, &msg, sizeof (msg), 0) != sizeof (msg))
@@ -462,12 +463,7 @@ usbip_finish_urb (struct urb *urb, int r)
       perror ("reply send");
     }
 
-  if ((size_t)send (fd, &msg_ctl, sizeof (msg_ctl), 0) != sizeof (msg_ctl))
-    {
-      perror ("reply send");
-    }
-
-  if ((size_t)send (fd, zeros, sizeof (zeros), 0) != sizeof (zeros))
+  if ((size_t)send (fd, &msg_rep, sizeof (msg_rep), 0) != sizeof (msg_rep))
     {
       perror ("reply send");
     }
@@ -607,25 +603,25 @@ usbip_handle_urb (uint32_t seq)
 {
   int r = 0;
   struct usbip_msg_head msg;
-  struct usbip_msg_ctl msg_ctl;
+  struct usbip_msg_cmd msg_cmd;
+  struct usbip_msg_rep msg_rep;
   struct urb *urb = NULL;
-  const char zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-  if (recv (fd, (char *)&msg_ctl, sizeof (msg_ctl), 0) != sizeof (msg_ctl))
+  if (recv (fd, (char *)&msg_cmd, sizeof (msg_cmd), 0) != sizeof (msg_cmd))
     {
       perror ("msg recv ctl");
       r = -EINVAL;
       goto leave;
     }
 
-  if (ntohl (msg_ctl.len) > URB_DATA_SIZE)
+  if (ntohl (msg_cmd.len) > URB_DATA_SIZE)
     {
       perror ("msg len too long");
       r = -EINVAL;
       goto leave;
     }
 
-  urb = malloc (sizeof (struct urb) + ntohl (msg_ctl.len));
+  urb = malloc (sizeof (struct urb) + ntohl (msg_cmd.len));
   if (urb == NULL)
     {
       perror ("URB alloc");
@@ -650,10 +646,10 @@ usbip_handle_urb (uint32_t seq)
 
   urb->tid = 0;
   urb->seq = seq;
-  urb->devid = ntohl (msg_ctl.devid);
-  urb->dir = ntohl (msg_ctl.dir);
-  urb->ep = ntohl (msg_ctl.ep);
-  urb->remain = urb->len = ntohl (msg_ctl.len);
+  urb->devid = ntohl (msg_cmd.devid);
+  urb->dir = ntohl (msg_cmd.dir);
+  urb->ep = ntohl (msg_cmd.ep);
+  urb->remain = urb->len = ntohl (msg_cmd.len);
   urb->data_p = urb->data;
 
   printf ("URB: dir=%s, ep=%d, len=%d\n", urb->dir==USBIP_DIR_IN? "IN": "OUT",
@@ -699,13 +695,8 @@ usbip_handle_urb (uint32_t seq)
   msg.cmd = htonl (REP_URB_SUBMIT);
   msg.seq = htonl (urb->seq);
 
-  msg_ctl.devid = 0;
-  msg_ctl.dir = 0;
-  msg_ctl.ep = 0;
-  msg_ctl.status = htonl (r);
-  msg_ctl.len = 0;
-  msg_ctl.rsvd[0] = msg_ctl.rsvd[1] = 0;
-  msg_ctl.err_cnt = 0;
+  memset (&msg_rep, 0, sizeof (msg_rep));
+  msg_rep.status = htonl (r);
   
   pthread_mutex_lock (&fd_mutex);
   if ((size_t)send (fd, &msg, sizeof (msg), 0) != sizeof (msg))
@@ -713,12 +704,7 @@ usbip_handle_urb (uint32_t seq)
       perror ("reply send");
     }
 
-  if ((size_t)send (fd, &msg_ctl, sizeof (msg_ctl), 0) != sizeof (msg_ctl))
-    {
-      perror ("reply send");
-    }
-
-  if ((size_t)send (fd, zeros, sizeof (zeros), 0) != sizeof (zeros))
+  if ((size_t)send (fd, &msg_rep, sizeof (msg_rep), 0) != sizeof (msg_rep))
     {
       perror ("reply send");
     }
@@ -868,8 +854,8 @@ usbip_process_cmd (void)
     }
   else if (msg.cmd == CMD_URB_UNLINK)
     {
-      struct usbip_msg_ctl msg_ctl;
-      const char zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+      struct usbip_msg_cmd msg_cmd;
+      struct usbip_msg_rep msg_rep;
       uint32_t seq;
       struct urb *urb;
       char buf[8];
@@ -881,7 +867,7 @@ usbip_process_cmd (void)
 	  return -1;
 	}
 
-      if (recv (fd, (char *)&msg_ctl, sizeof (msg_ctl), 0) != sizeof (msg_ctl))
+      if (recv (fd, (char *)&msg_cmd, sizeof (msg_cmd), 0) != sizeof (msg_cmd))
 	{
 	  perror ("msg recv ctl");
 	  return -1;
@@ -893,7 +879,7 @@ usbip_process_cmd (void)
 	  return -1;
 	}
 
-      seq = ntohl (msg_ctl.status);
+      seq = ntohl (msg_cmd.flags);
 
       pthread_mutex_lock (&urb_mutex);
       if ((urb = urb_list))
@@ -920,13 +906,9 @@ usbip_process_cmd (void)
       msg.cmd = htonl (REP_URB_UNLINK);
       msg.seq = htonl (msg.seq);
 
-      msg_ctl.devid = 0;
-      msg_ctl.dir = 0;
-      msg_ctl.ep = 0;
+      memset (&msg_rep, 0, sizeof (msg_rep));
       if (found)
-	msg_ctl.status = htonl(-ECONNRESET);
-      else
-	msg_ctl.status = 0;
+	msg_rep.status = htonl(-ECONNRESET);
 
       printf ("URB UNLINK! %d: %s\n", seq, found?"o":"x");
 
@@ -936,15 +918,11 @@ usbip_process_cmd (void)
 	  perror ("reply send");
 	}
 
-      if ((size_t)send (fd, &msg_ctl, sizeof (msg_ctl), 0) != sizeof (msg_ctl))
+      if ((size_t)send (fd, &msg_rep, sizeof (msg_rep), 0) != sizeof (msg_rep))
 	{
 	  perror ("reply send");
 	}
 
-      if ((size_t)send (fd, zeros, sizeof (zeros), 0) != sizeof (zeros))
-	{
-	  perror ("reply send");
-	}
       pthread_mutex_unlock (&fd_mutex);
     }
   else
