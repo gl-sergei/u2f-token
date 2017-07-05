@@ -284,8 +284,8 @@ struct usb_control {
   struct urb *urb;
 };
 
-static struct usb_control usbc_ep_in[7];
-static struct usb_control usbc_ep_out[7];
+static struct usb_control usbc_ep_in[8];
+static struct usb_control usbc_ep_out[8];
 #define usbc_ep0 usbc_ep_out[0]
 /*
  * usbc_ep_in[0] not used.

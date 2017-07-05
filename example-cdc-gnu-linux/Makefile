@@ -5,17 +5,17 @@ PROJECT = sample
 ### This is for GNU/Linux
 
 CHOPSTX = ..
-LDSCRIPT= 
+LDSCRIPT=
 CSRC = sample.c usb-cdc.c
 
 CHIP=gnu-linux
 # USE_SYS = yes
-USE_SYS = 
+USE_SYS =
 USE_USB = yes
 EMULATION=yes
 
 ###################################
-CROSS = 
+CROSS =
 CC   = $(CROSS)gcc
 LD   = $(CROSS)gcc
 OBJCOPY   = $(CROSS)objcopy
@@ -34,4 +34,3 @@ board.h:
 	@exit 1
 
 distclean: clean
-	rm -f board.h
