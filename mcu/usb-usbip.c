@@ -483,7 +483,7 @@ usbip_finish_urb (struct urb *urb, int r)
 
 
 static int
-hc_handle_data_urb  (struct usb_control *usbc_p)
+hc_handle_data_urb (struct usb_control *usbc_p)
 {
   int r;
   uint16_t count;
@@ -505,7 +505,7 @@ hc_handle_data_urb  (struct usb_control *usbc_p)
       urb->data_p += count;
       urb->remain -= count;
 
-      if (count < 64)
+      if (urb->remain == 0 || count < 64)
 	{
 	  size_t len = urb->len - urb->remain;
 
@@ -532,11 +532,11 @@ hc_handle_data_urb  (struct usb_control *usbc_p)
 
       urb->remain -= r;
       urb->data_p += r;
-      if (r < 64)
+      if (urb->remain == 0 || r < 64)
 	{
 	  size_t len = urb->len - urb->remain;
 
-	  fprintf (stderr, "<-data: %lu\n", len);
+	  fprintf (stderr, "<-data: %lu %d\n", len, r);
 	  // successfully finished
 	  if (len)
 	    {
@@ -1257,7 +1257,7 @@ control_read_data_transaction (char *buf, uint16_t count)
   if (usbc_ep0.state == USB_STATE_READY)
     {
       if (usbc_ep0.len > count)
-	fprintf (stderr, "*** length %d\n", usbc_ep0.len);
+	fprintf (stderr, "***c read: length %d > %d\n", usbc_ep0.len, count);
       else
 	count = usbc_ep0.len;
 
@@ -1339,16 +1339,14 @@ read_data_transaction (struct usb_control *usbc_p,
 		       int ep_num, char *buf, uint16_t count)
 {
   if (usbc_p->len > count)
-    {
-      fprintf (stderr, "*** length %d\n", usbc_p->len);
-      usbc_p->state = USB_STATE_STALL;
-      return -EPIPE;
-    }
+    fprintf (stderr, "*** length %d > %d\n", usbc_p->len, count);
+  else
+    count = usbc_p->len;
 
   usbc_p->state = USB_STATE_NAK;
-  memcpy (buf, usbc_p->buf, usbc_p->len);
+  memcpy (buf, usbc_p->buf, count);
   notify_device (USB_INTR_DATA_TRANSFER, ep_num, USBIP_DIR_IN);
-  return usbc_p->len;
+  return count;
 }
 
 void chx_handle_intr (uint32_t irq_num);
@@ -2135,14 +2133,14 @@ usb_lld_setup_endp (struct usb_dev *dev, int ep_num, int rx_en, int tx_en)
 void
 usb_lld_stall_tx (int ep_num)
 {
-  printf ("stall tx %d", ep_num);
+  printf ("stall tx %d\n", ep_num);
   usbc_ep_in[ep_num].state = USB_STATE_STALL;
 }
 
 void
 usb_lld_stall_rx (int ep_num)
 {
-  printf ("stall rx %d", ep_num);
+  printf ("stall rx %d\n", ep_num);
   usbc_ep_out[ep_num].state = USB_STATE_STALL;
 }
 
@@ -2175,5 +2173,5 @@ usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len)
   usbc_p->len = len;
   write (usbc_p->eventfd, &l, sizeof (l));
   pthread_mutex_unlock (&usbc_p->mutex);
-  printf ("usb_lld_tx_enable_buf: %d\n", ep_num);
+  printf ("usb_lld_tx_enable_buf: %d %ld\n", ep_num, len);
 }
