@@ -1,3 +1,9 @@
+2017-07-07  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (usbip_handle_data_urb): Fix error return value.
+	(notify_hostcontroller): New.
+	(usb_lld_stall_tx, usb_lld_stall_rx): Notify host controller side.
+
 2017-07-06  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/usb-usbip.c (hc_handle_data_urb): Fix the condition of the
