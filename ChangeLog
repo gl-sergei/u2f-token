@@ -1,3 +1,8 @@
+2017-08-03  Jeremy Drake <jeremydrake+gnuk@eacceleration.com>
+
+	* mcu/sys-stm32f103.c (flash_write): Allow compile time
+	flash size definition by STM32F103_OVERRIDE_FLASH_SIZE_KB.
+
 2017-08-02  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* contrib/adc-gnu-linux.c: New.
