@@ -6,7 +6,7 @@ CHOPSTX = ..
 LDSCRIPT= u2f.ld
 CSRC = u2f.c usb-hid.c dbug.c u2f-hid.c u2f-apdu.c \
 	sha256.c neug.c random.c ec_p256r1.c bn.c jpc_p256r1.c \
-	call-ec_p256r1.c modp256r1.c mod.c hmac.c
+	call-ec_p256r1.c modp256r1.c mod.c hmac.c pbt.c
 
 CHIP=stm32f103
 

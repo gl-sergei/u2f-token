@@ -5,6 +5,7 @@
 #include "hmac.h"
 #include "random.h"
 #include "sys.h"
+#include "pbt.h"
 
 #define CLA(apdu)  ((apdu)[0])
 #define INS(apdu)  ((apdu)[1])
@@ -293,6 +294,16 @@ u2f_write_ctr (uint32_t val)
   flash_write ((uint32_t) ctr_addr, (uint8_t *) &val, sizeof (val));
 }
 
+static void
+u2f_inc_ctr (void)
+{
+  uint32_t ctr;
+
+  ctr = u2f_read_ctr ();
+  ctr++;
+  u2f_write_ctr (ctr);
+}
+
 static int
 u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
 {
@@ -305,14 +316,11 @@ u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
   resp->flags = U2F_AUTH_FLAG_TUP;
 
   ctr = u2f_read_ctr ();
-  ctr++;
 
   resp->ctr[0] = ctr >> 24 & 0xff;
   resp->ctr[1] = ctr >> 16 & 0xff;
   resp->ctr[2] = ctr >>  8 & 0xff;
   resp->ctr[3] = ctr       & 0xff;
-
-  u2f_write_ctr (ctr);
 
   sha256_context ctx;
 
@@ -398,14 +406,16 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
           u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_LENGTH);
           break;
         }
-      // if (!user_presence)
-      //   {
-      //     u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_CONDITIONS_NOT_SATISFIED);
-      //     return 0;
-      //   }
+      if (!user_presence_get ())
+        {
+          u2f_apdu_error (apdu_resp.bytes, resp_len,
+                          U2F_SW_CONDITIONS_NOT_SATISFIED);
+          return 0;
+        }
       ret = u2f_register ((U2F_REGISTER_REQ *) DATA (apdu), &apdu_resp.reg);
       if (ret > 0)
         {
+          user_presence_reset ();
           *resp_len = ret;
           append_sw (apdu_resp.bytes, resp_len, U2F_SW_NO_ERROR);
         }
@@ -421,6 +431,14 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
         {
           if (P1 (apdu) != U2F_AUTH_CHECK_ONLY)
             {
+            if (!user_presence_get ())
+              {
+                u2f_apdu_error (apdu_resp.bytes, resp_len,
+                                U2F_SW_CONDITIONS_NOT_SATISFIED);
+                return 0;
+              }
+              u2f_inc_ctr ();
+              user_presence_reset ();
               *resp_len = ret;
               append_sw (apdu_resp.bytes, resp_len, U2F_SW_NO_ERROR);
             }

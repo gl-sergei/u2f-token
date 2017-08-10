@@ -1,1 +1,1 @@
-../board/board-blue-pill.h
+../board/board-maple-mini.h

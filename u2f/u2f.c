@@ -13,6 +13,7 @@
 #include "u2f-hid.h"
 #include "random.h"
 #include "adc.h"
+#include "pbt.h"
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
@@ -33,7 +34,7 @@ pwm (void *arg)
 
   while (1)
     {
-      set_led (blink_is_on & v);
+      set_led ((blink_is_on & v) || user_presence_get ());
       chopstx_usec_wait (m);
       set_led (0);
       chopstx_usec_wait (100-m);
@@ -70,7 +71,6 @@ blk (void *arg)
 
   return NULL;
 }
-
 
 #define PRIO_PWM 3
 #define PRIO_BLK 2
@@ -115,6 +115,8 @@ main (int argc, const char *argv[])
   adc_init ();
 
   random_init ();
+
+  pbt_init ();
 
   flash_unlock ();
 
