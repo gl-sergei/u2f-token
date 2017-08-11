@@ -1,3 +1,8 @@
+2017-08-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.4.
+	* doc/chopstx.texi (VERSION): 1.4.
+
 2017-08-03  Jeremy Drake <jeremydrake+gnuk@eacceleration.com>
 
 	* mcu/sys-stm32f103.c (flash_write): Allow compile time

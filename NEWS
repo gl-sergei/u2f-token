@@ -1,6 +1,15 @@
 NEWS - Noteworthy changes
 
 
+* Major changes in Chopstx 1.4
+
+  Released 2017-08-11
+
+** New port: Emulation on GNU/Linux 
+Now, user can run Chopstx application on GNU/Linux.  Its USB driver is
+by USBIP.  Its ADC driver is dummy with random(3).
+
+
 * Major changes in Chopstx 1.3
 
   Released 2017-02-02
