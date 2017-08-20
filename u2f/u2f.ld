@@ -8,6 +8,7 @@ __process2_stack_size__  = 0x0200; /* blk                     */
 __process3_stack_size__  = 0x0200; /* usb-hid                 */
 __process4_stack_size__  = 0x1000; /* u2f-hid                 */
 __process5_stack_size__  = 0x0500; /* rng                     */
+__process6_stack_size__  = 0x0200; /* pbt                     */
 
 MEMORY
 {
@@ -84,27 +85,37 @@ SECTIONS
     .process_stack :
     {
         . = ALIGN(8);
+
+        __process6_stack_base__ = .;
+        . += __process6_stack_size__;
+        . = ALIGN(8);
+        __process6_stack_end__ = .;
+
         __process5_stack_base__ = .;
         . += __process5_stack_size__;
         . = ALIGN(8);
         __process5_stack_end__ = .;
-        . = ALIGN(8);
+
         __process4_stack_base__ = .;
         . += __process4_stack_size__;
         . = ALIGN(8);
         __process4_stack_end__ = .;
+
         __process3_stack_base__ = .;
         . += __process3_stack_size__;
         . = ALIGN(8);
         __process3_stack_end__ = .;
+
         __process2_stack_base__ = .;
         . += __process2_stack_size__;
         . = ALIGN(8);
         __process2_stack_end__ = .;
+
         __process1_stack_base__ = .;
         . += __process1_stack_size__;
         . = ALIGN(8);
         __process1_stack_end__ = .;
+
         __process0_stack_base__ = .;
         . += __process0_stack_size__;
         . = ALIGN(8);
