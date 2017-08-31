@@ -6,12 +6,12 @@
  *
  * This file is a part of U2F firmware for STM32
  *
- * Chopstx is free software: you can redistribute it and/or modify it
+ * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Chopstx is distributed in the hope that it will be useful, but
+ * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
@@ -22,7 +22,7 @@
  * As additional permission under GNU GPL version 3 section 7, you may
  * distribute non-source form of the Program without the copy of the
  * GNU GPL normally required by section 4, provided you inform the
- * receipents of GNU GPL by a written offer.
+ * recipients of GNU GPL by a written offer.
  *
  */
 #include <stdint.h>

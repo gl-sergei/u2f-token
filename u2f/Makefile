@@ -43,3 +43,9 @@ u2f-apdu.c: cert/certificates.c
 
 distclean: clean
 	rm -f board.h
+
+certclean:
+	rm -f cert/certificates.c
+	rm -f cert/*.der
+	rm -f cert/*.pem
+	rm -f cert/*.csr
