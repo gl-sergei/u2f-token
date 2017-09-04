@@ -57,7 +57,7 @@ In the development of Gnuk, we developed:
 
 It is now maintained as example-cdc/sys.c.
 
-There is another version in example-led/sys.c, which also support
+There is another version in example-led/sys.c, which also supports
 STM32F030, as well as STM32F103.  But, it wouldn't be useful for
 STM32F030.  In fact, the file example-fsm-55/sys.c has name sys.c
 but it doesn't include any system routines.
@@ -74,7 +74,7 @@ Later on, we add another point.
     (3) It is good if the executable of Gnuk could be shared among
         different boards.
 
-For (1) and (2), we decided put some useful routines and data which is
+For (1) and (2), we decided put some useful routines and data which are
 not need to be changed.
 
 Now, the first 4KiB of flash ROM consists of:
@@ -84,7 +84,7 @@ Now, the first 4KiB of flash ROM consists of:
 
 SYS consists of:
 
-  Internal: reset entry, end of RAM
+  Internal: reset entry, address of the end of RAM
   Data: board identification
   Routines: board specific
             board independent
@@ -94,7 +94,7 @@ and here is the list of all.
 * Internal routines
 
   reset entry
-  end of RAM
+  address of the end of RAM
 
 * Board identification
 

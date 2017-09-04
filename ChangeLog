@@ -1,5 +1,7 @@
 2017-09-04  NIIBE Yutaka  <gniibe@fsij.org>
 
+	* mcu/sys-stm32f103.h (nvic_system_reset): Add noreturn attribute.
+
 	* sys.h: Add mcu/sys-gnu-linux.h.
 
 	* mcu/sys-gnu-linux.c: New.
