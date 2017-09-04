@@ -1,3 +1,10 @@
+2017-09-04  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* sys.h: Add mcu/sys-gnu-linux.h.
+
+	* mcu/sys-gnu-linux.c: New.
+	* mcu/sys-gnu-linux.h: New.
+
 2017-08-11  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* VERSION: 1.4.
