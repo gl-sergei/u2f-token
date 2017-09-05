@@ -1,3 +1,8 @@
+2017-09-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc: Use stack-def.h.
+	* example-cdc/stack-def.h: New.
+
 2017-09-04  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/sys-stm32f103.h (nvic_system_reset): Add noreturn attribute.
