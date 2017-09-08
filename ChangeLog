@@ -1,3 +1,7 @@
+2017-09-08  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-gnu-linux.c: Flash emulation implemented.
+
 2017-09-05  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-cdc: Use stack-def.h.
