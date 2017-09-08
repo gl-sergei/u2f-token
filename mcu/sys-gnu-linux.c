@@ -86,13 +86,13 @@ flash_unlock (void)
 }
 
 int
-flash_program_halfword (uint32_t addr, uint16_t data)
+flash_program_halfword (uintptr_t addr, uint16_t data)
 {
   off_t offset;
   char buf[2];
 
-  fprintf (stderr, "flash_program_halfword: addr=%08x, data=%04x\n", addr, data);
-  offset = (off_t)(addr - (uint32_t)flash_addr);
+  fprintf (stderr, "flash_program_halfword: addr=%016lx, data=%04x\n", addr, data);
+  offset = (off_t)(addr - (uintptr_t)flash_addr);
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
@@ -112,13 +112,13 @@ flash_program_halfword (uint32_t addr, uint16_t data)
 static const uint8_t erased[] = { [0 ... 1023 ] = 0xff };
 
 int
-flash_erase_page (uint32_t addr)
+flash_erase_page (uintptr_t addr)
 {
   off_t offset;
 
-  fprintf (stderr, "flash_erase_page: addr=%08x\n", addr);
+  fprintf (stderr, "flash_erase_page: addr=%016lx\n", addr);
 
-  offset = (off_t)(addr - (uint32_t)flash_addr);
+  offset = (off_t)(addr - (uintptr_t)flash_addr);
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
@@ -126,7 +126,7 @@ flash_erase_page (uint32_t addr)
       return 1;
     }
 
-  if (write (flash_fd, erased, sizeof (erased)) != len)
+  if (write (flash_fd, erased, sizeof (erased)) != sizeof (erased))
     {
       perror ("flash_erase_page");
       return 2;
@@ -147,13 +147,13 @@ flash_check_blank (const uint8_t *p_start, size_t size)
 }
 
 int
-flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
+flash_write (uintptr_t dst_addr, const uint8_t *src, size_t len)
 {
   off_t offset;
 
-  fprintf (stderr, "flash_write: addr=%08x, %p, %zd\n", dst_addr, src, len);
+  fprintf (stderr, "flash_write: addr=%016lx, %p, %zd\n", dst_addr, src, len);
 
-  offset = (off_t)(dst_addr - (uint32_t)flash_addr);
+  offset = (off_t)(dst_addr - (uintptr_t)flash_addr);
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
@@ -161,7 +161,7 @@ flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
       return 1;
     }
 
-  if (write (flash_fd, src, len) != len)
+  if (write (flash_fd, src, len) != (ssize_t)len)
     {
       perror ("flash_write");
       return 2;

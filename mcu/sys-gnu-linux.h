@@ -23,10 +23,10 @@ unique_device_id (void)
 
 void set_led (int on);
 void flash_unlock (void);
-int flash_program_halfword (uint32_t addr, uint16_t data);
-int flash_erase_page (uint32_t addr);
+int flash_program_halfword (uintptr_t addr, uint16_t data);
+int flash_erase_page (uintptr_t addr);
 int flash_check_blank (const uint8_t *p_start, size_t size);
-int flash_write (uint32_t dst_addr, const uint8_t *src, size_t len);
+int flash_write (uintptr_t dst_addr, const uint8_t *src, size_t len);
 int flash_protect (void);
 void __attribute__((noreturn))
 flash_erase_all_and_exec (void (*entry)(void));
