@@ -4,6 +4,8 @@
 #include "mcu/sys-mkl27z.h"
 #elif defined(MCU_STM32F0)
 #include "mcu/sys-stm32f0.h"
+#elif defined(MCU_EFM32)
+#include "mcu/sys-efm32.h"
 #else
 #include "mcu/sys-stm32f103.h"
 #endif
