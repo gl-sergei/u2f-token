@@ -10,7 +10,10 @@ extern const uint8_t sys_board_name[];
 static inline const uint8_t *
 unique_device_id (void)
 {
-  /* STM32F103 has 96-bit unique device identifier */
+  /*
+   * STM32F103 has 96-bit unique device identifier.
+   * This routine mimics that.
+   */
 
   static const uint8_t id[] = { /* My RSA fingerprint */
     0x12, 0x41, 0x24, 0xBD, 0x3B, 0x48, 0x62, 0xAF,
@@ -22,6 +25,8 @@ unique_device_id (void)
 }
 
 void set_led (int on);
+
+uintptr_t flash_init (const char *f_name);
 void flash_unlock (void);
 int flash_program_halfword (uintptr_t addr, uint16_t data);
 int flash_erase_page (uintptr_t addr);

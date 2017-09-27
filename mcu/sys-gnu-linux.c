@@ -19,8 +19,10 @@ const uint8_t sys_version[8] = {
   '3', 0, '.', 0, '0', 0,
 };
 
+#if defined(USE_SYS3) || defined(USE_SYS_BOARD_ID)
 const uint32_t sys_board_id = BOARD_ID;
 const uint8_t sys_board_name[] = BOARD_NAME;
+#endif
 
 void
 set_led (int on)
@@ -33,7 +35,7 @@ static size_t flash_size;
 static void * flash_addr;
 static int flash_fd;
 
-void
+uintptr_t
 flash_init (const char *f_name)
 {
   int fd;
@@ -69,6 +71,8 @@ flash_init (const char *f_name)
   flash_path = f_name;
   flash_addr = addr;
   flash_size = sb.st_size;
+
+  return (uintptr_t)addr;
 }
 
 void
@@ -93,6 +97,12 @@ flash_program_halfword (uintptr_t addr, uint16_t data)
 
   fprintf (stderr, "flash_program_halfword: addr=%016lx, data=%04x\n", addr, data);
   offset = (off_t)(addr - (uintptr_t)flash_addr);
+  if (offset < 0 || offset >= (off_t)flash_size)
+    {
+      perror ("flash_program_halfword");
+      return 1;
+    }
+
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
@@ -119,6 +129,12 @@ flash_erase_page (uintptr_t addr)
   fprintf (stderr, "flash_erase_page: addr=%016lx\n", addr);
 
   offset = (off_t)(addr - (uintptr_t)flash_addr);
+  if (offset < 0 || offset >= (off_t)flash_size)
+    {
+      perror ("flash_erase_page");
+      return 1;
+    }
+
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
@@ -139,6 +155,13 @@ flash_check_blank (const uint8_t *p_start, size_t size)
 {
   const uint8_t *p;
 
+  if (p_start < (const uint8_t *)flash_addr
+      || p_start + size > (const uint8_t *)flash_addr + flash_size)
+    {
+      perror ("flash_check_blank");
+      return 0;
+    }
+
   for (p = p_start; p < p_start + size; p++)
     if (*p != 0xff)
       return 0;
@@ -154,6 +177,12 @@ flash_write (uintptr_t dst_addr, const uint8_t *src, size_t len)
   fprintf (stderr, "flash_write: addr=%016lx, %p, %zd\n", dst_addr, src, len);
 
   offset = (off_t)(dst_addr - (uintptr_t)flash_addr);
+  if (offset < 0 || offset >= (off_t)flash_size)
+    {
+      perror ("flash_write");
+      return 1;
+    }
+
   offset = lseek (flash_fd, offset, SEEK_SET);
   if (offset == (off_t)-1)
     {
