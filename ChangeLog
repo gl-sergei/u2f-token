@@ -1,3 +1,8 @@
+2017-09-29  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-stm32f103.c (flash_program_halfword, flash_erase_page)
+	(flash_write, flash_erase_all_and_exec): Use uintptr_t.
+
 2017-09-08  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* mcu/sys-gnu-linux.c: Flash emulation implemented.

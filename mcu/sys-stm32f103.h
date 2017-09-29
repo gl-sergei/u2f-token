@@ -47,17 +47,17 @@ flash_unlock (void)
 }
 
 static inline int
-flash_program_halfword (uint32_t addr, uint16_t data)
+flash_program_halfword (uintptr_t addr, uint16_t data)
 {
-  int (*func) (uint32_t, uint16_t) = (int (*)(uint32_t, uint16_t))vector[4];
+  int (*func) (uintptr_t, uint16_t) = (int (*)(uintptr_t, uint16_t))vector[4];
 
   return (*func) (addr, data);
 }
 
 static inline int
-flash_erase_page (uint32_t addr)
+flash_erase_page (uintptr_t addr)
 {
-  int (*func) (uint32_t) = (int (*)(uint32_t))vector[5];
+  int (*func) (uintptr_t) = (int (*)(uintptr_t))vector[5];
 
   return (*func) (addr);
 }
@@ -71,10 +71,10 @@ flash_check_blank (const uint8_t *p_start, size_t size)
 }
 
 static inline int
-flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
+flash_write (uintptr_t dst_addr, const uint8_t *src, size_t len)
 {
-  int (*func) (uint32_t, const uint8_t *, size_t)
-    = (int (*)(uint32_t, const uint8_t *, size_t))vector[7];
+  int (*func) (uintptr_t, const uint8_t *, size_t)
+    = (int (*)(uintptr_t, const uint8_t *, size_t))vector[7];
 
   return (*func) (dst_addr, src, len);
 }
