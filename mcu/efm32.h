@@ -13,8 +13,10 @@
 #define CMU_HFPERCLKEN0_USART1  (0x1UL << 4)  /* USART 1 */
 #define CMU_HFPERCLKEN0_ACMP0   (0x1UL << 5)  /* Analog Comparator 0 */
 #define CMU_HFPERCLKEN0_PRS     (0x1UL << 6)  /* Peripheral Reflex System */
+#define CMU_HFPERCLKEN0_IDAC0   (0x1UL << 7)  /* Current DAC 0 */
 #define CMU_HFPERCLKEN0_GPIO    (0x1UL << 8)  /* General purpose IO */
 #define CMU_HFPERCLKEN0_VCMP    (0x1UL << 9)  /* Voltage Comparator */
+#define CMU_HFPERCLKEN0_ADC0    (0x1UL << 10) /* ADC 0 */
 #define CMU_HFPERCLKEN0_I2C0    (0x1UL << 11) /* I2C 0 */
 
 /* Bit fields for CMU OSCENCMD */
@@ -92,9 +94,345 @@
 #define USB_CTRL_VREGDIS            (0x1UL << 16)  /* Voltage Regulator Disable */
 #define USB_CTRL_VREGOSEN           (0x1UL << 17)  /* VREGO Sense Enable */
 
+/* Bit fields for USB STATUS */
+#define USB_STATUS_VREGOS           (0x1UL << 0)   /* VREGO Sense Output */
+#define USB_STATUS_LEMACTIVE        (0x1UL << 2)   /* Low Energy Mode Active */
+
+/* Bit fields for USB IFS */
+#define USB_IFS_VREGOSH             (0x1UL << 0)   /* Set VREGO Sense High Interrupt Flag */
+#define USB_IFS_VREGOSL             (0x1UL << 1)   /* Set VREGO Sense Low Interrupt Flag */
+
+/* Bit fields for USB IFC */
+#define USB_IFC_VREGOSH             (0x1UL << 0)   /* Clear VREGO Sense High Interrupt Flag */
+#define USB_IFC_VREGOSL             (0x1UL << 1)   /* Clear VREGO Sense Low Interrupt Flag */
+
+/* Bit fields for USB IEN */
+#define USB_IEN_VREGOSH             (0x1UL << 0)   /* VREGO Sense High Interrupt Enable */
+#define USB_IEN_VREGOSL             (0x1UL << 1)   /* VREGO Sense Low Interrupt Enable */
+
 /* Bit fields for USB ROUTE */
 #define USB_ROUTE_PHYPEN            (0x1UL << 0)   /* USB PHY Pin Enable */
 #define USB_ROUTE_DMPUPEN           (0x1UL << 2)   /* DMPU Pin Enable */
+
+/* Bit fields for USB DCFG */
+#define USB_DCFG_DEVSPD_MASK        0x3UL                /* Bit mask for USB_DEVSPD */
+#define USB_DCFG_DEVSPD_LS          (0x00000002UL << 0)  /* mode LS for USB_DCFG */
+#define USB_DCFG_DEVSPD_FS          (0x00000003UL << 0)  /* mode FS for USB_DCFG */
+#define USB_DCFG_NZSTSOUTHSHK       (0x1UL << 2)         /* Non-Zero-Length Status OUT Handshake */
+#define USB_DCFG_ENA32KHZSUSP       (0x1UL << 3)         /* Enable 32 KHz Suspend mode */
+#define USB_DCFG_DEVADDR_MASK       0x7F0UL              /* Bit mask for USB_DEVADDR */
+#define USB_DCFG_PERFRINT_MASK      0x1800UL             /* Bit mask for USB_PERFRINT */
+#define USB_DCFG_PERFRINT_80PCNT    (0x00000000UL << 11) /* mode 80PCNT for USB_DCFG */
+#define USB_DCFG_PERFRINT_85PCNT    (0x00000001UL << 11) /* mode 85PCNT for USB_DCFG */
+#define USB_DCFG_PERFRINT_90PCNT    (0x00000002UL << 11) /* mode 90PCNT for USB_DCFG */
+#define USB_DCFG_PERFRINT_95PCNT    (0x00000003UL << 11) /* mode 95PCNT for USB_DCFG */
+#define USB_DCFG_ERRATICINTMSK      (0x1UL << 15)        /*  */
+#define USB_DCFG_RESVALID_MASK      0xFC000000UL         /* Bit mask for USB_RESVALID */
+
+/* Bit fields for USB DCTL */
+#define USB_DCTL_MASK               0x00018FFFUL         /* Mask for USB_DCTL */
+#define USB_DCTL_RMTWKUPSIG         (0x1UL << 0)         /* Remote Wakeup Signaling */
+#define USB_DCTL_SFTDISCON          (0x1UL << 1)         /* Soft Disconnect */
+#define USB_DCTL_GNPINNAKSTS        (0x1UL << 2)         /* Global Non-periodic IN NAK Status */
+#define USB_DCTL_GOUTNAKSTS         (0x1UL << 3)         /* Global OUT NAK Status */
+#define USB_DCTL_TSTCTL_MASK        0x70UL               /* Bit mask for USB_TSTCTL */
+#define USB_DCTL_TSTCTL_DISABLE     (0x00000000UL << 4)  /* mode DISABLE for USB_DCTL */
+#define USB_DCTL_TSTCTL_J           (0x00000001UL << 4)  /* mode J for USB_DCTL */
+#define USB_DCTL_TSTCTL_K           (0x00000002UL << 4)  /* mode K for USB_DCTL */
+#define USB_DCTL_TSTCTL_SE0NAK      (0x00000003UL << 4)  /* mode SE0NAK for USB_DCTL */
+#define USB_DCTL_TSTCTL_PACKET      (0x00000004UL << 4)  /* mode PACKET for USB_DCTL */
+#define USB_DCTL_TSTCTL_FORCE       (0x00000005UL << 4)  /* mode FORCE for USB_DCTL */
+#define USB_DCTL_SGNPINNAK          (0x1UL << 7)         /* Set Global Non-periodic IN NAK */
+#define USB_DCTL_CGNPINNAK          (0x1UL << 8)         /* Clear Global Non-periodic IN NAK */
+#define USB_DCTL_SGOUTNAK           (0x1UL << 9)         /* Set Global OUT NAK */
+#define USB_DCTL_CGOUTNAK           (0x1UL << 10)        /* Clear Global OUT NAK */
+#define USB_DCTL_PWRONPRGDONE       (0x1UL << 11)        /* Power-On Programming Done */
+#define USB_DCTL_IGNRFRMNUM         (0x1UL << 15)        /* Ignore Frame number For Isochronous End points */
+#define USB_DCTL_NAKONBBLE          (0x1UL << 16)        /* NAK on Babble Error */
+
+/* Bit fields for USB PCGCCTL */
+#define USB_PCGCCTL_STOPPCLK        (0x1UL << 0)         /* Stop PHY clock */
+#define USB_PCGCCTL_GATEHCLK        (0x1UL << 1)         /* Gate HCLK */
+#define USB_PCGCCTL_PWRCLMP         (0x1UL << 2)         /* Power Clamp */
+#define USB_PCGCCTL_RSTPDWNMODULE   (0x1UL << 3)         /* Reset Power-Down Modules */
+#define USB_PCGCCTL_PHYSLEEP        (0x1UL << 6)         /* PHY In Sleep */
+
+/* Bit fields for USB GRSTCTL */
+#define USB_GRSTCTL_MASK            0xC00007F3UL         /* Mask for USB_GRSTCTL */
+#define USB_GRSTCTL_CSFTRST         (0x1UL << 0)         /* Core Soft Reset */
+#define USB_GRSTCTL_PIUFSSFTRST     (0x1UL << 1)         /* PIU FS Dedicated Controller Soft Reset */
+#define USB_GRSTCTL_RXFFLSH         (0x1UL << 4)         /* RxFIFO Flush */
+#define USB_GRSTCTL_TXFFLSH         (0x1UL << 5)         /* TxFIFO Flush */
+#define USB_GRSTCTL_TXFNUM_MASK     0x7C0UL              /* Bit mask for USB_TXFNUM */
+#define USB_GRSTCTL_TXFNUM_F0       (0x00000000UL << 6)  /* mode F0 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F1       (0x00000001UL << 6)  /* mode F1 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F2       (0x00000002UL << 6)  /* mode F2 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F3       (0x00000003UL << 6)  /* mode F3 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F4       (0x00000004UL << 6)  /* mode F4 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F5       (0x00000005UL << 6)  /* mode F5 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_F6       (0x00000006UL << 6)  /* mode F6 for USB_GRSTCTL */
+#define USB_GRSTCTL_TXFNUM_FALL     (0x00000010UL << 6)  /* mode FALL for USB_GRSTCTL */
+#define USB_GRSTCTL_DMAREQ          (0x1UL << 30)        /* DMA Request Signal */
+#define USB_GRSTCTL_AHBIDLE         (0x1UL << 31)        /* AHB Master Idle */
+
+/* Bit fields for USB GINTSTS */
+#define USB_GINTSTS_CURMOD       (0x1UL << 0)   /* Current Mode of Operation */
+#define USB_GINTSTS_SOF          (0x1UL << 3)   /* Start of Frame */
+#define USB_GINTSTS_RXFLVL       (0x1UL << 4)   /* RxFIFO Non-Empty */
+#define USB_GINTSTS_GINNAKEFF    (0x1UL << 6)   /* Global IN Non-periodic NAK Effective */
+#define USB_GINTSTS_GOUTNAKEFF   (0x1UL << 7)   /* Global OUT NAK Effective */
+#define USB_GINTSTS_ERLYSUSP     (0x1UL << 10)  /* Early Suspend */
+#define USB_GINTSTS_USBSUSP      (0x1UL << 11)  /* USB Suspend */
+#define USB_GINTSTS_USBRST       (0x1UL << 12)  /* USB Reset */
+#define USB_GINTSTS_ENUMDONE     (0x1UL << 13)  /* Enumeration Done */
+#define USB_GINTSTS_ISOOUTDROP   (0x1UL << 14)  /* Isochronous OUT Packet Dropped Interrupt */
+#define USB_GINTSTS_EOPF         (0x1UL << 15)  /* End of Periodic Frame Interrupt */
+#define USB_GINTSTS_IEPINT       (0x1UL << 18)  /* IN Endpoints Interrupt */
+#define USB_GINTSTS_OEPINT       (0x1UL << 19)  /* OUT Endpoints Interrupt */
+#define USB_GINTSTS_INCOMPISOIN  (0x1UL << 20)  /* Incomplete Isochronous IN Transfer */
+#define USB_GINTSTS_INCOMPLP     (0x1UL << 21)  /* Incomplete Periodic Transfer */
+#define USB_GINTSTS_FETSUSP      (0x1UL << 22)  /* Data Fetch Suspended */
+#define USB_GINTSTS_RESETDET     (0x1UL << 23)  /* Reset detected Interrupt */
+#define USB_GINTSTS_WKUPINT      (0x1UL << 31)  /* Resume/Remote Wakeup Detected Interrupt */
+
+/* Bit fields for USB GAHBCFG */
+#define USB_GAHBCFG_GLBLINTRMSK           (0x1UL << 0)          /* Global Interrupt Mask */
+#define USB_GAHBCFG_HBSTLEN_MASK          0x1EUL                /* Bit mask for USB_HBSTLEN */
+#define USB_GAHBCFG_HBSTLEN_SINGLE        (0x00000000UL << 1)   /* mode SINGLE for USB_GAHBCFG */
+#define USB_GAHBCFG_HBSTLEN_INCR          (0x00000001UL << 1)   /* mode INCR for USB_GAHBCFG */
+#define USB_GAHBCFG_HBSTLEN_INCR4         (0x00000003UL << 1)   /* mode INCR4 for USB_GAHBCFG */
+#define USB_GAHBCFG_HBSTLEN_INCR8         (0x00000005UL << 1)   /* mode INCR8 for USB_GAHBCFG */
+#define USB_GAHBCFG_HBSTLEN_INCR16        (0x00000007UL << 1)   /* mode INCR16 for USB_GAHBCFG */
+#define USB_GAHBCFG_DMAEN                 (0x1UL << 5)          /* DMA Enable */
+#define USB_GAHBCFG_NPTXFEMPLVL           (0x1UL << 7)          /* Non-Periodic TxFIFO Empty Level */
+#define USB_GAHBCFG_NPTXFEMPLVL_MASK      0x80UL                /* Bit mask for USB_NPTXFEMPLVL */
+#define USB_GAHBCFG_NPTXFEMPLVL_HALFEMPTY (0x00000000UL << 7)   /* mode HALFEMPTY for USB_GAHBCFG */
+#define USB_GAHBCFG_NPTXFEMPLVL_EMPTY     (0x00000001UL << 7)   /* mode EMPTY for USB_GAHBCFG */
+#define USB_GAHBCFG_REMMEMSUPP            (0x1UL << 21)         /* Remote Memory Support */
+#define USB_GAHBCFG_NOTIALLDMAWRIT        (0x1UL << 22)         /* Notify All DMA Writes */
+#define USB_GAHBCFG_AHBSINGLE             (0x1UL << 23)         /* AHB Single Support */
+
+/* Bit fields for USB GINTMSK */
+#define USB_GINTMSK_MODEMISMSK            (0x1UL << 1)    /* Mode Mismatch Interrupt Mask */
+#define USB_GINTMSK_SOFMSK                (0x1UL << 3)    /* Start of Frame Mask */
+#define USB_GINTMSK_RXFLVLMSK             (0x1UL << 4)    /* Receive FIFO Non-Empty Mask */
+#define USB_GINTMSK_GINNAKEFFMSK          (0x1UL << 6)    /* Global Non-periodic IN NAK Effective Mask */
+#define USB_GINTMSK_GOUTNAKEFFMSK         (0x1UL << 7)    /* Global OUT NAK Effective Mask */
+#define USB_GINTMSK_ERLYSUSPMSK           (0x1UL << 10)   /* Early Suspend Mask */
+#define USB_GINTMSK_USBSUSPMSK            (0x1UL << 11)   /* USB Suspend Mask */
+#define USB_GINTMSK_USBRSTMSK             (0x1UL << 12)   /* USB Reset Mask */
+#define USB_GINTMSK_ENUMDONEMSK           (0x1UL << 13)   /* Enumeration Done Mask */
+#define USB_GINTMSK_ISOOUTDROPMSK         (0x1UL << 14)   /* Isochronous OUT Packet Dropped Interrupt Mask */
+#define USB_GINTMSK_EOPFMSK               (0x1UL << 15)   /* End of Periodic Frame Interrupt Mask */
+#define USB_GINTMSK_IEPINTMSK             (0x1UL << 18)   /* IN Endpoints Interrupt Mask */
+#define USB_GINTMSK_OEPINTMSK             (0x1UL << 19)   /* OUT Endpoints Interrupt Mask */
+#define USB_GINTMSK_INCOMPISOINMSK        (0x1UL << 20)   /* Incomplete Isochronous IN Transfer Mask */
+#define USB_GINTMSK_INCOMPLPMSK           (0x1UL << 21)   /* Incomplete Periodic Transfer Mask */
+#define USB_GINTMSK_FETSUSPMSK            (0x1UL << 22)   /* Data Fetch Suspended Mask */
+#define USB_GINTMSK_RESETDETMSK           (0x1UL << 23)   /* Reset detected Interrupt Mask */
+#define USB_GINTMSK_WKUPINTMSK            (0x1UL << 31)   /* Resume/Remote Wakeup Detected Interrupt Mask */
+
+/* Bit fields for USB DAINTMSK */
+#define USB_DAINTMSK_INEPMSK0      (0x1UL << 0)   /* IN Endpoint 0 Interrupt mask Bit */
+#define USB_DAINTMSK_INEPMSK1      (0x1UL << 1)   /* IN Endpoint 1 Interrupt mask Bit */
+#define USB_DAINTMSK_INEPMSK2      (0x1UL << 2)   /* IN Endpoint 2 Interrupt mask Bit */
+#define USB_DAINTMSK_INEPMSK3      (0x1UL << 3)   /* IN Endpoint 3 Interrupt mask Bit */
+#define USB_DAINTMSK_OUTEPMSK0     (0x1UL << 16)  /* OUT Endpoint 0 Interrupt mask Bit */
+#define USB_DAINTMSK_OUTEPMSK1     (0x1UL << 17)  /* OUT Endpoint 1 Interrupt mask Bit */
+#define USB_DAINTMSK_OUTEPMSK2     (0x1UL << 18)  /* OUT Endpoint 2 Interrupt mask Bit */
+#define USB_DAINTMSK_OUTEPMSK3     (0x1UL << 19)  /* OUT Endpoint 3 Interrupt mask Bit */
+
+/* Bit fields for USB DIEPMSK */
+#define USB_DIEPMSK_XFERCOMPLMSK    (0x1UL << 0)  /* Transfer Completed Interrupt Mask */
+#define USB_DIEPMSK_EPDISBLDMSK     (0x1UL << 1)  /* Endpoint Disabled Interrupt Mask */
+#define USB_DIEPMSK_AHBERRMSK       (0x1UL << 2)  /* AHB Error Mask */
+#define USB_DIEPMSK_TIMEOUTMSK      (0x1UL << 3)  /* Timeout Condition Mask */
+#define USB_DIEPMSK_INTKNTXFEMPMSK  (0x1UL << 4)  /* IN Token Received When TxFIFO Empty Mask */
+#define USB_DIEPMSK_INEPNAKEFFMSK   (0x1UL << 6)  /* IN Endpoint NAK Effective Mask */
+#define USB_DIEPMSK_TXFIFOUNDRNMSK  (0x1UL << 8)  /* Fifo Underrun Mask */
+#define USB_DIEPMSK_NAKMSK          (0x1UL << 13) /* NAK interrupt Mask */
+
+/* Bit fields for USB DOEPMSK */
+#define USB_DOEPMSK_XFERCOMPLMSK    (0x1UL << 0)  /* Transfer Completed Interrupt Mask */
+#define USB_DOEPMSK_EPDISBLDMSK     (0x1UL << 1)  /* Endpoint Disabled Interrupt Mask */
+#define USB_DOEPMSK_AHBERRMSK       (0x1UL << 2)  /* AHB Error */
+#define USB_DOEPMSK_SETUPMSK        (0x1UL << 3)  /* SETUP Phase Done Mask */
+#define USB_DOEPMSK_OUTTKNEPDISMSK  (0x1UL << 4)  /* OUT Token Received when Endpoint Disabled Mask */
+#define USB_DOEPMSK_STSPHSERCVDMSK  (0x1UL << 5)  /* Status Phase Received Mask */
+#define USB_DOEPMSK_BACK2BACKSETUP  (0x1UL << 6)  /* Back-to-Back SETUP Packets Received Mask */
+#define USB_DOEPMSK_OUTPKTERRMSK    (0x1UL << 8)  /* OUT Packet Error Mask */
+#define USB_DOEPMSK_BBLEERRMSK      (0x1UL << 12) /* Babble Error interrupt Mask */
+#define USB_DOEPMSK_NAKMSK          (0x1UL << 13) /* NAK interrupt Mask */
+
+/* Bit fields for USB DIEP_CTL */
+#define USB_DIEP_CTL_USBACTEP           (0x1UL << 15)        /* USB Active Endpoint */
+#define USB_DIEP_CTL_DPIDEOF            (0x1UL << 16)        /* Endpoint Data PID / Even or Odd Frame */
+#define USB_DIEP_CTL_DPIDEOF_DATA0EVEN  (0 << 16)            /* mode DATA0EVEN for USB_DIEP_CTL */
+#define USB_DIEP_CTL_DPIDEOF_DATA1ODD   (1 << 16)            /* mode DATA1ODD for USB_DIEP_CTL */
+#define USB_DIEP_CTL_NAKSTS             (0x1UL << 17)        /* NAK Status */
+#define USB_DIEP_CTL_NAKSTS_MASK        0x20000UL            /* Bit mask for USB_NAKSTS */
+#define USB_DIEP_CTL_EPTYPE_MASK        0xC0000UL            /* Bit mask for USB_EPTYPE */
+#define USB_DIEP_CTL_EPTYPE_CONTROL     (0x00000000UL << 18) /* mode CONTROL for USB_DIEP_CTL */
+#define USB_DIEP_CTL_EPTYPE_ISO         (0x00000001UL << 18) /* mode ISO for USB_DIEP_CTL */
+#define USB_DIEP_CTL_EPTYPE_BULK        (0x00000002UL << 18) /* mode BULK for USB_DIEP_CTL */
+#define USB_DIEP_CTL_EPTYPE_INT         (0x00000003UL << 18) /* mode INT for USB_DIEP_CTL */
+#define USB_DIEP_CTL_STALL              (0x1UL << 21)        /* Handshake */
+#define USB_DIEP_CTL_TXFNUM_SHIFT       22                   /* Shift value for USB_TXFNUM */
+#define USB_DIEP_CTL_TXFNUM_MASK        0x3C00000UL          /* Bit mask for USB_TXFNUM */
+#define USB_DIEP_CTL_CNAK               (0x1UL << 26)        /* Clear NAK */
+#define USB_DIEP_CTL_SNAK               (0x1UL << 27)        /* Set NAK */
+#define USB_DIEP_CTL_SETD0PIDEF         (0x1UL << 28)        /* Set DATA0 PID / Even Frame */
+#define USB_DIEP_CTL_SETD1PIDOF         (0x1UL << 29)        /* Set DATA1 PID / Odd Frame */
+#define USB_DIEP_CTL_EPDIS              (0x1UL << 30)        /* Endpoint Disable */
+#define USB_DIEP_CTL_EPENA              (0x1UL << 31)        /* Endpoint Enable */
+
+/* Bit fields for USB DIEP_INT */
+#define USB_DIEP_INT_MASK          0x000038DFUL   /* Mask for USB_DIEP_INT */
+#define USB_DIEP_INT_XFERCOMPL     (0x1UL << 0)   /* Transfer Completed Interrupt */
+#define USB_DIEP_INT_EPDISBLD      (0x1UL << 1)   /* Endpoint Disabled Interrupt */
+#define USB_DIEP_INT_AHBERR        (0x1UL << 2)   /* AHB Error */
+#define USB_DIEP_INT_TIMEOUT       (0x1UL << 3)   /* Timeout Condition */
+#define USB_DIEP_INT_INTKNTXFEMP   (0x1UL << 4)   /* IN Token Received When TxFIFO is Empty */
+#define USB_DIEP_INT_INEPNAKEFF    (0x1UL << 6)   /* IN Endpoint NAK Effective */
+#define USB_DIEP_INT_TXFEMP        (0x1UL << 7)   /* Transmit FIFO Empty */
+#define USB_DIEP_INT_PKTDRPSTS     (0x1UL << 11)  /* Packet Drop Status */
+#define USB_DIEP_INT_BBLEERR       (0x1UL << 12)  /* NAK Interrupt */
+#define USB_DIEP_INT_NAKINTRPT     (0x1UL << 13)  /* NAK Interrupt */
+
+/* Bit fields for USB DIEP0CTL */
+#define USB_DIEP0CTL_MPS_MASK       0x3UL                /* Bit mask for USB_MPS */
+#define USB_DIEP0CTL_MPS_64B        (0x00000000UL << 0)  /* mode 64B for USB_DIEP0CTL */
+#define USB_DIEP0CTL_MPS_32B        (0x00000001UL << 0)  /* mode 32B for USB_DIEP0CTL */
+#define USB_DIEP0CTL_MPS_16B        (0x00000002UL << 0)  /* mode 16B for USB_DIEP0CTL */
+#define USB_DIEP0CTL_MPS_8B         (0x00000003UL << 0)  /* mode 8B for USB_DIEP0CTL */
+#define USB_DIEP0CTL_USBACTEP       (0x1UL << 15)        /* USB Active Endpoint */
+#define USB_DIEP0CTL_NAKSTS         (0x1UL << 17)        /* NAK Status */
+#define USB_DIEP0CTL_STALL          (0x1UL << 21)        /* Handshake */
+#define USB_DIEP0CTL_TXFNUM_SHIFT   22                   /* Shift value for USB_TXFNUM */
+#define USB_DIEP0CTL_TXFNUM_MASK    0x3C00000UL          /* Bit mask for USB_TXFNUM */
+#define USB_DIEP0CTL_CNAK           (0x1UL << 26)        /* Clear NAK */
+#define USB_DIEP0CTL_SNAK           (0x1UL << 27)        /* Set NAK */
+#define USB_DIEP0CTL_EPDIS          (0x1UL << 30)        /* Endpoint Disable */
+#define USB_DIEP0CTL_EPENA          (0x1UL << 31)        /* Endpoint Enable */
+
+/* Bit fields for USB DIEP0INT */
+#define USB_DIEP0INT_XFERCOMPL    (0x1UL << 0)   /* Transfer Completed Interrupt */
+#define USB_DIEP0INT_EPDISBLD     (0x1UL << 1)   /* Endpoint Disabled Interrupt */
+#define USB_DIEP0INT_AHBERR       (0x1UL << 2)   /* AHB Error */
+#define USB_DIEP0INT_TIMEOUT      (0x1UL << 3)   /* Timeout Condition */
+#define USB_DIEP0INT_INTKNTXFEMP  (0x1UL << 4)   /* IN Token Received When TxFIFO is Empty */
+#define USB_DIEP0INT_INEPNAKEFF   (0x1UL << 6)   /* IN Endpoint NAK Effective */
+#define USB_DIEP0INT_TXFEMP       (0x1UL << 7)   /* Transmit FIFO Empty */
+#define USB_DIEP0INT_PKTDRPSTS    (0x1UL << 11)  /* Packet Drop Status */
+#define USB_DIEP0INT_BBLEERR      (0x1UL << 12)  /* NAK Interrupt */
+#define USB_DIEP0INT_NAKINTRPT    (0x1UL << 13)  /* NAK Interrupt */
+
+/* Bit fields for USB DOEP_CTL */
+#define USB_DOEP_CTL_MPS_MASK       0x7FFUL              /* Bit mask for USB_MPS */
+#define USB_DOEP_CTL_USBACTEP       (0x1UL << 15)        /* USB Active Endpoint */
+#define USB_DOEP_CTL_DPIDEOF        (0x1UL << 16)        /* Endpoint Data PID / Even-odd Frame */
+#define USB_DOEP_CTL_NAKSTS         (0x1UL << 17)        /* NAK Status */
+#define USB_DOEP_CTL_EPTYPE_SHIFT   18                   /* Shift value for USB_EPTYPE */
+#define USB_DOEP_CTL_EPTYPE_MASK    0xC0000UL            /* Bit mask for USB_EPTYPE */
+#define USB_DOEP_CTL_EPTYPE_CONTROL (0x00000000UL << 18) /* mode CONTROL for USB_DOEP_CTL */
+#define USB_DOEP_CTL_EPTYPE_ISO     (0x00000001UL << 18) /* mode ISO for USB_DOEP_CTL */
+#define USB_DOEP_CTL_EPTYPE_BULK    (0x00000002UL << 18) /* mode BULK for USB_DOEP_CTL */
+#define USB_DOEP_CTL_EPTYPE_INT     (0x00000003UL << 18) /* mode INT for USB_DOEP_CTL */
+#define USB_DOEP_CTL_SNP            (0x1UL << 20)        /* Snoop Mode */
+#define USB_DOEP_CTL_STALL          (0x1UL << 21)        /* STALL Handshake */
+#define USB_DOEP_CTL_CNAK           (0x1UL << 26)        /* Clear NAK */
+#define USB_DOEP_CTL_SNAK           (0x1UL << 27)        /* Set NAK */
+#define USB_DOEP_CTL_SETD0PIDEF     (0x1UL << 28)        /* Set DATA0 PID / Even Frame */
+#define USB_DOEP_CTL_SETD1PIDOF     (0x1UL << 29)        /* Set DATA1 PID / Odd Frame */
+#define USB_DOEP_CTL_EPDIS          (0x1UL << 30)        /* Endpoint Disable */
+#define USB_DOEP_CTL_EPENA          (0x1UL << 31)        /* Endpoint Enable */
+
+/* Bit fields for USB DOEP_INT */
+#define USB_DOEP_INT_XFERCOMPL       (0x1UL << 0)   /* Transfer Completed Interrupt */
+#define USB_DOEP_INT_EPDISBLD        (0x1UL << 1)   /* Endpoint Disabled Interrupt */
+#define USB_DOEP_INT_AHBERR          (0x1UL << 2)   /* AHB Error */
+#define USB_DOEP_INT_SETUP           (0x1UL << 3)   /* Setup Phase Done */
+#define USB_DOEP_INT_OUTTKNEPDIS     (0x1UL << 4)   /* OUT Token Received When Endpoint Disabled */
+#define USB_DOEP_INT_STSPHSERCVD     (0x1UL << 5)   /* Status Phase Received For Control Write */
+#define USB_DOEP_INT_BACK2BACKSETUP  (0x1UL << 6)   /* Back-to-Back SETUP Packets Received */
+#define USB_DOEP_INT_PKTDRPSTS       (0x1UL << 11)  /* Packet Drop Status */
+#define USB_DOEP_INT_BBLEERR         (0x1UL << 12)  /* Babble Error */
+#define USB_DOEP_INT_NAKINTRPT       (0x1UL << 13)  /* NAK Interrupt */
+#define USB_DOEP_INT_STUPPKTRCVD     (0x1UL << 15)  /* Setup Packet Received */
+
+/* Bit fields for USB DOEP0CTL */
+#define USB_DOEP0CTL_MPS_64B        (0x00000000UL << 0)  /* mode 64B for USB_DOEP0CTL */
+#define USB_DOEP0CTL_MPS_32B        (0x00000001UL << 0)  /* mode 32B for USB_DOEP0CTL */
+#define USB_DOEP0CTL_MPS_16B        (0x00000002UL << 0)  /* mode 16B for USB_DOEP0CTL */
+#define USB_DOEP0CTL_MPS_8B         (0x00000003UL << 0)  /* mode 8B for USB_DOEP0CTL */
+#define USB_DOEP0CTL_USBACTEP       (0x1UL << 15)        /* USB Active Endpoint */
+#define USB_DOEP0CTL_NAKSTS         (0x1UL << 17)        /* NAK Status */
+#define USB_DOEP0CTL_SNP            (0x1UL << 20)        /* Snoop Mode */
+#define USB_DOEP0CTL_STALL          (0x1UL << 21)        /* Handshake */
+#define USB_DOEP0CTL_CNAK           (0x1UL << 26)        /* Clear NAK */
+#define USB_DOEP0CTL_SNAK           (0x1UL << 27)        /* Set NAK */
+#define USB_DOEP0CTL_EPDIS          (0x1UL << 30)        /* Endpoint Disable */
+#define USB_DOEP0CTL_EPENA          (0x1UL << 31)        /* Endpoint Enable */
+
+/* Bit fields for USB DOEP0INT */
+#define USB_DOEP0INT_XFERCOMPL       (0x1UL << 0)   /* Transfer Completed Interrupt */
+#define USB_DOEP0INT_EPDISBLD        (0x1UL << 1)   /* Endpoint Disabled Interrupt */
+#define USB_DOEP0INT_AHBERR          (0x1UL << 2)   /* AHB Error */
+#define USB_DOEP0INT_SETUP           (0x1UL << 3)   /* Setup Phase Done */
+#define USB_DOEP0INT_OUTTKNEPDIS     (0x1UL << 4)   /* OUT Token Received When Endpoint Disabled */
+#define USB_DOEP0INT_STSPHSERCVD     (0x1UL << 5)   /* Status Phase Received For Control Write */
+#define USB_DOEP0INT_BACK2BACKSETUP  (0x1UL << 6)   /* Back-to-Back SETUP Packets Received */
+#define USB_DOEP0INT_PKTDRPSTS       (0x1UL << 11)  /* Packet Drop Status */
+#define USB_DOEP0INT_BBLEERR         (0x1UL << 12)  /* NAK Interrupt */
+#define USB_DOEP0INT_NAKINTRPT       (0x1UL << 13)  /* NAK Interrupt */
+#define USB_DOEP0INT_STUPPKTRCVD     (0x1UL << 15)  /* Setup Packet Received */
+
+/* Bit fields for USB DOEP0TSIZ */
+#define USB_DOEP0TSIZ_XFERSIZE_SHIFT 0             /* Shift value for USB_XFERSIZE */
+#define USB_DOEP0TSIZ_XFERSIZE_MASK  0x7FUL        /* Bit mask for USB_XFERSIZE */
+#define USB_DOEP0TSIZ_PKTCNT_SHIFT   19            /* Shift value for USB_PKTCNT */
+#define USB_DOEP0TSIZ_PKTCNT_MASK    0x80000UL     /* Bit mask for USB_PKTCNT */
+#define USB_DOEP0TSIZ_SUPCNT_SHIFT   29            /* Shift value for USB_SUPCNT */
+#define USB_DOEP0TSIZ_SUPCNT_MASK    0x60000000UL  /* Bit mask for USB_SUPCNT */
+
+/* Bit fields for USB GRXSTSP */
+#define USB_GRXSTSP_CHEPNUM_SHIFT     0                     /* Shift value for USB_CHEPNUM */
+#define USB_GRXSTSP_CHEPNUM_MASK      0xFUL                 /* Bit mask for USB_CHEPNUM */
+#define USB_GRXSTSP_BCNT_SHIFT        4                     /* Shift value for USB_BCNT */
+#define USB_GRXSTSP_BCNT_MASK         0x7FF0UL              /* Bit mask for USB_BCNT */
+#define USB_GRXSTSP_DPID_SHIFT        15                    /* Shift value for USB_DPID */
+#define USB_GRXSTSP_DPID_DATA0        (0x00000000UL << 15)  /* mode DATA0 for USB_GRXSTSP */
+#define USB_GRXSTSP_DPID_DATA1        (0x00000001UL << 15)  /* mode DATA1 for USB_GRXSTSP */
+#define USB_GRXSTSP_DPID_DATA2        (0x00000002UL << 15)  /* mode DATA2 for USB_GRXSTSP */
+#define USB_GRXSTSP_DPID_MDATA        (0x00000003UL << 15)  /* mode MDATA for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_MASK       0x1E0000UL            /* Bit mask for USB_PKTSTS */
+#define USB_GRXSTSP_PKTSTS_GOUTNAK    (0x00000001UL << 17)  /* mode GOUTNAK for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_PKTRCV     (0x00000002UL << 17)  /* mode PKTRCV for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_XFERCOMPL  (0x00000003UL << 17)  /* mode XFERCOMPL for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_SETUPCOMPL (0x00000004UL << 17)  /* mode SETUPCOMPL for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_TGLERR     (0x00000005UL << 17)  /* mode TGLERR for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_SETUPRCV   (0x00000006UL << 17)  /* mode SETUPRCV for USB_GRXSTSP */
+#define USB_GRXSTSP_PKTSTS_CHLT       (0x00000007UL << 17)  /* mode CHLT for USB_GRXSTSP */
+#define USB_GRXSTSP_FN_SHIFT          21                    /* Shift value for USB_FN */
+#define USB_GRXSTSP_FN_MASK           0x1E00000UL           /* Bit mask for USB_FN */
+
+/* Bit fields for ADC CMD */
+#define ADC_CMD_SINGLESTART   (0x1UL << 0)  /* Single Conversion Start */
+#define ADC_CMD_SINGLESTOP    (0x1UL << 1)  /* Single Conversion Stop */
+#define ADC_CMD_SCANSTART     (0x1UL << 2)  /* Scan Sequence Start */
+#define ADC_CMD_SCANSTOP      (0x1UL << 3)  /* Scan Sequence Stop */
+
+/* Limits imposed by the USB peripheral */
+#define NP_RX_QUE_DEPTH       8
+#define HP_RX_QUE_DEPTH       8
+#define MAX_XFER_LEN          524287L         /* 2^19 - 1 bytes */
+#define MAX_PACKETS_PR_XFER   1023            /* 2^10 - 1 packets */
+#define MAX_NUM_TX_FIFOS      3               /* In addition to EP0 Tx FIFO */
+#define MAX_NUM_IN_EPS        3               /* In addition to EP0 */
+#define MAX_NUM_OUT_EPS       3               /* In addition to EP0 */
+#define MAX_DEVICE_FIFO_SIZE_INWORDS 384U
+#define MIN_EP_FIFO_SIZE_INWORDS  16U         /* Unit is words (32bit) */
+#define MIN_EP_FIFO_SIZE_INBYTES  64U         /* Unit is bytes (8bit) */
 
 struct CMU
 {
@@ -376,6 +714,11 @@ struct USB
 #define USB_BASE 0x400C4000UL                /* USB base address */
 #define USB ((struct USB *) USB_BASE)        /* USB base pointer */
 
+#define USB_DINEPS   ((struct USB_DIEP *) &USB->DIEP0CTL)
+#define USB_DOUTEPS  ((struct USB_DOEP *) &USB->DOEP0CTL)
+#define USB_FIFOS    ((uint32_t *) &USB->FIFO0D)
+#define USB_DIEPTXFS ((uint32_t *) &USB->DIEPTXF1)
+
 
 struct ROMTABLE
 {
@@ -392,3 +735,52 @@ struct ROMTABLE
 
 #define ROMTABLE_BASE 0xF00FFFD0UL                   /* ROMTABLE base address */
 #define ROMTABLE ((struct ROMTABLE *) ROMTABLE_BASE) /* ROMTABLE base pointer */
+
+struct ADC
+{
+  volatile uint32_t CTRL;                /* Control Register */
+  volatile uint32_t CMD;                 /* Command Register */
+  volatile const uint32_t STATUS;        /* Status Register */
+  volatile uint32_t SINGLECTRL;          /* Single Sample Control Register */
+  volatile uint32_t SCANCTRL;            /* Scan Control Register */
+  volatile uint32_t IEN;                 /* Interrupt Enable Register */
+  volatile const uint32_t IF;            /* Interrupt Flag Register */
+  volatile uint32_t IFS;                 /* Interrupt Flag Set Register */
+  volatile uint32_t IFC;                 /* Interrupt Flag Clear Register */
+  volatile const uint32_t SINGLEDATA;    /* Single Conversion Result Data */
+  volatile const uint32_t SCANDATA;      /* Scan Conversion Result Data */
+  volatile const uint32_t SINGLEDATAP;   /* Single Conversion Result Data Peek Register */
+  volatile const uint32_t SCANDATAP;     /* Scan Sequence Result Data Peek Register */
+  volatile uint32_t CAL;                 /* Calibration Register */
+
+  uint32_t RESERVED0[1];                 /* Reserved for future use */
+  volatile uint32_t BIASPROG;            /* Bias Programming Register */
+};
+
+#define ADC0_BASE (0x40002000UL)         /* ADC0 base address */
+#define ADC0 ((struct ADC *) ADC0_BASE)  /* ADC0 base pointer */
+
+struct DEVINFO
+{
+  volatile const uint32_t CAL;          /* Calibration temperature and checksum */
+  volatile const uint32_t ADC0CAL0;     /* ADC0 Calibration register 0 */
+  volatile const uint32_t ADC0CAL1;     /* ADC0 Calibration register 1 */
+  volatile const uint32_t ADC0CAL2;     /* ADC0 Calibration register 2 */
+  uint32_t RESERVED0[2];                /* Reserved */
+  volatile const uint32_t IDAC0CAL0;    /* IDAC0 calibration register */
+  volatile const uint32_t USHFRCOCAL0;  /* USHFRCO calibration register */
+  uint32_t RESERVED1[1];                /* Reserved */
+  volatile const uint32_t AUXHFRCOCAL0; /* AUXHFRCO calibration register 0 */
+  volatile const uint32_t AUXHFRCOCAL1; /* AUXHFRCO calibration register 1 */
+  volatile const uint32_t HFRCOCAL0;    /* HFRCO calibration register 0 */
+  volatile const uint32_t HFRCOCAL1;    /* HFRCO calibration register 1 */
+  volatile const uint32_t MEMINFO;      /* Memory information */
+  uint32_t RESERVED2[2];                /* Reserved */
+  volatile const uint32_t UNIQUEL;      /* Low 32 bits of device unique number */
+  volatile const uint32_t UNIQUEH;      /* High 32 bits of device unique number */
+  volatile const uint32_t MSIZE;        /* Flash and SRAM Memory size in KiloBytes */
+  volatile const uint32_t PART;         /* Part description */
+};
+
+#define DEVINFO_BASE (0x0FE081B0UL)               /* DEVINFO base address */
+#define DEVINFO ((struct DEVINFO *) DEVINFO_BASE) /* DEVINFO base pointer */

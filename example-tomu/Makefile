@@ -4,10 +4,12 @@ PROJECT = sample
 
 CHOPSTX = ..
 LDSCRIPT= sample.ld
-CSRC = sample.c
+CSRC = sample.c usb-cdc.c
 
 CHIP=efm32
 USE_SYS = yes
+USE_ADC = yes
+USE_USB = yes
 
 ###################################
 CROSS = arm-none-eabi-

@@ -6,6 +6,7 @@ __process0_stack_size__  = 0x0300; /* Main program            */
 __process1_stack_size__  = 0x0200; /* first thread program    */
 __process2_stack_size__  = 0x0100; /* second thread program   */
 __process3_stack_size__  = 0x0200; /* third thread program    */
+__process4_stack_size__  = 0x0200; /* fourth thread program   */
 
 MEMORY
 {
@@ -76,6 +77,9 @@ SECTIONS
 
     .process_stack :
     {
+        . = ALIGN(8);
+        __process4_stack_base__ = .;
+        . += __process4_stack_size__;
         . = ALIGN(8);
         __process3_stack_base__ = .;
         . += __process3_stack_size__;
