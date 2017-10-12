@@ -1,3 +1,52 @@
+/*
+ * Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.@n
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Silicon Laboratories, Inc.
+ * has no obligation to support this Software. Silicon Laboratories, Inc. is
+ * providing the Software "AS IS", with no express or implied warranties of any
+ * kind, including, but not limited to, any implied warranties of
+ * merchantability or fitness for any particular purpose or warranties against
+ * infringement of any proprietary rights of a third party.
+ *
+ * Silicon Laboratories, Inc. will not be liable for any consequential,
+ * incidental, or special damages, or any other relief, or for any claim by
+ * any third party, arising from your use of this Software.
+ *
+ * Copyright (C) 2017 Sergei Glushchenko
+ * Author: Sergei Glushchenko <gl.sergei@gmail.com>
+ *
+ * This file is a part of U2F firmware for STM32
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * As additional permission under GNU GPL version 3 section 7, you may
+ * distribute non-source form of the Program without the copy of the
+ * GNU GPL normally required by section 4, provided you inform the
+ * recipients of GNU GPL by a written offer.
+ *
+ */
+
 /* Bit fields for CMU HFCORECLKEN0 */
 #define CMU_HFCORECLKEN0_AES    (0x1UL << 0)  /* AES Accelerator */
 #define CMU_HFCORECLKEN0_DMA    (0x1UL << 1)  /* DMA Controller */
@@ -434,6 +483,35 @@
 #define MIN_EP_FIFO_SIZE_INWORDS  16U         /* Unit is words (32bit) */
 #define MIN_EP_FIFO_SIZE_INBYTES  64U         /* Unit is bytes (8bit) */
 
+/* Bit fields for MSC WRITECTRL */
+#define MSC_WRITECTRL_WREN           (0x1UL << 0) /* Enable Write/Erase Controller */
+#define MSC_WRITECTRL_IRQERASEABORT  (0x1UL << 1) /* Abort Page Erase on Interrupt */
+
+/* Bit fields for MSC TIMEBASE */
+#define MSC_TIMEBASE_PERIOD_1US  (0x00000000UL << 16)  /* mode 1US for MSC_TIMEBASE */
+#define MSC_TIMEBASE_PERIOD_5US  (0x00000001UL << 16)  /* mode 5US for MSC_TIMEBASE */
+
+/* Bit fields for MSC WRITECMD */
+#define MSC_WRITECMD_LADDRIM     (0x1UL << 0)  /* Load MSC_ADDRB into ADDR */
+#define MSC_WRITECMD_ERASEPAGE   (0x1UL << 1)  /* Erase Page */
+#define MSC_WRITECMD_WRITEEND    (0x1UL << 2)  /* End Write Mode */
+#define MSC_WRITECMD_WRITEONCE   (0x1UL << 3)  /* Word Write-Once Trigger */
+#define MSC_WRITECMD_WRITETRIG   (0x1UL << 4)  /* Word Write Sequence Trigger */
+#define MSC_WRITECMD_ERASEABORT  (0x1UL << 5)  /* Abort erase sequence */
+#define MSC_WRITECMD_ERASEMAIN0  (0x1UL << 8)  /* Mass erase region 0 */
+#define MSC_WRITECMD_CLEARWDATA  (0x1UL << 12) /* Clear WDATA state */
+
+/* Bit fields for MSC STATUS */
+#define MSC_STATUS_BUSY         (0x1UL << 0)  /* Erase/Write Busy */
+#define MSC_STATUS_LOCKED       (0x1UL << 1)  /* Access Locked */
+#define MSC_STATUS_INVADDR      (0x1UL << 2)  /* Invalid Write Address or Erase Page */
+#define MSC_STATUS_WDATAREADY   (0x1UL << 3)  /* WDATA Write Ready */
+#define MSC_STATUS_WORDTIMEOUT  (0x1UL << 4)  /* Flash Write Word Timeout */
+#define MSC_STATUS_ERASEABORTED (0x1UL << 5)  /* The Current Flash Erase Operation Aborted */
+#define MSC_STATUS_PCRUNNING    (0x1UL << 6)  /* Performance Counters Running */
+
+#define MSC_UNLOCK_CODE      0x1B71 /* MSC unlock code */
+
 struct CMU
 {
   volatile uint32_t CTRL;          /* CMU Control Register */
@@ -784,3 +862,33 @@ struct DEVINFO
 
 #define DEVINFO_BASE (0x0FE081B0UL)               /* DEVINFO base address */
 #define DEVINFO ((struct DEVINFO *) DEVINFO_BASE) /* DEVINFO base pointer */
+
+struct MSC
+{
+  volatile uint32_t CTRL;               /* Memory System Control Register  */
+  volatile uint32_t READCTRL;           /* Read Control Register  */
+  volatile uint32_t WRITECTRL;          /* Write Control Register  */
+  volatile uint32_t WRITECMD;           /* Write Command Register  */
+  volatile uint32_t ADDRB;              /* Page Erase/Write Address Buffer  */
+
+  uint32_t RESERVED0[1];                /* Reserved for future use **/
+  volatile uint32_t WDATA;              /* Write Data Register  */
+  volatile const uint32_t STATUS;       /* Status Register  */
+
+  uint32_t RESERVED1[3];                /* Reserved for future use **/
+  volatile const uint32_t IF;           /* Interrupt Flag Register  */
+  volatile uint32_t IFS;                /* Interrupt Flag Set Register  */
+  volatile uint32_t IFC;                /* Interrupt Flag Clear Register  */
+  volatile uint32_t IEN;                /* Interrupt Enable Register  */
+  volatile uint32_t LOCK;               /* Configuration Lock Register  */
+  volatile uint32_t CMD;                /* Command Register  */
+  volatile const uint32_t CACHEHITS;    /* Cache Hits Performance Counter  */
+  volatile const uint32_t CACHEMISSES;  /* Cache Misses Performance Counter  */
+  uint32_t RESERVED2[1];                /* Reserved for future use **/
+  volatile uint32_t TIMEBASE;           /* Flash Write and Erase Timebase  */
+  volatile uint32_t MASSLOCK;           /* Mass Erase Lock Register  */
+  volatile uint32_t IRQLATENCY;         /* Irq Latency Register  */
+};
+
+#define MSC_BASE (0x400C0000UL)        /* MSC base address */
+#define MSC ((struct MSC *) MSC_BASE)  /* MSC base pointer */

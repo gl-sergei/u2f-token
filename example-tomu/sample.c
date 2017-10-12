@@ -208,14 +208,14 @@ adc_string (char *s)
 
   for (i = 0; i < 6; i++)
     {
-      s[i * 8 + 0] = hexchar ((adc_buf[i] >>  0) & 0xf);
-      s[i * 8 + 1] = hexchar ((adc_buf[i] >>  4) & 0xf);
-      s[i * 8 + 2] = hexchar ((adc_buf[i] >>  8) & 0xf);
-      s[i * 8 + 3] = hexchar ((adc_buf[i] >> 12) & 0xf);
-      s[i * 8 + 4] = hexchar ((adc_buf[i] >> 16) & 0xf);
-      s[i * 8 + 5] = hexchar ((adc_buf[i] >> 20) & 0xf);
-      s[i * 8 + 6] = hexchar ((adc_buf[i] >> 24) & 0xf);
-      s[i * 8 + 7] = hexchar ((adc_buf[i] >> 28) & 0xf);
+      s[i * 8 + 7] = hexchar ((adc_buf[i] >>  0) & 0xf);
+      s[i * 8 + 6] = hexchar ((adc_buf[i] >>  4) & 0xf);
+      s[i * 8 + 5] = hexchar ((adc_buf[i] >>  8) & 0xf);
+      s[i * 8 + 4] = hexchar ((adc_buf[i] >> 12) & 0xf);
+      s[i * 8 + 3] = hexchar ((adc_buf[i] >> 16) & 0xf);
+      s[i * 8 + 2] = hexchar ((adc_buf[i] >> 20) & 0xf);
+      s[i * 8 + 1] = hexchar ((adc_buf[i] >> 24) & 0xf);
+      s[i * 8 + 0] = hexchar ((adc_buf[i] >> 28) & 0xf);
     }
   s[i * 8 + 0] = '\r';
   s[i * 8 + 1] = '\n';

@@ -1,3 +1,30 @@
+/*
+ * usb-efm32.c - USB driver for EFM32HG
+ *
+ * Copyright (C) 2017 Sergei Glushchenko
+ * Author: Sergei Glushchenko <gl.sergei@gmail.com>
+ *
+ * This file is a part of Chpostx port to EFM32HG
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * As additional permission under GNU GPL version 3 section 7, you may
+ * distribute non-source form of the Program without the copy of the
+ * GNU GPL normally required by section 4, provided you inform the
+ * recipients of GNU GPL by a written offer.
+ *
+ */
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -768,7 +795,7 @@ efm32hg_core_init (void)
   USB->DCFG &= ~USB_DCFG_PERFRINT_MASK;
 
   USB->GAHBCFG = (USB->GAHBCFG & ~USB_GAHBCFG_HBSTLEN_MASK)
-                 | USB_GAHBCFG_DMAEN | USB_GAHBCFG_HBSTLEN_SINGLE/* | USB_GAHBCFG_HBSTLEN_INCR*/;
+                 | USB_GAHBCFG_DMAEN | USB_GAHBCFG_HBSTLEN_SINGLE;
 
   /* Ignore frame numbers on ISO transfers. */
   USB->DCTL = (USB->DCTL & ~DCTL_WO_MASK) | USB_DCTL_IGNRFRMNUM;
@@ -913,20 +940,6 @@ usb_lld_event_handler (struct usb_dev *dev)
   if (intsts & USB_GINTSTS_OEPINT)
     {
       uint32_t epint = (USB->DAINT & USB->DAINTMSK) >> 16;
-
-      if (epint == 0)
-        {
-          uint32_t daint = USB->DAINT >> 16;
-
-          ep = 0;
-          while (daint)
-            {
-              if (daint & 1)
-                USB_DOUTEPS[ep].INT = USB_DOUTEPS[ep].INT;
-              ep++;
-              daint >>= 1;
-            }
-        }
 
       ep = 0;
       while (epint != 0)

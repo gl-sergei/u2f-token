@@ -1,10 +1,10 @@
 /*
- * clk_gpio_init-efm32.c - Clock and GPIO initialization for EFM32HG
+ * dbug.c - debugging routines
  *
  * Copyright (C) 2017 Sergei Glushchenko
  * Author: Sergei Glushchenko <gl.sergei@gmail.com>
  *
- * This file is a part of Chpostx port to EFM32HG
+ * This file is a part of U2F firmware for STM32
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
@@ -26,28 +26,29 @@
  *
  */
 
-#include <mcu/efm32.h>
+#include <stdint.h>
+#include <string.h>
 
-static void __attribute__((used))
-clock_init (void)
+/* some debugging routines */
+void
+dbg_send_command (int command, void *message)
 {
-  CMU->HFPERCLKEN0 = CMU_HFPERCLKEN0_GPIO;
-  CMU->HFPERCLKDIV = 1 << 8;
-
-  CMU->OSCENCMD = CMU_OSCENCMD_HFRCOEN;
-  while (!(CMU->STATUS & CMU_STATUS_HFRCORDY));
-
-  CMU->CMD |= CMU_CMD_HFCLKSEL_HFRCO;
-  while ((CMU->STATUS & CMU_STATUS_HFRCOSEL) == 0);
+  asm ("mov r0, %[cmd];"
+       "mov r1, %[msg];"
+       "bkpt #0xAB"
+       :
+       : [cmd] "r" (command), [msg] "r" (message)
+       : "r0", "r1", "memory");
 }
 
-static void __attribute__((used))
-gpio_init (void)
+void
+dbg_print(const char *text)
 {
-  GPIO->P[0].DOUT = 0xffffffff;
-  GPIO->P[1].DOUT = 0xffffffff;
-  GPIO->P[0].MODEL = 0x88888888;
-  GPIO->P[0].MODEH = 0x88888888;
-  GPIO->P[1].MODEL = 0x88888888;
-  GPIO->P[1].MODEH = 0x88888888;
+  uint32_t msg[3];
+
+  msg[0] = 2 /*stderr*/;
+  msg[1] = (uint32_t) text;
+  msg[2] = strlen(text);
+
+  dbg_send_command (0x05, msg);
 }

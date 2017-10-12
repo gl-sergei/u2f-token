@@ -1,3 +1,30 @@
+/*
+ * adc-efm32.c - ADC driver for EFM32HG
+ *
+ * Copyright (C) 2017 Sergei Glushchenko
+ * Author: Sergei Glushchenko <gl.sergei@gmail.com>
+ *
+ * This file is a part of Chpostx port to EFM32HG
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * As additional permission under GNU GPL version 3 section 7, you may
+ * distribute non-source form of the Program without the copy of the
+ * GNU GPL normally required by section 4, provided you inform the
+ * recipients of GNU GPL by a written offer.
+ *
+ */
 #include <stdint.h>
 #include <stdlib.h>
 #include <chopstx.h>
@@ -37,13 +64,13 @@ int adc_init (void)
                    | (0 << 20)    /* 1 cycle aacquisition time */
                    | (0 << 16)    /* 1.25V internal reference */
                    | (0 <<  4)    /* 12 bit resolution */
-                   | (9 <<  8)    /* VDD/3 input selected */
+                   | (8 <<  8)    /* temperature sensor input selected */
                    | (0 <<  1)    /* differential mode */
                    | (0 << 24)    /* disable PRS */
                    | (0 <<  2)    /* right adjust */
                    | (1 <<  0);   /* repetitive mode */
 
-  ADC0->CAL = (0x7C << 0) | (0x1F << 8);
+  ADC0->CAL = DEVINFO->ADC0CAL0;
 
   return 0;
 }
@@ -68,6 +95,8 @@ extern uint8_t u;
 int adc_wait_completion (void)
 {
   struct chx_poll_head *pd_array[1] = { (struct chx_poll_head *)&adc_intr };
+  uint32_t value;
+  int samples;
 
   chopstx_claim_irq (&adc_intr, INTR_REQ_ADC0);
 
@@ -75,6 +104,8 @@ int adc_wait_completion (void)
   ADC0->IEN = 1; /* enable single conversion complete interrupt */
   ADC0->CMD = ADC_CMD_SINGLESTART;
 
+  value = 0;
+  samples = 0;
   while (req.count > 0)
     {
       /* Wait for single conversion completion */
@@ -82,8 +113,20 @@ int adc_wait_completion (void)
 
       if (adc_intr.ready && (ADC0->IF & 1))
         {
-          adc_buf[req.offset++] = ADC0->SINGLEDATA;
-          --req.count;
+          /* Combine 4 12-bit samples into single 32-bit one. Entropy 
+          comes from less significant bits. */
+          if (samples < 4)
+            {
+              value = (value << 8) | (ADC0->SINGLEDATA & 0xff);
+              ++samples;
+            }
+          else
+            {
+              adc_buf[req.offset++] = value;
+              --req.count;
+              value = 0;
+              samples = 0;
+            }
         }
     }
 
