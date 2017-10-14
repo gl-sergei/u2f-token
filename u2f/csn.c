@@ -38,6 +38,8 @@
 
 #define MASKED_WRITE(reg, mask, val) { (reg) = (((reg) & ~(mask)) | (val)); }
 
+#define INTR_REQ_TIMER0 2
+#define INTR_REQ_TIMER1 7
 #define PRIO_CSN 8
 
 extern uint8_t __process6_stack_base__[], __process6_stack_size__[];
@@ -48,34 +50,61 @@ extern uint8_t __process6_stack_base__[], __process6_stack_size__[];
 static volatile uint32_t present = 1000;
 static uint32_t count_max[2] = {0, 0};
 
+static chopstx_intr_t timer1_intr;
+
+static void
+measure_start (int ch)
+{
+  /* select channel */
+  MASKED_WRITE(ACMP0->INPUTSEL, 0x07, ch);
+
+  /* reset and start timers */
+  TIMER0->CNT = 0;
+  TIMER1->CNT = 0;
+  TIMER0->CMD = (1 << 0);  /* start */
+  TIMER1->CMD = (1 << 0);  /* start */
+}
+
+static uint32_t
+measure_stop (void)
+{
+  TIMER0->CMD = (1 << 1);  /* stop */
+  TIMER1->CMD = (1 << 1);  /* stop */
+
+  TIMER1->IFC = 1; /* clear interrupt flag */
+
+  return TIMER0->CNT;
+}
+
 static void *
 csn (void *arg)
 {
+  int ch = 0;
+
   (void)arg;
 
   present = 1000; /* indicate user presence for 10 seconds after start
                   (reset after 10s) */
 
+  chopstx_claim_irq (&timer1_intr, INTR_REQ_TIMER1);
+
+  measure_start (ch);
+
   while (1)
     {
-      for (int ch = 0; ch < 2; ch++)
+      struct chx_poll_head *pd_array[1] = {
+        (struct chx_poll_head *)&timer1_intr
+      };
+
+      chopstx_poll (NULL, 1, pd_array);
+
+      if (timer1_intr.ready)
         {
           uint32_t count;
           uint32_t threshold;
-          uint8_t touch = 0;
+          uint32_t touch = 0;
 
-          /* select ch */
-          MASKED_WRITE(ACMP0->INPUTSEL, 0x07, ch);
-
-          TIMER0->CNT = 0;
-          TIMER0->CMD = (1 << 0);        /* START */
-
-          chopstx_usec_wait (10*1000);   /* 0.01 sec */
-
-          TIMER0->CMD = (1 << 1);        /* STOP */
-
-          count = TIMER0->CNT;
-          TIMER0->CNT = 0;
+          count = measure_stop ();
 
           threshold = count_max[ch] - count_max[ch] / 2;
           if (count > 0 && count < threshold)
@@ -91,6 +120,10 @@ csn (void *arg)
 
           if (touch)
             present = 1000;    /* remember user presence for 10 seconds */
+
+          ch ^= 1;
+
+          measure_start (ch);
         }
     }
 
@@ -113,7 +146,8 @@ void
 capsense_init (void)
 {
   CMU->HFPERCLKEN0 |= CMU_HFPERCLKEN0_ACMP0
-                      | CMU_HFPERCLKEN0_TIMER0 | CMU_HFPERCLKEN0_PRS;
+                      | CMU_HFPERCLKEN0_TIMER0 | CMU_HFPERCLKEN0_PRS
+                      | CMU_HFPERCLKEN0_TIMER1;
 
   /* Set control register. No need to set interrupt modes */
   ACMP0->CTRL = (0x0 << 31)    /* FULLBIAS */
@@ -152,6 +186,12 @@ capsense_init (void)
   PRS->CH[0].CTRL = (1 << 24)              /* EDSEL = POSEDGE */
                     | (2 << 16)            /* SOURCESEL = ACMP0 */
                     | (0 << 0);            /* SIGSEL = ACMP0OUT */
+
+  /* Initialize TIMER1 - Prescaler 2^9, top value 274, interrupt on overflow */
+  TIMER1->CTRL = (0x9 << 24);  /* PRESC_DIV512 */
+  TIMER1->TOP  = 560;
+  TIMER1->IEN  = (1 << 0);     /* IEN_OF */
+  TIMER1->CNT  = 0;
 
   chopstx_create (PRIO_CSN, STACK_ADDR_CSN, STACK_SIZE_CSN, csn, NULL);
 }
