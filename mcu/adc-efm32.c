@@ -52,7 +52,7 @@ int adc_init (void)
   /* Make sure conversion is not in progress */
   ADC0->CMD = ADC_CMD_SINGLESTOP | ADC_CMD_SCANSTOP;
 
-  const uint8_t timebase = 15; /* we are using 14MHz HFRCO as HFCLK source */
+  const uint8_t timebase = MHZ + 1; /* we are using HFRCO as HFCLK source */
   const uint8_t presc = 2;
 
   ADC0->CTRL = (0 << 24)           /* OVSRSEL */

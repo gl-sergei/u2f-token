@@ -131,13 +131,15 @@ bn256_sub_uint (bn256 *X, const bn256 *A, uint32_t w)
   return borrow;
 }
 
+#include "bn-thumb1.h"
+
 #ifndef BN256_C_IMPLEMENTATION
 #define ASM_IMPLEMENTATION 1
 #endif
 void
 bn256_mul (bn512 *X, const bn256 *A, const bn256 *B)
 {
-#if ASM_IMPLEMENTATION
+#if defined(ASM_IMPLEMENTATION) && defined(__thumb2__)
 #include "muladd_256.h"
   const uint32_t *s;
   uint32_t *d;
@@ -154,6 +156,8 @@ bn256_mul (bn512 *X, const bn256 *A, const bn256 *B)
   s = A->word;  d = &X->word[5];  w = B->word[5];  MULADD_256 (s, d, w, c);
   s = A->word;  d = &X->word[6];  w = B->word[6];  MULADD_256 (s, d, w, c);
   s = A->word;  d = &X->word[7];  w = B->word[7];  MULADD_256 (s, d, w, c);
+#elif defined(ASM_IMPLEMENTATION) && defined(__thumb__)
+  bn256_mul_thumb1 (X, A, B);
 #else
   int i, j, k;
   int i_beg, i_end;
@@ -206,7 +210,7 @@ bn256_mul (bn512 *X, const bn256 *A, const bn256 *B)
 void
 bn256_sqr (bn512 *X, const bn256 *A)
 {
-#if ASM_IMPLEMENTATION
+#if defined(ASM_IMPLEMENTATION) && defined(__thumb2__)
   int i;
 
   memset (X->word, 0, sizeof (bn512));
@@ -282,6 +286,8 @@ bn256_sqr (bn512 *X, const bn256 *A)
       if (i < BN256_WORDS - 1)
 	*wij = c;
     }
+#elif defined(ASM_IMPLEMENTATION) && defined(__thumb__)
+  bn256_mul_thumb1 (X, A, A);
 #else
   int i, j, k;
   int i_beg, i_end;

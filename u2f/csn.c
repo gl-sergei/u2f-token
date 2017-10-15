@@ -187,9 +187,10 @@ capsense_init (void)
                     | (2 << 16)            /* SOURCESEL = ACMP0 */
                     | (0 << 0);            /* SIGSEL = ACMP0OUT */
 
-  /* Initialize TIMER1 - Prescaler 2^9, top value 274, interrupt on overflow */
+  /* Initialize TIMER1 - Prescaler 2^9, top value 40 * MHZ,
+  interrupt on overflow */
   TIMER1->CTRL = (0x9 << 24);  /* PRESC_DIV512 */
-  TIMER1->TOP  = 560;
+  TIMER1->TOP  = 40 * MHZ;
   TIMER1->IEN  = (1 << 0);     /* IEN_OF */
   TIMER1->CNT  = 0;
 

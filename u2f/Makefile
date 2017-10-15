@@ -23,7 +23,7 @@ OBJCOPY   = $(CROSS)objcopy
 
 MCU   = cortex-m0plus
 CWARN = -Wall -Wextra -Wstrict-prototypes
-DEFS  = -DMAKE_ENTRY_PUBLIC -DUSE_SYS3 -DFREE_STANDING -DMHZ=14 -DBN256_C_IMPLEMENTATION
+DEFS  = -DMAKE_ENTRY_PUBLIC -DUSE_SYS3 -DFREE_STANDING -DMHZ=21
 OPT   = -O3 -Os -fstack-usage
 LIBS  =
 
