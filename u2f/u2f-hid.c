@@ -283,6 +283,8 @@ u2f_hid_main (void *arg)
   int remain = 0;
   int err;
 
+  u2f_apdu_init ();
+
   while (1)
     {
       err = hid_recv (u2f->hid, (uint8_t *) &u2f->frame,

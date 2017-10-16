@@ -14,7 +14,7 @@ MEMORY
 {
     flash  : org = 0x00004000, len = 47k
     ram : org = 0x20000000, len = 8k
-    flash1 : org = 0x00004000+0xbc00, len = 1k
+    flash1 : org = 0x00004000+0xb800, len = 2k
 }
 
 __ram_start__           = ORIGIN(ram);
@@ -156,6 +156,8 @@ SECTIONS
     .flash_storage :
     {
         . = ALIGN (1024);
+        _device_key_base = .;
+        . += 1024;
         _auth_ctr_base = .;
         . += 1024;
     } > flash1

@@ -135,15 +135,66 @@ typedef struct {
 #define U2F_SW_WRONG_LENGTH             0x6700 // SW_INS_WRONG_LENGTH
 #define U2F_SW_BAD_CLA                  0x6E00 // SW_BAD_CLA
 
+/* simple RNG interface */
+static uint8_t rng_index = 0;
+
+static int
+rng (uint8_t *buf, size_t size)
+{
+  return random_gen (&rng_index, buf, size);
+}
+
+/* device key */
+
+struct device_key
+{
+  /* ECC private key unique for each device */
+  uint8_t key[U2F_PRIV_K_SIZE];
+  /* SHA256 of private key to verify its integrity */
+  uint8_t key_hash[HASH_RES_SIZE];
+  /* reserved for future use */
+  uint8_t resrved[1024 - U2F_PRIV_K_SIZE - HASH_RES_SIZE];
+};
+
+extern uint32_t _device_key_base;
+static struct device_key *device_key = (struct device_key *) &_device_key_base;
+
+static void
+device_key_gen (void)
+{
+  uint8_t key[U2F_PRIV_K_SIZE];
+  uint8_t key_hash[HASH_RES_SIZE];
+  sha256_context ctx;
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, device_key->key, U2F_PRIV_K_SIZE);
+  sha256_finish (&ctx, key_hash);
+
+  if (memcmp (key_hash, device_key->key_hash, HASH_RES_SIZE) == 0)
+    return;
+
+  /* new device key needs to be generated */
+  rng (key, U2F_PRIV_K_SIZE);
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, key, U2F_PRIV_K_SIZE);
+  sha256_finish (&ctx, key_hash);
+
+  flash_erase_page ((uintptr_t) &device_key);
+  flash_write ((uintptr_t) device_key->key, key, U2F_PRIV_K_SIZE);
+  flash_write ((uintptr_t) device_key->key_hash, key_hash, HASH_RES_SIZE);
+}
+
+
 static void
 new_private_key (uint8_t *app_id, uint8_t *nonce, uint8_t *private_key)
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, nonce, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key, private_key);
+  hmac_sha256_finish (&ctx, device_key->key, private_key);
 }
 
 static void
@@ -152,10 +203,10 @@ make_key_handle (uint8_t *private_key, uint8_t *app_id,
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key, key_handle);
+  hmac_sha256_finish (&ctx, device_key->key, key_handle);
 
   memcpy (key_handle + HASH_RES_SIZE, nonce, U2F_NONCE_SIZE);
 }
@@ -166,15 +217,15 @@ recover_private_key (uint8_t *app_id, uint8_t *key_handle, uint8_t *private_key)
   hmac_sha256_context ctx;
   uint8_t control_mac[HASH_RES_SIZE];
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, key_handle + HASH_RES_SIZE, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key, private_key);
+  hmac_sha256_finish (&ctx, device_key->key, private_key);
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key, control_mac);
+  hmac_sha256_finish (&ctx, device_key->key, control_mac);
 
   return memcmp(control_mac, key_handle, HASH_RES_SIZE);
 }
@@ -255,9 +306,8 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
   uint8_t hash[HASH_RES_SIZE];
   uint8_t sig[64];
   uint8_t sig_len;
-  uint8_t index;
 
-  if (random_gen (&index, nonce, U2F_NONCE_SIZE))
+  if (rng (nonce, U2F_NONCE_SIZE))
     return -1;
 
   new_private_key (req->appId, nonce, private);
@@ -402,6 +452,13 @@ u2f_apdu_error (uint8_t *msg, uint32_t *len, uint16_t sw)
 {
   *len = 0;
   append_sw (msg, len, sw);
+}
+
+void
+u2f_apdu_init (void)
+{
+  /* generate and store device private key on first run */
+  device_key_gen ();
 }
 
 int
