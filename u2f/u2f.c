@@ -64,9 +64,7 @@ pwm (void *arg)
   while (1)
     {
       set_led ((blink_is_on & v) || user_presence_get ());
-      chopstx_usec_wait (m);
-      set_led (0);
-      chopstx_usec_wait (100-m);
+      chopstx_usec_wait (10*1000);
     }
 
   return NULL;
@@ -101,8 +99,8 @@ blk (void *arg)
   return NULL;
 }
 
-#define PRIO_PWM 3
-#define PRIO_BLK 3
+#define PRIO_PWM 7
+#define PRIO_BLK 7
 
 extern uint8_t __process1_stack_base__[], __process1_stack_size__[];
 extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
