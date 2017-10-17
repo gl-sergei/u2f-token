@@ -486,7 +486,7 @@ usb_tx (struct usb_hid *hid, uint8_t ep_num)
 
 
 #define INTR_REQ_USB 19
-#define PRIO_HID      5
+#define PRIO_HID     8
 
 extern uint8_t __process3_stack_base__[], __process3_stack_size__[];
 #define STACK_ADDR_HID ((uint32_t)__process3_stack_base__)
