@@ -34,18 +34,18 @@ clock_init (void)
   CMU->HFPERCLKEN0 = CMU_HFPERCLKEN0_GPIO;
   CMU->HFPERCLKDIV = 1 << 8;
 
+#if (MHZ == 21)
+  /* Set HFRCO freq 21 MHz */
+  CMU->HFRCOCTRL = (4 << 8) | (DEVINFO->HFRCOCAL1 & 0xff << 0);
+#elif (MHZ != 14)
+  #error "Unsuppored clock frequency."
+#endif
+
   CMU->OSCENCMD = CMU_OSCENCMD_HFRCOEN;
   while (!(CMU->STATUS & CMU_STATUS_HFRCORDY));
 
   CMU->CMD |= CMU_CMD_HFCLKSEL_HFRCO;
   while ((CMU->STATUS & CMU_STATUS_HFRCOSEL) == 0);
-
-#if (MHZ == 21)
-  /* Set HFRCO freq 21 MHz */
-  CMU->HFRCOCTRL = (4 << 8) | (DEVINFO->HFRCOCAL1 & 0xff << 0);
-#elif (MZH != 14)
-  #error "Unsuppored clock frequency."
-#endif
 }
 
 static void __attribute__((used))
