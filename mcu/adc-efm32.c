@@ -60,17 +60,18 @@ int adc_init (void)
                | (presc << 8)      /* PRESC */
                | (0 << 0)          /* WARMUPMODE */;
 
-  ADC0->SINGLECTRL = (1 << 28)    /* PRS channel 1 (we use ch0 for capsense) */
-                   | (0 << 20)    /* 1 cycle aacquisition time */
-                   | (0 << 16)    /* 1.25V internal reference */
-                   | (0 <<  4)    /* 12 bit resolution */
-                   | (8 <<  8)    /* temperature sensor input selected */
-                   | (0 <<  1)    /* differential mode */
-                   | (0 << 24)    /* disable PRS */
-                   | (0 <<  2)    /* right adjust */
-                   | (1 <<  0);   /* repetitive mode */
+  ADC0->SCANCTRL = ( 1 << 28)     /* PRS channel 1 (we use ch0 for capsense) */
+                   | ( 0 << 24)   /* disable PRS */
+                   | ( 0 << 20)   /* 1 cycle aacquisition time */
+                   | ( 0 << 16)   /* 1.25V internal reference */
+                   | (15 <<  8)   /* CH0,1,2,3 */
+                   | ( 0 <<  4)   /* 12 bit resolution */
+                   | ( 0 <<  2)   /* right adjust */
+                   | ( 0 <<  1)   /* differential mode */
+                   | ( 1 <<  0);  /* repetitive mode */
 
-  ADC0->CAL = DEVINFO->ADC0CAL0;
+  ADC0->CAL = (DEVINFO->ADC0CAL0 & 0xffff)
+              | ((DEVINFO->ADC0CAL0 & 0xffff) << 16);
 
   return 0;
 }
@@ -95,43 +96,46 @@ extern uint8_t u;
 int adc_wait_completion (void)
 {
   struct chx_poll_head *pd_array[1] = { (struct chx_poll_head *)&adc_intr };
-  uint32_t value;
-  int samples;
 
   chopstx_claim_irq (&adc_intr, INTR_REQ_ADC0);
 
   ADC0->IFC = 0xffffffff;
-  ADC0->IEN = 1; /* enable single conversion complete interrupt */
-  ADC0->CMD = ADC_CMD_SINGLESTART;
+  ADC0->IEN = ADC_IEN_SINGLE | ADC_IEN_SCAN;
 
-  value = 0;
-  samples = 0;
+  uint32_t value = 0;
+  int idx = 0;
+
+  ADC0->CMD = ADC_CMD_SCANSTART;
+
   while (req.count > 0)
     {
-      /* Wait for single conversion completion */
+
+      /* Wait for conversion completion */
       chopstx_poll (NULL, 1, pd_array);
 
-      if (adc_intr.ready && (ADC0->IF & 1))
+      if (adc_intr.ready)
         {
-          /* Combine 4 12-bit samples into single 32-bit one. Entropy 
-          comes from less significant bits. */
-          if (samples < 4)
+          uint32_t flag = ADC0->IF;
+
+          if (flag & ADC_IF_SCAN)
             {
-              value = (value << 8) | (ADC0->SINGLEDATA & 0xff);
-              ++samples;
+              ADC0->IFC = ADC_IFC_SCAN;
+              value = (value << 8) | (ADC0->SCANDATA & 0xff);
+              ++idx;
             }
-          else
+
+          if (idx > 3)
             {
               adc_buf[req.offset++] = value;
               --req.count;
+              idx = 0;
               value = 0;
-              samples = 0;
             }
         }
     }
 
   ADC0->IEN = 0;
-  ADC0->CMD = ADC_CMD_SINGLESTOP;
+  ADC0->CMD = ADC_CMD_SCANSTOP;
 
   return 0;
 }

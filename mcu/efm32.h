@@ -471,6 +471,47 @@
 #define ADC_CMD_SCANSTART     (0x1UL << 2)  /* Scan Sequence Start */
 #define ADC_CMD_SCANSTOP      (0x1UL << 3)  /* Scan Sequence Stop */
 
+/* Bit fields for ADC STATUS */
+#define ADC_STATUS_SINGLEACT        (0x1UL << 0)          /* Single Conversion Active */
+#define ADC_STATUS_SCANACT          (0x1UL << 1)          /* Scan Conversion Active */
+#define ADC_STATUS_SINGLEREFWARM    (0x1UL << 8)          /* Single Reference Warmed Up */
+#define ADC_STATUS_SCANREFWARM      (0x1UL << 9)          /* Scan Reference Warmed Up */
+#define ADC_STATUS_WARM             (0x1UL << 12)         /* ADC Warmed Up */
+#define ADC_STATUS_SINGLEDV         (0x1UL << 16)         /* Single Sample Data Valid */
+#define ADC_STATUS_SCANDV           (0x1UL << 17)         /* Scan Data Valid */
+#define ADC_STATUS_SCANDATASRC_CH0  (0x00000000UL << 24)  /* CH0 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH1  (0x00000001UL << 24)  /* CH1 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH2  (0x00000002UL << 24)  /* CH2 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH3  (0x00000003UL << 24)  /* CH3 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH4  (0x00000004UL << 24)  /* CH4 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH5  (0x00000005UL << 24)  /* CH5 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH6  (0x00000006UL << 24)  /* CH6 scan is ready */
+#define ADC_STATUS_SCANDATASRC_CH7  (0x00000007UL << 24)  /* CH7 scan is ready */
+
+/* Bit fields for ADC IEN */
+#define ADC_IEN_SINGLE       (0x1UL << 0)  /* Single Conversion Complete */
+#define ADC_IEN_SCAN         (0x1UL << 1)  /* Scan Conversion Complete */
+#define ADC_IEN_SINGLEOF     (0x1UL << 8)  /* Single Result Overflow */
+#define ADC_IEN_SCANOF       (0x1UL << 9)  /* Scan Result Overflow */
+
+/* Bit fields for ADC IF */
+#define ADC_IF_SINGLE        (0x1UL << 0)  /* Single Conversion Complete */
+#define ADC_IF_SCAN          (0x1UL << 1)  /* Scan Conversion Complete */
+#define ADC_IF_SINGLEOF      (0x1UL << 8)  /* Single Result Overflow */
+#define ADC_IF_SCANOF        (0x1UL << 9)  /* Scan Result Overflow */
+
+/* Bit fields for ADC IFS */
+#define ADC_IFS_SINGLE       (0x1UL << 0)  /* Single Conversion Complete */
+#define ADC_IFS_SCAN         (0x1UL << 1)  /* Scan Conversion Complete */
+#define ADC_IFS_SINGLEOF     (0x1UL << 8)  /* Single Result Overflow */
+#define ADC_IFS_SCANOF       (0x1UL << 9)  /* Scan Result Overflow */
+
+/* Bit fields for ADC IFC */
+#define ADC_IFC_SINGLE       (0x1UL << 0)  /* Single Conversion Complete */
+#define ADC_IFC_SCAN         (0x1UL << 1)  /* Scan Conversion Complete */
+#define ADC_IFC_SINGLEOF     (0x1UL << 8)  /* Single Result Overflow */
+#define ADC_IFC_SCANOF       (0x1UL << 9)  /* Scan Result Overflow */
+
 /* Limits imposed by the USB peripheral */
 #define NP_RX_QUE_DEPTH       8
 #define HP_RX_QUE_DEPTH       8
