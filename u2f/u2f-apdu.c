@@ -212,10 +212,14 @@ make_key_handle (uint8_t *private_key, uint8_t *app_id,
 }
 
 static int
-recover_private_key (uint8_t *app_id, uint8_t *key_handle, uint8_t *private_key)
+recover_private_key (uint8_t *app_id, uint8_t *key_handle,
+                     uint8_t key_handle_len, uint8_t *private_key)
 {
   hmac_sha256_context ctx;
   uint8_t control_mac[HASH_RES_SIZE];
+
+  if (key_handle_len != U2F_KH_SIZE)
+    return -1;
 
   hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
@@ -420,7 +424,8 @@ u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
 
   auth_req_hash (req, resp, hash);
 
-  if (recover_private_key (req->appId, req->keyHandle, private))
+  if (recover_private_key (req->appId, req->keyHandle,
+                           req->keyHandleLen, private))
     return -1;
 
   if (ecdsa_sign_p256r1 (hash, sig, private))
@@ -509,6 +514,11 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
         }
       break;
     case U2F_AUTHENTICATE:
+      if (Lc != sizeof (U2F_AUTHENTICATE_REQ))
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
+          break;
+        }
       ret = u2f_authenticate ((U2F_AUTHENTICATE_REQ *) DATA (apdu),
                               (U2F_AUTHENTICATE_RESP *)resp);
       if (ret > 0)
