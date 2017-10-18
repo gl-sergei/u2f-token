@@ -47,7 +47,7 @@ extern uint8_t __process6_stack_base__[], __process6_stack_size__[];
 #define STACK_ADDR_CSN ((uint32_t)__process6_stack_base__)
 #define STACK_SIZE_CSN ((uint32_t)__process6_stack_size__)
 
-static volatile uint32_t present = 1000;
+static volatile uint32_t present = 500;
 static uint32_t count_max[2] = {0, 0};
 
 static chopstx_intr_t timer1_intr;
@@ -83,7 +83,7 @@ csn (void *arg)
 
   (void)arg;
 
-  present = 1000; /* indicate user presence for 10 seconds after start
+  present = 500; /* indicate user presence for 10 seconds after start
                   (reset after 10s) */
 
   chopstx_claim_irq (&timer1_intr, INTR_REQ_TIMER1);
@@ -119,7 +119,7 @@ csn (void *arg)
             --present;
 
           if (touch)
-            present = 1000;    /* remember user presence for 10 seconds */
+            present = 500;    /* remember user presence for 10 seconds */
 
           ch ^= 1;
 
@@ -187,9 +187,9 @@ capsense_init (void)
                     | (2 << 16)            /* SOURCESEL = ACMP0 */
                     | (0 << 0);            /* SIGSEL = ACMP0OUT */
 
-  /* Initialize TIMER1 - Prescaler 2^9, top value 40 * MHZ,
+  /* Initialize TIMER1 - Prescaler 2^10, top value 40 * MHZ,
   interrupt on overflow */
-  TIMER1->CTRL = (0x9 << 24);  /* PRESC_DIV512 */
+  TIMER1->CTRL = (0xa << 24);  /* PRESC_DIV1024 */
   TIMER1->TOP  = 40 * MHZ;
   TIMER1->IEN  = (1 << 0);     /* IEN_OF */
   TIMER1->CNT  = 0;
