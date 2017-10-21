@@ -145,14 +145,14 @@ telnet localhost 4444
 
 ### Random number generator (RNG)
 
-U2F-TOKEN is using [Neug][1] to generate high quality random numbers. The source
-of entropy is built-in Analog to Digital Converter (both STM32F103 and EFM32HG
-have ones). 32-bit ADC output is passed through CRC32 35 times to get 1120 bit
-input for SHA256-based whitening element.
+U2F-TOKEN is using [Neug][neug] to generate high quality random numbers. The
+source of entropy is built-in Analog to Digital Converter (both STM32F103 and
+EFM32HG have ones). 32-bit ADC output is passed through CRC32 35 times to get
+1120 bit input for SHA256-based whitening element.
 
-[1]:((https://www.gniibe.org/memo/development/gnuk/rng/neug.html)
+[neug]: https://www.gniibe.org/memo/development/gnuk/rng/neug.html "Neug"
 
-I ran [this suite][2] on 1.7M of raw RNG output from Tomu board.
+I ran [this suite][rngtest] on 1.7M of raw RNG output from Tomu board.
 
 ```text
 SUMMARY
@@ -174,7 +174,7 @@ random_excursion_test                    0.251774950817     PASS
 random_excursion_variant_test            0.0871834280054    PASS
 ```
 
-[2]:(https://github.com/dj-on-github/sp800_22_tests)
+[rngtest]: https://github.com/dj-on-github/sp800_22_tests "SP800-22 Rev 1a PRNG test suite"
 
 
 ### Device Key
@@ -267,12 +267,12 @@ authentication device, because:
    device key
 2. Both STM32F103 and EFM32HG have "flash readout protection" feature. Once
    enabled, this feature protecting flash from being read via debug interface.
-   See [this post][3] for EFM32, and [this question][5] for STM32F103. See also
-   `efm32 debuglock` and `stm32f1x lock` commands in [OpenOCD manual][5].
+   See [this post][p1] for EFM32, and [this question][q1] for STM32F103. See also
+   `efm32 debuglock` and `stm32f1x lock` commands in [OpenOCD manual][openocd-flash].
 
-[3]:(http://community.silabs.com/t5/32-bit-MCU/Read-Write-Protection-of-Flash-and-SRAM/td-p/106405)
-[4]:(https://stackoverflow.com/q/32509747)
-[5]:(http://openocd.org/doc/html/Flash-Commands.html)
+[p1]: http://community.silabs.com/t5/32-bit-MCU/Read-Write-Protection-of-Flash-and-SRAM/td-p/106405 "readout protection"
+[q1]: https://stackoverflow.com/q/32509747 "readout protection"
+[openocd-flash]: http://openocd.org/doc/html/Flash-Commands.html "readout protection"
 
 
 ## License
