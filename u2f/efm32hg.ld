@@ -12,7 +12,7 @@ __process6_stack_size__  = 0x0200; /* pbt / csn               */
 
 MEMORY
 {
-    flash  : org = 0x00004000, len = 47k
+    flash  : org = 0x00000000, len = 47k
     ram : org = 0x20000000, len = 8k
     flash1 : org = 0x00004000+0xb800, len = 2k
 }
