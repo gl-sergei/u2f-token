@@ -2,10 +2,14 @@
 #include <stdlib.h>
 #include <chopstx.h>
 #include <string.h>
+#include "board.h"
 #include "usb_lld.h"
 #include "tty.h"
 
 static chopstx_intr_t usb_intr;
+
+#define CDC_EP_DATA      1
+#define CDC_EP_NOTIFY    2
 
 struct line_coding
 {
@@ -15,7 +19,7 @@ struct line_coding
   uint8_t datatype;
 }  __attribute__((packed));
 
-static const struct line_coding line_coding0 = {
+static const struct line_coding line_coding0 __attribute__ ((aligned(4))) = {
   115200, /* baud rate: 115200    */
   0x00,   /* stop bits: 1         */
   0x00,   /* parity:    none      */
@@ -43,6 +47,8 @@ struct tty {
   chopstx_cond_t cnd;
   uint8_t inputline[LINEBUFSIZE];   /* Line editing is supported */
   uint8_t send_buf[LINEBUFSIZE];    /* Sending ring buffer for echo back */
+  uint8_t send_buf0[64] __attribute__ ((aligned(4)));
+  uint8_t recv_buf0[64] __attribute__ ((aligned(4)));
   uint32_t inputline_len    : 8;
   uint32_t send_head        : 8;
   uint32_t send_tail        : 8;
@@ -51,16 +57,17 @@ struct tty {
   uint32_t flag_input_avail : 1;
   uint32_t                  : 2;
   uint32_t device_state     : 3;     /* USB device status */
-  struct line_coding line_coding;
+  struct line_coding __attribute__ ((aligned(4))) line_coding;
+  uint32_t padding[1] __attribute__ ((aligned(4))) ;
 };
 
-static struct tty tty0;
+static struct tty tty0 __attribute__ ((aligned(4)));
 
 /*
  * Locate TTY structure from interface number or endpoint number.
  * Currently, it always returns tty0, because we only have the one.
  */
-static struct tty *
+struct tty *
 tty_get (int interface, uint8_t ep_num)
 {
   struct tty *t = &tty0;
@@ -68,23 +75,17 @@ tty_get (int interface, uint8_t ep_num)
   if (interface >= 0)
     {
       if (interface == 0)
-	t = &tty0;
+        t = &tty0;
     }
   else
     {
-      if (ep_num == ENDP1 || ep_num == ENDP2 || ep_num == ENDP3)
-	t = &tty0;
+      if (ep_num == CDC_EP_NOTIFY || ep_num == CDC_EP_DATA)
+        t = &tty0;
     }
 
   return t;
 }
 
-
-#define ENDP0_RXADDR        (0x40)
-#define ENDP0_TXADDR        (0x80)
-#define ENDP1_TXADDR        (0xc0)
-#define ENDP2_TXADDR        (0x100)
-#define ENDP3_RXADDR        (0x140)
 
 #define USB_CDC_REQ_SET_LINE_CODING             0x20
 #define USB_CDC_REQ_GET_LINE_CODING             0x21
@@ -92,82 +93,82 @@ tty_get (int interface, uint8_t ep_num)
 #define USB_CDC_REQ_SEND_BREAK                  0x23
 
 /* USB Device Descriptor */
-static const uint8_t vcom_device_desc[18] = {
+static const uint8_t vcom_device_desc[18] __attribute__ ((aligned(4))) = {
   18,   /* bLength */
-  DEVICE_DESCRIPTOR,		/* bDescriptorType */
-  0x10, 0x01,			/* bcdUSB = 1.1 */
-  0x02,				/* bDeviceClass (CDC).              */
-  0x00,				/* bDeviceSubClass.                 */
-  0x00,				/* bDeviceProtocol.                 */
-  0x40,				/* bMaxPacketSize.                  */
+  DEVICE_DESCRIPTOR,                /* bDescriptorType */
+  0x10, 0x01,                        /* bcdUSB = 1.1 */
+  0x02,                                /* bDeviceClass (CDC).              */
+  0x00,                                /* bDeviceSubClass.                 */
+  0x00,                                /* bDeviceProtocol.                 */
+  0x40,                                /* bMaxPacketSize.                  */
   0xFF, 0xFF, /* idVendor  */
   0x01, 0x00, /* idProduct */
   0x00, 0x01, /* bcdDevice  */
-  1,				/* iManufacturer.                   */
-  2,				/* iProduct.                        */
-  3,				/* iSerialNumber.                   */
-  1				/* bNumConfigurations.              */
+  1,                                /* iManufacturer.                   */
+  2,                                /* iProduct.                        */
+  3,                                /* iSerialNumber.                   */
+  1                                /* bNumConfigurations.              */
 };
 
-#define VCOM_FEATURE_BUS_POWERED	0x80
+#define VCOM_FEATURE_BUS_POWERED        0x80
 
 /* Configuration Descriptor tree for a CDC.*/
-static const uint8_t vcom_config_desc[67] = {
+static const uint8_t vcom_config_desc[67] __attribute__ ((aligned(4))) = {
   9,
-  CONFIG_DESCRIPTOR,		/* bDescriptorType: Configuration */
+  CONFIG_DESCRIPTOR,                /* bDescriptorType: Configuration */
   /* Configuration Descriptor.*/
-  67, 0x00,			/* wTotalLength.                    */
-  0x02,				/* bNumInterfaces.                  */
-  0x01,				/* bConfigurationValue.             */
-  0,				/* iConfiguration.                  */
-  VCOM_FEATURE_BUS_POWERED,	/* bmAttributes.                    */
-  50,				/* bMaxPower (100mA).               */
+  67, 0x00,                        /* wTotalLength.                    */
+  0x02,                                /* bNumInterfaces.                  */
+  0x01,                                /* bConfigurationValue.             */
+  0,                                /* iConfiguration.                  */
+  VCOM_FEATURE_BUS_POWERED,        /* bmAttributes.                    */
+  50,                                /* bMaxPower (100mA).               */
   /* Interface Descriptor.*/
   9,
   INTERFACE_DESCRIPTOR,
-  0x00,		   /* bInterfaceNumber.                */
-  0x00,		   /* bAlternateSetting.               */
-  0x01,		   /* bNumEndpoints.                   */
-  0x02,		   /* bInterfaceClass (Communications Interface Class,
-		      CDC section 4.2).  */
-  0x02,		   /* bInterfaceSubClass (Abstract Control Model, CDC
-		      section 4.3).  */
-  0x01,		   /* bInterfaceProtocol (AT commands, CDC section
-		      4.4).  */
-  0,	           /* iInterface.                      */
+  0x00,                   /* bInterfaceNumber.                */
+  0x00,                   /* bAlternateSetting.               */
+  0x01,                   /* bNumEndpoints.                   */
+  0x02,                   /* bInterfaceClass (Communications Interface Class,
+                      CDC section 4.2).  */
+  0x02,                   /* bInterfaceSubClass (Abstract Control Model, CDC
+                      section 4.3).  */
+  0x01,                   /* bInterfaceProtocol (AT commands, CDC section
+                      4.4).  */
+  0,                   /* iInterface.                      */
   /* Header Functional Descriptor (CDC section 5.2.3).*/
-  5,	      /* bLength.                         */
-  0x24,	      /* bDescriptorType (CS_INTERFACE).  */
-  0x00,	      /* bDescriptorSubtype (Header Functional Descriptor). */
+  5,              /* bLength.                         */
+  0x24,              /* bDescriptorType (CS_INTERFACE).  */
+  0x00,              /* bDescriptorSubtype (Header Functional Descriptor). */
   0x10, 0x01, /* bcdCDC.                          */
   /* Call Management Functional Descriptor. */
   5,            /* bFunctionLength.                 */
   0x24,         /* bDescriptorType (CS_INTERFACE).  */
   0x01,         /* bDescriptorSubtype (Call Management Functional
-		   Descriptor). */
+                   Descriptor). */
   0x03,         /* bmCapabilities (D0+D1).          */
   0x01,         /* bDataInterface.                  */
   /* ACM Functional Descriptor.*/
   4,            /* bFunctionLength.                 */
   0x24,         /* bDescriptorType (CS_INTERFACE).  */
   0x02,         /* bDescriptorSubtype (Abstract Control Management
-		   Descriptor).  */
+                   Descriptor).  */
   0x02,         /* bmCapabilities.                  */
   /* Union Functional Descriptor.*/
   5,            /* bFunctionLength.                 */
   0x24,         /* bDescriptorType (CS_INTERFACE).  */
   0x06,         /* bDescriptorSubtype (Union Functional
-		   Descriptor).  */
+                   Descriptor).  */
   0x00,         /* bMasterInterface (Communication Class
-		   Interface).  */
+                   Interface).  */
   0x01,         /* bSlaveInterface0 (Data Class Interface).  */
-  /* Endpoint 2 Descriptor.*/
+  /* Endpoint NOTIFY Descriptor.*/
   7,
   ENDPOINT_DESCRIPTOR,
-  ENDP2|0x80,    /* bEndpointAddress.    */
+  CDC_EP_NOTIFY|0x80,    /* bEndpointAddress.    */
   0x03,          /* bmAttributes (Interrupt).        */
-  0x08, 0x00,	 /* wMaxPacketSize.                  */
-  0xFF,		 /* bInterval.                       */
+  0x08, 0x00,         /* wMaxPacketSize.                  */
+  0xFF,                 /* bInterval.                       */
   /* Interface Descriptor.*/
   9,
   INTERFACE_DESCRIPTOR, /* bDescriptorType: */
@@ -177,45 +178,45 @@ static const uint8_t vcom_config_desc[67] = {
   0x0A,          /* bInterfaceClass (Data Class Interface, CDC section 4.5). */
   0x00,          /* bInterfaceSubClass (CDC section 4.6). */
   0x00,          /* bInterfaceProtocol (CDC section 4.7). */
-  0x00,		 /* iInterface.                      */
-  /* Endpoint 3 Descriptor.*/
+  0x00,                 /* iInterface.                      */
+  /* Endpoint DATA OUT Descriptor.*/
   7,
-  ENDPOINT_DESCRIPTOR,		/* bDescriptorType: Endpoint */
-  ENDP3,    /* bEndpointAddress. */
-  0x02,				/* bmAttributes (Bulk).             */
-  0x40, 0x00,			/* wMaxPacketSize.                  */
-  0x00,				/* bInterval.                       */
-  /* Endpoint 1 Descriptor.*/
+  ENDPOINT_DESCRIPTOR,                /* bDescriptorType: Endpoint */
+  CDC_EP_DATA,    /* bEndpointAddress. */
+  0x02,                                /* bmAttributes (Bulk).             */
+  0x40, 0x00,                        /* wMaxPacketSize.                  */
+  0x00,                                /* bInterval.                       */
+  /* Endpoint DATA IN Descriptor.*/
   7,
-  ENDPOINT_DESCRIPTOR,		/* bDescriptorType: Endpoint */
-  ENDP1|0x80,			/* bEndpointAddress. */
-  0x02,				/* bmAttributes (Bulk).             */
-  0x40, 0x00,			/* wMaxPacketSize.                  */
-  0x00				/* bInterval.                       */
+  ENDPOINT_DESCRIPTOR,                /* bDescriptorType: Endpoint */
+  CDC_EP_DATA|0x80,                        /* bEndpointAddress. */
+  0x02,                                /* bmAttributes (Bulk).             */
+  0x40, 0x00,                        /* wMaxPacketSize.                  */
+  0x00                                /* bInterval.                       */
 };
 
 
 /*
  * U.S. English language identifier.
  */
-static const uint8_t vcom_string0[4] = {
-  4,				/* bLength */
+static const uint8_t vcom_string0[4] __attribute__ ((aligned(4))) = {
+  4,                                /* bLength */
   STRING_DESCRIPTOR,
-  0x09, 0x04			/* LangID = 0x0409: US-English */
+  0x09, 0x04                        /* LangID = 0x0409: US-English */
 };
 
-static const uint8_t vcom_string1[] = {
-  23*2+2,			/* bLength */
-  STRING_DESCRIPTOR,		/* bDescriptorType */
+static const uint8_t vcom_string1[] __attribute__ ((aligned(4))) = {
+  23*2+2,                        /* bLength */
+  STRING_DESCRIPTOR,                /* bDescriptorType */
   /* Manufacturer: "Flying Stone Technology" */
   'F', 0, 'l', 0, 'y', 0, 'i', 0, 'n', 0, 'g', 0, ' ', 0, 'S', 0,
   't', 0, 'o', 0, 'n', 0, 'e', 0, ' ', 0, 'T', 0, 'e', 0, 'c', 0,
   'h', 0, 'n', 0, 'o', 0, 'l', 0, 'o', 0, 'g', 0, 'y', 0, 
 };
 
-static const uint8_t vcom_string2[] = {
-  14*2+2,			/* bLength */
-  STRING_DESCRIPTOR,		/* bDescriptorType */
+static const uint8_t vcom_string2[] __attribute__ ((aligned(4))) = {
+  14*2+2,                        /* bLength */
+  STRING_DESCRIPTOR,                /* bDescriptorType */
   /* Product name: "Chopstx Sample" */
   'C', 0, 'h', 0, 'o', 0, 'p', 0, 's', 0, 't', 0, 'x', 0, ' ', 0,
   'S', 0, 'a', 0, 'm', 0, 'p', 0, 'l', 0, 'e', 0,
@@ -224,15 +225,14 @@ static const uint8_t vcom_string2[] = {
 /*
  * Serial Number string.
  */
-static const uint8_t vcom_string3[28] = {
-  28,				    /* bLength */
-  STRING_DESCRIPTOR,		    /* bDescriptorType */
+static const uint8_t vcom_string3[28] __attribute__ ((aligned(4))) = {
+  28,                                    /* bLength */
+  STRING_DESCRIPTOR,                    /* bDescriptorType */
   '0', 0,  '.', 0,  '0', 0, '0', 0, /* Version number */
 };
 
 
 #define NUM_INTERFACES 2
-
 
 static void
 usb_device_reset (struct usb_dev *dev)
@@ -240,7 +240,7 @@ usb_device_reset (struct usb_dev *dev)
   usb_lld_reset (dev, VCOM_FEATURE_BUS_POWERED);
 
   /* Initialize Endpoint 0 */
-  usb_lld_setup_endpoint (ENDP0, EP_CONTROL, 0, ENDP0_RXADDR, ENDP0_TXADDR, 64);
+  usb_lld_setup_endp (dev, ENDP0, EP_CONTROL, 1, 1, 64);
 
   chopstx_mutex_lock (&tty0.mtx);
   tty0.inputline_len = 0;
@@ -274,13 +274,7 @@ usb_ctrl_write_finish (struct usb_dev *dev)
       chopstx_cond_signal (&t->cnd);
       chopstx_mutex_unlock (&t->mtx);
     }
-
-  /*
-   * The transaction was already finished.  So, it is no use to call
-   * usb_lld_ctrl_error when the condition does not match.
-   */
 }
-
 
 
 static int
@@ -293,21 +287,23 @@ vcom_port_data_setup (struct usb_dev *dev)
       struct tty *t = tty_get (arg->index, 0);
 
       if (arg->request == USB_CDC_REQ_GET_LINE_CODING)
-	return usb_lld_ctrl_send (dev, &t->line_coding,
-				  sizeof (struct line_coding));
+        return usb_lld_ctrl_send (dev, &t->line_coding,
+                                  sizeof (struct line_coding));
     }
   else  /* USB_SETUP_SET (req) */
     {
       if (arg->request == USB_CDC_REQ_SET_LINE_CODING
-	  && arg->len == sizeof (struct line_coding))
-	{
-	  struct tty *t = tty_get (arg->index, 0);
+          && arg->len == sizeof (struct line_coding))
+        {
+          struct tty *t = tty_get (arg->index, 0);
 
-	  return usb_lld_ctrl_recv (dev, &t->line_coding,
-				    sizeof (struct line_coding));
-	}
+          return usb_lld_ctrl_recv (dev, &t->line_coding,
+                                    sizeof (struct line_coding));
+        }
       else if (arg->request == USB_CDC_REQ_SET_CONTROL_LINE_STATE)
-	return usb_lld_ctrl_ack (dev);
+        {
+          return usb_lld_ctrl_ack (dev);
+        }
     }
 
   return -1;
@@ -338,36 +334,36 @@ usb_get_descriptor (struct usb_dev *dev)
 
   if (desc_type == DEVICE_DESCRIPTOR)
     return usb_lld_ctrl_send (dev,
-			      vcom_device_desc, sizeof (vcom_device_desc));
+                              vcom_device_desc, sizeof (vcom_device_desc));
   else if (desc_type == CONFIG_DESCRIPTOR)
     return usb_lld_ctrl_send (dev,
-			      vcom_config_desc, sizeof (vcom_config_desc));
+                              vcom_config_desc, sizeof (vcom_config_desc));
   else if (desc_type == STRING_DESCRIPTOR)
     {
       const uint8_t *str;
       int size;
 
       switch (desc_index)
-	{
-	case 0:
-	  str = vcom_string0;
-	  size = sizeof (vcom_string0);
-	  break;
-	case 1:
-	  str = vcom_string1;
-	  size = sizeof (vcom_string1);
-	  break;
-	case 2:
-	  str = vcom_string2;
-	  size = sizeof (vcom_string2);
-	  break;
-	case 3:
-	  str = vcom_string3;
-	  size = sizeof (vcom_string3);
-	  break;
-	default:
-	  return -1;
-	}
+        {
+        case 0:
+          str = vcom_string0;
+          size = sizeof (vcom_string0);
+          break;
+        case 1:
+          str = vcom_string1;
+          size = sizeof (vcom_string1);
+          break;
+        case 2:
+          str = vcom_string2;
+          size = sizeof (vcom_string2);
+          break;
+        case 3:
+          str = vcom_string3;
+          size = sizeof (vcom_string3);
+          break;
+        default:
+          return -1;
+        }
 
       return usb_lld_ctrl_send (dev, str, size);
     }
@@ -376,28 +372,27 @@ usb_get_descriptor (struct usb_dev *dev)
 }
 
 static void
-vcom_setup_endpoints_for_interface (uint16_t interface, int stop)
+vcom_setup_endpoints_for_interface (struct usb_dev *dev,
+                                    uint16_t interface, int stop)
 {
   if (interface == 0)
     {
       if (!stop)
-	usb_lld_setup_endpoint (ENDP2, EP_INTERRUPT, 0, 0, ENDP2_TXADDR, 0);
+        usb_lld_setup_endp (dev, CDC_EP_NOTIFY, EP_INTERRUPT, 0, 1, 8);
       else
-	usb_lld_stall_tx (ENDP2);
+        usb_lld_stall_tx (CDC_EP_NOTIFY);
     }
   else if (interface == 1)
     {
       if (!stop)
-	{
-	  usb_lld_setup_endpoint (ENDP1, EP_BULK, 0, 0, ENDP1_TXADDR, 0);
-	  usb_lld_setup_endpoint (ENDP3, EP_BULK, 0, ENDP3_RXADDR, 0, 64);
-	  /* Start with no data receiving (ENDP3 not enabled)*/
-	}
+        {
+          usb_lld_setup_endp (dev, CDC_EP_DATA, EP_BULK, 1, 1, 64);
+        }
       else
-	{
-	  usb_lld_stall_tx (ENDP1);
-	  usb_lld_stall_rx (ENDP3);
-	}
+        {
+          usb_lld_stall_tx (CDC_EP_DATA);
+          usb_lld_stall_rx (CDC_EP_DATA);
+        }
     }
 }
 
@@ -411,11 +406,11 @@ usb_set_configuration (struct usb_dev *dev)
   if (current_conf == 0)
     {
       if (dev->dev_req.value != 1)
-	return -1;
+        return -1;
 
       usb_lld_set_configuration (dev, 1);
       for (i = 0; i < NUM_INTERFACES; i++)
-	vcom_setup_endpoints_for_interface (i, 0);
+        vcom_setup_endpoints_for_interface (dev, i, 0);
       chopstx_mutex_lock (&tty0.mtx);
       tty0.device_state = CONFIGURED;
       chopstx_cond_signal (&tty0.cnd);
@@ -424,19 +419,18 @@ usb_set_configuration (struct usb_dev *dev)
   else if (current_conf != dev->dev_req.value)
     {
       if (dev->dev_req.value != 0)
-	return -1;
+        return -1;
 
       usb_lld_set_configuration (dev, 0);
       for (i = 0; i < NUM_INTERFACES; i++)
-	vcom_setup_endpoints_for_interface (i, 1);
+        vcom_setup_endpoints_for_interface (dev, i, 1);
       chopstx_mutex_lock (&tty0.mtx);
       tty0.device_state = ADDRESSED;
       chopstx_cond_signal (&tty0.cnd);
       chopstx_mutex_unlock (&tty0.mtx);
     }
 
-  usb_lld_ctrl_ack (dev);
-  return 0;
+  return usb_lld_ctrl_ack (dev);
 }
 
 
@@ -453,9 +447,8 @@ usb_set_interface (struct usb_dev *dev)
     return -1;
   else
     {
-      vcom_setup_endpoints_for_interface (interface, 0);
-      usb_lld_ctrl_ack (dev);
-      return 0;
+      vcom_setup_endpoints_for_interface (dev, interface, 0);
+      return usb_lld_ctrl_ack (dev);
     }
 }
 
@@ -531,7 +524,6 @@ tty_echo_char (struct tty *t, int c)
   put_char_to_ringbuffer (t, c);
 }
 
-
 static void
 usb_tx_done (uint8_t ep_num, uint16_t len)
 {
@@ -539,17 +531,17 @@ usb_tx_done (uint8_t ep_num, uint16_t len)
 
   (void)len;
 
-  if (ep_num == ENDP1)
+  if (ep_num == CDC_EP_DATA)
     {
       chopstx_mutex_lock (&t->mtx);
       if (t->flag_send_ready == 0)
-	{
-	  t->flag_send_ready = 1;
-	  chopstx_cond_signal (&t->cnd);
-	}
+        {
+          t->flag_send_ready = 1;
+          chopstx_cond_signal (&t->cnd);
+        }
       chopstx_mutex_unlock (&t->mtx);
     }
-  else if (ep_num == ENDP2)
+  else if (ep_num == CDC_EP_NOTIFY)
     {
       /* Nothing */
     }
@@ -580,35 +572,35 @@ tty_input_char (struct tty *t, int c)
       tty_echo_char (t, 0x0d);
       tty_echo_char (t, 0x0a);
       for (i = 0; i < t->inputline_len; i++)
-	tty_echo_char (t, t->inputline[i]);
+        tty_echo_char (t, t->inputline[i]);
       break;
     case 0x15: /* Control-U */
       for (i = 0; i < t->inputline_len; i++)
-	{
-	  tty_echo_char (t, 0x08);
-	  tty_echo_char (t, 0x20);
-	  tty_echo_char (t, 0x08);
-	}
+        {
+          tty_echo_char (t, 0x08);
+          tty_echo_char (t, 0x20);
+          tty_echo_char (t, 0x08);
+        }
       t->inputline_len = 0;
       break;
     case 0x7f: /* DEL    */
       if (t->inputline_len > 0)
-	{
-	  tty_echo_char (t, 0x08);
-	  tty_echo_char (t, 0x20);
-	  tty_echo_char (t, 0x08);
-	  t->inputline_len--;
-	}
+        {
+          tty_echo_char (t, 0x08);
+          tty_echo_char (t, 0x20);
+          tty_echo_char (t, 0x08);
+          t->inputline_len--;
+        }
       break;
     default:
       if (t->inputline_len < sizeof (t->inputline) - 1)
-	{
-	  tty_echo_char (t, c);
-	  t->inputline[t->inputline_len++] = c;
-	}
+        {
+          tty_echo_char (t, c);
+          t->inputline[t->inputline_len++] = c;
+        }
       else
-	/* Beep */
-	tty_echo_char (t, 0x0a);
+        /* Beep */
+        tty_echo_char (t, 0x0a);
       break;
     }
   chopstx_mutex_unlock (&t->mtx);
@@ -618,34 +610,31 @@ tty_input_char (struct tty *t, int c)
 static void
 usb_rx_ready (uint8_t ep_num, uint16_t len)
 {
-  uint8_t recv_buf[64];
   struct tty *t = tty_get (-1, ep_num);
 
-  if (ep_num == ENDP3)
+  if (ep_num == CDC_EP_DATA)
     {
       int i;
 
-      usb_lld_rxcpy (recv_buf, ep_num, 0, len);
       for (i = 0; i < len; i++)
-	if (tty_input_char (t, recv_buf[i]))
-	  break;
+        if (tty_input_char (t, t->recv_buf0[i]))
+          break;
 
       chopstx_mutex_lock (&t->mtx);
       if (t->flag_input_avail == 0)
-	usb_lld_rx_enable (ENDP3);
+        usb_lld_rx_enable_buf (CDC_EP_DATA, t->recv_buf0, 64);
       chopstx_mutex_unlock (&t->mtx);
     }
 }
 
 static void *tty_main (void *arg);
 
-#define INTR_REQ_USB 20
+#define INTR_REQ_USB 19
 #define PRIO_TTY      4
 
-#define STACK_PROCESS_3
-#include "stack-def.h"
-#define STACK_ADDR_TTY ((uint32_t)process3_base)
-#define STACK_SIZE_TTY (sizeof process3_base)
+extern uint8_t __process4_stack_base__[], __process4_stack_size__[];
+#define STACK_ADDR_TTY ((uint32_t)__process4_stack_base__)
+#define STACK_SIZE_TTY ((uint32_t)__process4_stack_size__)
 
 struct tty *
 tty_open (void)
@@ -672,147 +661,124 @@ tty_main (void *arg)
   struct usb_dev dev;
   int e;
 
-#if defined(OLDER_SYS_H)
-  /*
-   * Historically (before sys < 3.0), NVIC priority setting for USB
-   * interrupt was done in usb_lld_sys_init.  Thus this code.
-   *
-   * When USB interrupt occurs between usb_lld_init (which assumes
-   * ISR) and chopstx_claim_irq (which clears pending interrupt),
-   * invocation of usb_lld_event_handler won't occur.
-   *
-   * Calling usb_lld_event_handler is no harm even if there were no
-   * interrupts, thus, we call it unconditionally here, just in case
-   * if there is a request.
-   *
-   * We can't call usb_lld_init after chopstx_claim_irq, as
-   * usb_lld_init does its own setting for NVIC.  Calling
-   * chopstx_claim_irq after usb_lld_init overrides that.
-   *
-   */
-  usb_lld_init (&dev, VCOM_FEATURE_BUS_POWERED);
-  chopstx_claim_irq (&usb_intr, INTR_REQ_USB);
-  goto event_handle;
-#else
   chopstx_claim_irq (&usb_intr, INTR_REQ_USB);
   usb_lld_init (&dev, VCOM_FEATURE_BUS_POWERED);
-#endif
 
   while (1)
     {
-      chopstx_intr_wait (&usb_intr);
+      struct chx_poll_head *pd_array[1] = {
+        (struct chx_poll_head *)&usb_intr
+      };
+      chopstx_poll (NULL, 1, pd_array);
       if (usb_intr.ready)
-	{
-	  uint8_t ep_num;
-#if defined(OLDER_SYS_H)
-	event_handle:
-#endif
-	  /*
-	   * When interrupt is detected, call usb_lld_event_handler.
-	   * The event may be one of following:
-	   *    (1) Transfer to endpoint (bulk or interrupt)
-	   *        In this case EP_NUM is encoded in the variable E.
-	   *    (2) "NONE" event: some trasfer was done, but all was
-	   *        done by lower layer, no other work is needed in
-	   *        upper layer.
-	   *    (3) Device events: Reset or Suspend
-	   *    (4) Device requests to the endpoint zero.
-	   *        
-	   */
-	  e = usb_lld_event_handler (&dev);
-	  ep_num = USB_EVENT_ENDP (e);
+        {
+          uint8_t ep_num;
+          /*
+           * When interrupt is detected, call usb_lld_event_handler.
+           * The event may be one of following:
+           *    (1) Transfer to endpoint (bulk or interrupt)
+           *        In this case EP_NUM is encoded in the variable E.
+           *    (2) "NONE" event: some trasfer was done, but all was
+           *        done by lower layer, no other work is needed in
+           *        upper layer.
+           *    (3) Device events: Reset or Suspend
+           *    (4) Device requests to the endpoint zero.
+           *        
+           */
+          e = usb_lld_event_handler (&dev);
+          ep_num = USB_EVENT_ENDP (e);
 
-	  if (ep_num != 0)
-	    {
-	      if (USB_EVENT_TXRX (e))
-		usb_tx_done (ep_num, USB_EVENT_LEN (e));
-	      else
-		usb_rx_ready (ep_num, USB_EVENT_LEN (e));
-	    }
-	  else
-	    switch (USB_EVENT_ID (e))
-	      {
-	      case USB_EVENT_DEVICE_RESET:
-		usb_device_reset (&dev);
-		continue;
+          if (ep_num != 0)
+            {
+              if (USB_EVENT_TXRX (e))
+                usb_tx_done (ep_num, USB_EVENT_LEN (e));
+              else
+                usb_rx_ready (ep_num, USB_EVENT_LEN (e));
+            }
+          else
+            switch (USB_EVENT_ID (e))
+              {
+              case USB_EVENT_DEVICE_RESET:
+                usb_device_reset (&dev);
+                continue;
 
-	      case USB_EVENT_DEVICE_ADDRESSED:
-		/* The addres is assigned to the device.  We don't
-		 * need to do anything for this actually, but in this
-		 * application, we maintain the USB status of the
-		 * device.  Usually, just "continue" as EVENT_OK is
-		 * OK.
-		 */
-		chopstx_mutex_lock (&tty0.mtx);
-		tty0.device_state = ADDRESSED;
-		chopstx_cond_signal (&tty0.cnd);
-		chopstx_mutex_unlock (&tty0.mtx);
-		continue;
+              case USB_EVENT_DEVICE_ADDRESSED:
+                /* The addres is assigned to the device.  We don't
+                 * need to do anything for this actually, but in this
+                 * application, we maintain the USB status of the
+                 * device.  Usually, just "continue" as EVENT_OK is
+                 * OK.
+                 */
+                chopstx_mutex_lock (&tty0.mtx);
+                tty0.device_state = ADDRESSED;
+                chopstx_cond_signal (&tty0.cnd);
+                chopstx_mutex_unlock (&tty0.mtx);
+                continue;
 
-	      case USB_EVENT_GET_DESCRIPTOR:
-		if (usb_get_descriptor (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_GET_DESCRIPTOR:
+                if (usb_get_descriptor (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_SET_CONFIGURATION:
-		if (usb_set_configuration (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_SET_CONFIGURATION:
+                if (usb_set_configuration (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_SET_INTERFACE:
-		if (usb_set_interface (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_SET_INTERFACE:
+                if (usb_set_interface (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_CTRL_REQUEST:
-		/* Device specific device request.  */
-		if (usb_setup (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_CTRL_REQUEST:
+                /* Device specific device request.  */
+                if (usb_setup (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_GET_STATUS_INTERFACE:
-		if (usb_get_status_interface (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_GET_STATUS_INTERFACE:
+                if (usb_get_status_interface (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_GET_INTERFACE:
-		if (usb_get_interface (&dev) < 0)
-		  usb_lld_ctrl_error (&dev);
-		continue;
+              case USB_EVENT_GET_INTERFACE:
+                if (usb_get_interface (&dev) < 0)
+                  usb_lld_ctrl_error (&dev);
+                continue;
 
-	      case USB_EVENT_SET_FEATURE_DEVICE:
-	      case USB_EVENT_SET_FEATURE_ENDPOINT:
-	      case USB_EVENT_CLEAR_FEATURE_DEVICE:
-	      case USB_EVENT_CLEAR_FEATURE_ENDPOINT:
-		usb_lld_ctrl_ack (&dev);
-		continue;
+              case USB_EVENT_SET_FEATURE_DEVICE:
+              case USB_EVENT_SET_FEATURE_ENDPOINT:
+              case USB_EVENT_CLEAR_FEATURE_DEVICE:
+              case USB_EVENT_CLEAR_FEATURE_ENDPOINT:
+                usb_lld_ctrl_ack (&dev);
+                continue;
 
-	      case USB_EVENT_CTRL_WRITE_FINISH:
-		/* Control WRITE transfer finished.  */
-		usb_ctrl_write_finish (&dev);
-		continue;
+              case USB_EVENT_CTRL_WRITE_FINISH:
+                /* Control WRITE transfer finished.  */
+                usb_ctrl_write_finish (&dev);
+                continue;
 
-	      case USB_EVENT_OK:
-	      case USB_EVENT_DEVICE_SUSPEND:
-	      default:
-		continue;
-	      }
-	}
+              case USB_EVENT_OK:
+              case USB_EVENT_DEVICE_SUSPEND:
+              default:
+                continue;
+              }
+        }
 
       chopstx_mutex_lock (&t->mtx);
       if (t->device_state == CONFIGURED && t->flag_connected
-	  && t->flag_send_ready)
-	{
-	  uint8_t line[32];
-	  int len = get_chars_from_ringbuffer (t, line, sizeof (len));
+          && t->flag_send_ready)
+        {
+          uint8_t line[32];
+          int len = get_chars_from_ringbuffer (t, line, sizeof (len));
 
-	  if (len)
-	    {
-	      usb_lld_txcpy (line, ENDP1, 0, len);
-	      usb_lld_tx_enable (ENDP1, len);
-	      t->flag_send_ready = 0;
-	    }
-	}
+          if (len)
+            {
+              memcpy (t->send_buf0, line, len);
+              usb_lld_tx_enable_buf (CDC_EP_DATA, t->send_buf0, len);
+              t->flag_send_ready = 0;
+            }
+        }
       chopstx_mutex_unlock (&t->mtx);
     }
 
@@ -840,7 +806,7 @@ tty_wait_connection (struct tty *t)
   t->flag_input_avail = 0;
   t->send_head = t->send_tail = 0;
   t->inputline_len = 0;
-  usb_lld_rx_enable (ENDP3);	/* Accept input for line */
+  usb_lld_rx_enable_buf (CDC_EP_DATA, t->recv_buf0, 64); /* Accept input for line */
   chopstx_mutex_unlock (&t->mtx);
 }
 
@@ -870,26 +836,30 @@ tty_send (struct tty *t, const char *buf, int len)
     {
       chopstx_mutex_lock (&t->mtx);
       while ((r = check_tx (t)) == 0)
-	chopstx_cond_wait (&t->cnd, &t->mtx);
+        chopstx_cond_wait (&t->cnd, &t->mtx);
       if (r > 0)
-	{
-	  usb_lld_txcpy (p, ENDP1, 0, count);
-	  usb_lld_tx_enable (ENDP1, count);
-	  t->flag_send_ready = 0;
-	}
+        {
+          usb_lld_tx_enable_buf (CDC_EP_DATA, p, count);
+          t->flag_send_ready = 0;
+        }
       chopstx_mutex_unlock (&t->mtx);
 
       len -= count;
       p += count;
       if (len == 0 && count != 64)
-	/*
-	 * The size of the last packet should be != 0
-	 * If 64, send ZLP (zelo length packet)
-	 */
-	break;
+        /*
+         * The size of the last packet should be != 0
+         * If 64, send ZLP (zelo length packet)
+         */
+        break;
       count = len >= 64 ? 64 : len;
     }
 
+  /* Wait until all sent. */
+  chopstx_mutex_lock (&t->mtx);
+  while ((r = check_tx (t)) == 0)
+    chopstx_cond_wait (&t->cnd, &t->mtx);
+  chopstx_mutex_unlock (&t->mtx);
   return r;
 }
 
@@ -930,14 +900,14 @@ tty_recv (struct tty *t, char *buf, uint32_t *timeout)
   while (1)
     {
       struct chx_poll_head *pd_array[1] = {
-	(struct chx_poll_head *)&poll_desc
+        (struct chx_poll_head *)&poll_desc
       };
       chopstx_poll (timeout, 1, pd_array);
       chopstx_mutex_lock (&t->mtx);
       r = check_rx (t);
       chopstx_mutex_unlock (&t->mtx);
       if (r || (timeout != NULL && *timeout == 0))
-	break;
+        break;
     }
 
   chopstx_mutex_lock (&t->mtx);
@@ -948,7 +918,7 @@ tty_recv (struct tty *t, char *buf, uint32_t *timeout)
       r = t->inputline_len;
       memcpy (buf, t->inputline, r);
       t->flag_input_avail = 0;
-      usb_lld_rx_enable (ENDP3);
+      usb_lld_rx_enable_buf (CDC_EP_DATA, t->recv_buf0, 64);
       t->inputline_len = 0;
     }
   else

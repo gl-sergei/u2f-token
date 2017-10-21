@@ -424,7 +424,7 @@ usbip_handle_data_urb (struct urb *urb)
   pthread_mutex_lock (&usbc_p->mutex);
   if (usbc_p->state == USB_STATE_DISABLED
       || usbc_p->state == USB_STATE_STALL)
-    r = -EAGAIN;
+    r = -EPIPE;
   else /* nak or ready */
     {
       if (usbc_p->urb == NULL)
@@ -483,7 +483,7 @@ usbip_finish_urb (struct urb *urb, int r)
 
 
 static int
-hc_handle_data_urb  (struct usb_control *usbc_p)
+hc_handle_data_urb (struct usb_control *usbc_p)
 {
   int r;
   uint16_t count;
@@ -505,7 +505,7 @@ hc_handle_data_urb  (struct usb_control *usbc_p)
       urb->data_p += count;
       urb->remain -= count;
 
-      if (count < 64)
+      if (urb->remain == 0 || count < 64)
 	{
 	  size_t len = urb->len - urb->remain;
 
@@ -532,11 +532,11 @@ hc_handle_data_urb  (struct usb_control *usbc_p)
 
       urb->remain -= r;
       urb->data_p += r;
-      if (r < 64)
+      if (urb->remain == 0 || r < 64)
 	{
 	  size_t len = urb->len - urb->remain;
 
-	  fprintf (stderr, "<-data: %lu\n", len);
+	  fprintf (stderr, "<-data: %lu %d\n", len, r);
 	  // successfully finished
 	  if (len)
 	    {
@@ -688,8 +688,6 @@ usbip_handle_urb (uint32_t seq)
       if (r == 0)
 	return;
     }
-
-  r = -r;
 
  leave:
   msg.cmd = htonl (REP_URB_SUBMIT);
@@ -1257,7 +1255,7 @@ control_read_data_transaction (char *buf, uint16_t count)
   if (usbc_ep0.state == USB_STATE_READY)
     {
       if (usbc_ep0.len > count)
-	fprintf (stderr, "*** length %d\n", usbc_ep0.len);
+	fprintf (stderr, "***c read: length %d > %d\n", usbc_ep0.len, count);
       else
 	count = usbc_ep0.len;
 
@@ -1339,16 +1337,14 @@ read_data_transaction (struct usb_control *usbc_p,
 		       int ep_num, char *buf, uint16_t count)
 {
   if (usbc_p->len > count)
-    {
-      fprintf (stderr, "*** length %d\n", usbc_p->len);
-      usbc_p->state = USB_STATE_STALL;
-      return -EPIPE;
-    }
+    fprintf (stderr, "*** length %d > %d\n", usbc_p->len, count);
+  else
+    count = usbc_p->len;
 
   usbc_p->state = USB_STATE_NAK;
-  memcpy (buf, usbc_p->buf, usbc_p->len);
+  memcpy (buf, usbc_p->buf, count);
   notify_device (USB_INTR_DATA_TRANSFER, ep_num, USBIP_DIR_IN);
-  return usbc_p->len;
+  return count;
 }
 
 void chx_handle_intr (uint32_t irq_num);
@@ -1457,6 +1453,15 @@ usb_lld_shutdown (void)
   /* FIXME: Cancel all URB in the list here.  */
 }
 
+static void
+notify_hostcontroller (struct usb_control *usbc_p)
+{
+  const uint64_t l = 1;
+
+  write (usbc_p->eventfd, &l, sizeof (l));
+}
+
+
 #define USB_MAKE_EV(event) (event<<24)
 #define USB_MAKE_TXRX(ep_num,txrx,len) ((txrx? (1<<23):0)|(ep_num<<16)|len)
 
@@ -1492,7 +1497,6 @@ static void handle_datastage_out (struct usb_dev *dev)
 {
   struct ctrl_data *data_p = &dev->ctrl_data;
   uint32_t len;
-  const uint64_t l = 1;
 
   pthread_mutex_lock (&usbc_ep0.mutex);
   len = usbc_ep0.len;
@@ -1518,7 +1522,7 @@ static void handle_datastage_out (struct usb_dev *dev)
       usbc_ep0.state = USB_STATE_READY;
     }
 
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
 }
 
@@ -1526,7 +1530,6 @@ static void handle_datastage_in (struct usb_dev *dev)
 {
   struct ctrl_data *data_p = &dev->ctrl_data;
   uint32_t len = USB_MAX_PACKET_SIZE;
-  const uint64_t l = 1;
 
   if ((data_p->len == 0) && (dev->state == LAST_IN_DATA))
     {
@@ -1550,7 +1553,7 @@ static void handle_datastage_in (struct usb_dev *dev)
 	  usbc_ep0.state = USB_STATE_READY;
 	}
 
-      write (usbc_ep0.eventfd, &l, sizeof (l));
+      notify_hostcontroller (&usbc_ep0);
       pthread_mutex_unlock (&usbc_ep0.mutex);
       return;
     }
@@ -1566,7 +1569,7 @@ static void handle_datastage_in (struct usb_dev *dev)
   usbc_ep0.state = USB_STATE_READY;
   data_p->len -= len;
   data_p->addr += len;
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
 }
 
@@ -1889,7 +1892,6 @@ handle_setup0 (struct usb_dev *dev)
 static int handle_in0 (struct usb_dev *dev)
 {
   int r = 0;
-  const uint64_t l = 1;
 
   if (dev->state == IN_DATA || dev->state == LAST_IN_DATA)
     handle_datastage_in (dev);
@@ -1910,7 +1912,7 @@ static int handle_in0 (struct usb_dev *dev)
       usbc_ep0.buf = usb_setup;
       usbc_ep0.len = 8;
       usbc_ep0.state = USB_STATE_READY;
-      write (usbc_ep0.eventfd, &l, sizeof (l));
+      notify_hostcontroller (&usbc_ep0);
       pthread_mutex_unlock (&usbc_ep0.mutex);
     }
   else
@@ -1919,7 +1921,7 @@ static int handle_in0 (struct usb_dev *dev)
       dev->state = STALLED;
       pthread_mutex_lock (&usbc_ep0.mutex);
       usbc_ep0.state = USB_STATE_STALL;
-      write (usbc_ep0.eventfd, &l, sizeof (l));
+      notify_hostcontroller (&usbc_ep0);
       pthread_mutex_unlock (&usbc_ep0.mutex);
     }
 
@@ -1928,8 +1930,6 @@ static int handle_in0 (struct usb_dev *dev)
 
 static void handle_out0 (struct usb_dev *dev)
 {
-  const uint64_t l = 1;
-
   if (dev->state == OUT_DATA)
     /* Usual case.  */
     handle_datastage_out (dev);
@@ -1944,7 +1944,7 @@ static void handle_out0 (struct usb_dev *dev)
       usbc_ep0.buf = usb_setup;
       usbc_ep0.len = 8;
       usbc_ep0.state = USB_STATE_READY;
-      write (usbc_ep0.eventfd, &l, sizeof (l));
+      notify_hostcontroller (&usbc_ep0);
       pthread_mutex_unlock (&usbc_ep0.mutex);
     }
   else
@@ -1959,7 +1959,7 @@ static void handle_out0 (struct usb_dev *dev)
       dev->state = STALLED;
       pthread_mutex_lock (&usbc_ep0.mutex);
       usbc_ep0.state = USB_STATE_STALL;
-      write (usbc_ep0.eventfd, &l, sizeof (l));
+      notify_hostcontroller (&usbc_ep0);
       pthread_mutex_unlock (&usbc_ep0.mutex);
     }
 }
@@ -2000,14 +2000,12 @@ usb_handle_transfer (struct usb_dev *dev, uint8_t dir, uint8_t ep_num)
 int
 usb_lld_ctrl_ack (struct usb_dev *dev)
 {
-  const uint64_t l = 1;
-
   dev->state = WAIT_STATUS_IN;
   pthread_mutex_lock (&usbc_ep0.mutex);
   usbc_ep0.buf = usb_setup;
   usbc_ep0.len = 0;
   usbc_ep0.state = USB_STATE_READY;
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
   return USB_EVENT_OK;
 }
@@ -2016,8 +2014,6 @@ int
 usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
 {
   struct ctrl_data *data_p = &dev->ctrl_data;
-  const uint64_t l = 1;
-
   data_p->addr = p;
   data_p->len = len;
   dev->state = OUT_DATA;
@@ -2027,7 +2023,7 @@ usb_lld_ctrl_recv (struct usb_dev *dev, void *p, size_t len)
   usbc_ep0.state = USB_STATE_READY;
   usbc_ep0.buf = p;
   usbc_ep0.len = len;
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
   return USB_EVENT_OK;
 }
@@ -2038,7 +2034,6 @@ usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
   struct ctrl_data *data_p = &dev->ctrl_data;
   uint32_t len_asked = dev->dev_req.len;
   uint32_t len;
-  const uint64_t l = 1;
 
   data_p->addr = (void *)buf;
   data_p->len = buflen;
@@ -2067,7 +2062,7 @@ usb_lld_ctrl_send (struct usb_dev *dev, const void *buf, size_t buflen)
   usbc_ep0.state = USB_STATE_READY;
   data_p->len -= len;
   data_p->addr += len;
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
   return USB_EVENT_OK;
 }
@@ -2082,13 +2077,11 @@ usb_lld_current_configuration (struct usb_dev *dev)
 void
 usb_lld_ctrl_error (struct usb_dev *dev)
 {
-  const uint64_t l = 1;
-
   puts ("ctrl_error");
   dev->state = STALLED;
   pthread_mutex_lock (&usbc_ep0.mutex);
   usbc_ep0.state = USB_STATE_STALL;
-  write (usbc_ep0.eventfd, &l, sizeof (l));
+  notify_hostcontroller (&usbc_ep0);
   pthread_mutex_unlock (&usbc_ep0.mutex);
 }
 
@@ -2135,29 +2128,38 @@ usb_lld_setup_endp (struct usb_dev *dev, int ep_num, int rx_en, int tx_en)
 void
 usb_lld_stall_tx (int ep_num)
 {
-  printf ("stall tx %d", ep_num);
-  usbc_ep_in[ep_num].state = USB_STATE_STALL;
+  struct usb_control *usbc_p = &usbc_ep_in[ep_num];
+
+  pthread_mutex_lock (&usbc_p->mutex);
+  usbc_p->state = USB_STATE_STALL;
+  notify_hostcontroller (usbc_p);
+  pthread_mutex_unlock (&usbc_p->mutex);
+  printf ("stall tx %d\n", ep_num);
 }
 
 void
 usb_lld_stall_rx (int ep_num)
 {
-  printf ("stall rx %d", ep_num);
-  usbc_ep_out[ep_num].state = USB_STATE_STALL;
+  struct usb_control *usbc_p = &usbc_ep_out[ep_num];
+
+  pthread_mutex_lock (&usbc_p->mutex);
+  usbc_p->state = USB_STATE_STALL;
+  notify_hostcontroller (usbc_p);
+  pthread_mutex_unlock (&usbc_p->mutex);
+  printf ("stall rx %d\n", ep_num);
 }
 
 void
 usb_lld_rx_enable_buf (int ep_num, void *buf, size_t len)
 {
   struct usb_control *usbc_p = &usbc_ep_out[ep_num];
-  const uint64_t l = 1;
 
   pthread_mutex_lock (&usbc_p->mutex);
   usbc_p->state = USB_STATE_READY;
   usbc_p->buf = buf;
   usbc_p->len = len;
 
-  write (usbc_p->eventfd, &l, sizeof (l));
+  notify_hostcontroller (usbc_p);
   pthread_mutex_unlock (&usbc_p->mutex);
   printf ("usb_lld_rx_enable_buf: %d\n", ep_num);
 }
@@ -2167,13 +2169,12 @@ void
 usb_lld_tx_enable_buf (int ep_num, const void *buf, size_t len)
 {
   struct usb_control *usbc_p = &usbc_ep_in[ep_num];
-  const uint64_t l = 1;
 
   pthread_mutex_lock (&usbc_p->mutex);
   usbc_p->state = USB_STATE_READY;
   usbc_p->buf = (void *)buf;
   usbc_p->len = len;
-  write (usbc_p->eventfd, &l, sizeof (l));
+  notify_hostcontroller (usbc_p);
   pthread_mutex_unlock (&usbc_p->mutex);
-  printf ("usb_lld_tx_enable_buf: %d\n", ep_num);
+  printf ("usb_lld_tx_enable_buf: %d %ld\n", ep_num, len);
 }

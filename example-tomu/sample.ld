@@ -1,60 +1,48 @@
 /*
- * ST32F103 memory setup.
+ * EFM32HG memory setup.
  */
 __main_stack_size__      = 0x0100; /* Idle+Exception handlers */
-__process0_stack_size__  = 0x0400; /* Main program            */
-__process1_stack_size__  = 0x0200; /* pwd                     */
-__process2_stack_size__  = 0x0200; /* blk                     */
-__process3_stack_size__  = 0x0200; /* usb-hid                 */
-__process4_stack_size__  = 0x1000; /* u2f-hid                 */
-__process5_stack_size__  = 0x0500; /* rng                     */
-__process6_stack_size__  = 0x0200; /* pbt                     */
+__process0_stack_size__  = 0x0300; /* Main program            */
+__process1_stack_size__  = 0x0200; /* first thread program    */
+__process2_stack_size__  = 0x0100; /* second thread program   */
+__process3_stack_size__  = 0x0200; /* third thread program    */
+__process4_stack_size__  = 0x0200; /* fourth thread program   */
 
 MEMORY
 {
-    flash0 : org = 0x08000000, len = 4k
-    flash  : org = 0x08000000+0x1000, len = 56k
-    flash1 : org = 0x08000000+0xf000, len = 4k
-    ram : org = 0x20000000, len = 20k
+    flash  : org = 0x00004000, len = 48k
+    ram : org = 0x20000000, len = 8k
 }
 
 __ram_start__           = ORIGIN(ram);
-__ram_size__            = 20k;
+__ram_size__            = 8k;
 __ram_end__             = __ram_start__ + __ram_size__;
+
+ENTRY(reset)
 
 SECTIONS
 {
     . = 0;
 
-    .sys : ALIGN(4) SUBALIGN(4)
-    {
-	_sys = .;
-	KEEP(*(.vectors))
-	. = ALIGN(16);
-	KEEP(*(.sys.version))
-	KEEP(*(.sys.board_id))
-	KEEP(*(.sys.board_name))
-	build/sys-*.o(.text)
-	build/sys-*.o(.text.*)
-	build/sys-*.o(.rodata)
-	build/sys-*.o(.rodata.*)
-	. = ALIGN(1024);
-	*(.sys.0)
-	*(.sys.1)
-	*(.sys.2)
-    } > flash0
-
     _text = .;
 
-    .startup : ALIGN(128) SUBALIGN(128)
+    .text : ALIGN(16) SUBALIGN(8)
     {
-        KEEP(*(.startup.vectors))
-        . = ALIGN (16);
-    } > flash =0xffffffff
-
-    .text : ALIGN(16) SUBALIGN(16)
-    {
+    . = ALIGN(16);
+        KEEP(*(.first_page.first_words))
+        KEEP(*(.sys.vectors))
         *(.text.startup.*)
+    build/sys-*.o(.text)
+    build/sys-*.o(.text.*)
+    build/sys-*.o(.rodata)
+    build/sys-*.o(.rodata.*)
+    /*
+     * Because of alignment requirement
+     * of startup.vectors, align to 256.
+     */
+    . = ALIGN(256);
+        KEEP(*(.startup.vectors))
+    . = ALIGN(16);
         *(.text)
         *(.text.*)
         *(.rodata)
@@ -62,8 +50,13 @@ SECTIONS
         *(.glue_7t)
         *(.glue_7)
         *(.gcc*)
-	. = ALIGN(8);
+    . = ALIGN(8);
     } > flash
+
+    /DISCARD/ :
+    {
+        *(.bss.startup.0)
+    }
 
     .ARM.extab : {*(.ARM.extab* .gnu.linkonce.armextab.*)} > flash
 
@@ -85,37 +78,21 @@ SECTIONS
     .process_stack :
     {
         . = ALIGN(8);
-
-        __process6_stack_base__ = .;
-        . += __process6_stack_size__;
-        . = ALIGN(8);
-        __process6_stack_end__ = .;
-
-        __process5_stack_base__ = .;
-        . += __process5_stack_size__;
-        . = ALIGN(8);
-        __process5_stack_end__ = .;
-
         __process4_stack_base__ = .;
         . += __process4_stack_size__;
         . = ALIGN(8);
-        __process4_stack_end__ = .;
-
         __process3_stack_base__ = .;
         . += __process3_stack_size__;
         . = ALIGN(8);
         __process3_stack_end__ = .;
-
         __process2_stack_base__ = .;
         . += __process2_stack_size__;
         . = ALIGN(8);
         __process2_stack_end__ = .;
-
         __process1_stack_base__ = .;
         . += __process1_stack_size__;
         . = ALIGN(8);
         __process1_stack_end__ = .;
-
         __process0_stack_base__ = .;
         . += __process0_stack_size__;
         . = ALIGN(8);
@@ -153,16 +130,11 @@ SECTIONS
         *(.bss.*)
         . = ALIGN(4);
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(512);
+    __usb_bdt__ = .;
+        . += 512;
         PROVIDE(_bss_end = .);
     } > ram
-
-    .flash_storage :
-    {
-        . = ALIGN (1024);
-        _auth_ctr_base = .;
-        . += 4096;
-    } > flash1
 
     PROVIDE(end = .);
     _end            = .;

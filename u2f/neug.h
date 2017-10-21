@@ -26,3 +26,8 @@ void neug_fini (void);
 void neug_mode_select (uint8_t mode);
 
 int neug_consume_random (void (*proc) (uint32_t, int));
+
+void crc32_rv_reset (void);
+void crc32_rv_step (uint32_t v);
+uint32_t crc32_rv_get (void);
+uint32_t rbit (uint32_t v);

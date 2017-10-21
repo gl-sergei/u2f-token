@@ -5,32 +5,14 @@
 
 #include <chopstx.h>
 
+#include "sys.h"
+
 #include "usb_lld.h"
 #include "tty.h"
+#include "command.h"
 
 #include <unistd.h>
 #include <stdio.h>
-
-static void
-set_led (int on)
-{
-#if 0
-  /* For debugging, no output of LED.  */
-#if 1
-  if (on)
-    write (1, "********\x08\x08\x08\x08\x08\x08\x08\x08", 16);
-  else
-    write (1, "        \x08\x08\x08\x08\x08\x08\x08\x08", 16);
-#else
-  if (on)
-    puts ("!");
-  else
-    puts ("");
-#endif
-#else
-  (void)on;
-#endif
-}
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
@@ -114,6 +96,7 @@ main (int argc, const char *argv[])
 {
   struct tty *tty;
   uint8_t count;
+  uintptr_t addr;
 
   (void)argc;
   (void)argv;
@@ -134,6 +117,9 @@ main (int argc, const char *argv[])
   chopstx_cond_signal (&cnd1);
   chopstx_mutex_unlock (&mtx);
 
+  addr = flash_init ("flash.data");
+  flash_unlock ();
+
   u = 1;
 
   tty = tty_open ();
@@ -145,6 +131,7 @@ main (int argc, const char *argv[])
     {
       char s[LINEBUFSIZE];
 
+    connection_loop:
       u = 1;
       tty_wait_connection (tty);
 
@@ -157,39 +144,52 @@ main (int argc, const char *argv[])
       memcpy (s, "xx: Hello, World with Chopstx!\r\n", 32);
       s[0] = hexchar (count >> 4);
       s[1] = hexchar (count & 0x0f);
-      count++;
 
       puts("send hello");
       if (tty_send (tty, s, 32) < 0)
 	continue;
 
+      s[0] = hexchar (count >> 4);
+      s[1] = hexchar (count & 0x0f);
+      s[2] = ':';
+      s[3] = ' ';
+      compose_hex_ptr (s+4, addr);
+      s[20] = '\r';
+      s[21] = '\n';
+
+      count++;
+
+      if (tty_send (tty, s, 22) < 0)
+	continue;
+
       while (1)
 	{
-	  int size;
 	  uint32_t usec;
 
-	  puts("recv msg");
-	  usec = 3000000;	/* 3.0 seconds */
-	  size = tty_recv (tty, s + 4, &usec);
-	  if (size < 0)
+	  /* Prompt */
+	  if (tty_send (tty, "> ", 2) < 0)
 	    break;
 
-	  if (size)
+	  usec = 3000000;	/* 3.0 seconds */
+	  while (1)
 	    {
-	      size--;
+	      int size = tty_recv (tty, s, &usec);
+	      u ^= 1;
 
-	      puts("send msg");
-	      s[0] = hexchar (size >> 4);
-	      s[1] = hexchar (size & 0x0f);
-	      s[2] = ':';
-	      s[3] = ' ';
-	      s[size + 4] = '\r';
-	      s[size + 5] = '\n';
-	      if (tty_send (tty, s, size + 6) < 0)
+	      if (size < 0)
+		goto connection_loop;
+
+	      if (size == 1)
+		/* Do nothing but prompt again.  */
 		break;
+	      else if (size)
+		{
+		  /* Newline into NUL */
+		  s[size - 1] = 0;
+		  cmd_dispatch (tty, (char *)s);
+		  break;
+		}
 	    }
-
-	  u ^= 1;
 	}
     }
 

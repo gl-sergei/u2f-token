@@ -1,11 +1,20 @@
 /*
  * ST32F103 memory setup.
  */
+__main_stack_size__      = 0x0100; /* Idle+Exception handlers */
+__process0_stack_size__  = 0x0400; /* Main program            */
+__process1_stack_size__  = 0x0200; /* pwd                     */
+__process2_stack_size__  = 0x0200; /* blk                     */
+__process3_stack_size__  = 0x0200; /* usb-hid                 */
+__process4_stack_size__  = 0x1000; /* u2f-hid                 */
+__process5_stack_size__  = 0x0500; /* rng                     */
+__process6_stack_size__  = 0x0200; /* pbt                     */
 
 MEMORY
 {
     flash0 : org = 0x08000000, len = 4k
-    flash  : org = 0x08000000+0x1000, len = 60k
+    flash  : org = 0x08000000+0x1000, len = 58k
+    flash1 : org = 0x08000000+0xf800, len = 2k
     ram : org = 0x20000000, len = 20k
 }
 
@@ -76,18 +85,50 @@ SECTIONS
     .process_stack :
     {
         . = ALIGN(8);
-        *(.process_stack.3)
-        *(.process_stack.2)
-        *(.process_stack.1)
-        *(.process_stack.0)
+
+        __process6_stack_base__ = .;
+        . += __process6_stack_size__;
         . = ALIGN(8);
+        __process6_stack_end__ = .;
+
+        __process5_stack_base__ = .;
+        . += __process5_stack_size__;
+        . = ALIGN(8);
+        __process5_stack_end__ = .;
+
+        __process4_stack_base__ = .;
+        . += __process4_stack_size__;
+        . = ALIGN(8);
+        __process4_stack_end__ = .;
+
+        __process3_stack_base__ = .;
+        . += __process3_stack_size__;
+        . = ALIGN(8);
+        __process3_stack_end__ = .;
+
+        __process2_stack_base__ = .;
+        . += __process2_stack_size__;
+        . = ALIGN(8);
+        __process2_stack_end__ = .;
+
+        __process1_stack_base__ = .;
+        . += __process1_stack_size__;
+        . = ALIGN(8);
+        __process1_stack_end__ = .;
+
+        __process0_stack_base__ = .;
+        . += __process0_stack_size__;
+        . = ALIGN(8);
+        __process0_stack_end__ = .;
     } > ram
 
     .main_stack :
     {
         . = ALIGN(8);
-        *(.main_stack)
+        __main_stack_base__ = .;
+        . += __main_stack_size__;
         . = ALIGN(8);
+        __main_stack_end__ = .;
     } > ram
 
     .data :
@@ -115,6 +156,15 @@ SECTIONS
         . = ALIGN(4);
         PROVIDE(_bss_end = .);
     } > ram
+
+    .flash_storage :
+    {
+        . = ALIGN (1024);
+        _device_key_base = .;
+        . += 1024;
+        _auth_ctr_base = .;
+        . += 1024;
+    } > flash1
 
     PROVIDE(end = .);
     _end            = .;

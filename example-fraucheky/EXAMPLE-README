@@ -1,0 +1,43 @@
+(0) configure and make
+
+This example assumes that you have fraucheky source code
+along with chopstx.
+
+    --- chopstx --- chostx --- example-fraucheky
+                 |
+                 \- fraucheky
+
+
+If you use vendor id and product id of 234b:0004 under
+the condition of FSIJ, you can configure this program as:
+
+    $ ./configure --vidpid=234b:0004
+
+then, invoke make.
+
+    $ make
+
+
+(1) preparation as root 
+
+Install USBIP host module
+# modprobe vhci_hcd
+
+
+(2) Run sample program of USBIP server
+
+$ ./sample-msc
+
+
+(3) Use the USB device as root
+
+Attach the Chopstx application program (USBIP device) to USBIP host.
+
+# usbip attach -r 127.0.0.1 -b 1-1
+
+
+(4) Use the USB Mass Storage Class device
+
+You can mount the storage.
+
+Unmounting the storage, the program will exit.

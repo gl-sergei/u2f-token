@@ -111,7 +111,7 @@ usb_lld_sys_shutdown (void)
   (*vector[11]) ();
 }
 
-static inline void
+static inline void __attribute__((noreturn))
 nvic_system_reset (void)
 {
   (*vector[12]) ();

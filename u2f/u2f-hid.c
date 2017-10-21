@@ -30,6 +30,8 @@
 #include <string.h>
 #include <chopstx.h>
 
+#include "board.h"
+#include "sys.h"
 #include "usb-hid.h"
 #include "u2f-hid.h"
 #include "u2f-apdu.h"
@@ -149,17 +151,8 @@ extern uint8_t __process4_stack_base__[], __process4_stack_size__[];
 #define STACK_ADDR_U2F_HID ((uint32_t)__process4_stack_base__)
 #define STACK_SIZE_U2F_HID ((uint32_t)__process4_stack_size__)
 
-
-struct u2f_message {
-  uint32_t cid;
-  uint16_t len;
-  uint16_t cnt;
-  uint8_t buf[400];
-};
-
-extern uint8_t blink_is_on;
-
-#define MAX_MSGLEN 3072
+#define MAX_MSGLEN 1024
+#define MAX_APDU_CMDLEN 160
 
 struct u2f_hid {
   uint32_t next_cid;
@@ -169,6 +162,7 @@ struct u2f_hid {
   uint8_t cmd;
   uint8_t seq;
   uint8_t msg[MAX_MSGLEN];
+  uint8_t apdu_cmd[MAX_APDU_CMDLEN];
   uint16_t msg_len;
   uint16_t msg_pos;
 };
@@ -289,6 +283,8 @@ u2f_hid_main (void *arg)
   int remain = 0;
   int err;
 
+  u2f_apdu_init ();
+
   while (1)
     {
       err = hid_recv (u2f->hid, (uint8_t *) &u2f->frame,
@@ -383,7 +379,6 @@ u2f_hid_main (void *arg)
 
       if (remain == 0 && u2f->cmd)
         {
-          uint8_t *resp;
           uint32_t resp_len;
 
           switch (u2f->cmd)
@@ -393,8 +388,17 @@ u2f_hid_main (void *arg)
                               u2f->msg_len);
                 break;
               case U2FHID_MSG:
-                u2f_apdu_command_do (u2f->msg, u2f->msg_len, &resp, &resp_len);
-                u2f_send_msg (u2f, u2f->cid, U2FHID_MSG, resp, resp_len);
+                if (u2f->msg_len > MAX_APDU_CMDLEN)
+                  {
+                    u2f_send_error (u2f, u2f->frame.cid, ERR_INVALID_LEN);
+                    uf2_reset (u2f);
+                    continue;
+                  }
+                memcpy (u2f->apdu_cmd, u2f->msg, u2f->msg_len);
+                memset (u2f->msg, 0, MAX_MSGLEN);
+                u2f_apdu_command_do (u2f->apdu_cmd, u2f->msg_len,
+                                     u2f->msg, &resp_len);
+                u2f_send_msg (u2f, u2f->cid, U2FHID_MSG, u2f->msg, resp_len);
                 break;
               default:
                 u2f_send_error (u2f, u2f->cid, ERR_INVALID_CMD);

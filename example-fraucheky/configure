@@ -9,6 +9,7 @@ vidpid=none
 verbose=no
 debug=no
 with_fraucheky=yes
+with_index=./INDEX.HTM
 
 if test -d ../.git; then
   REVISION=`git describe --dirty="-modified"`
@@ -34,8 +35,6 @@ for option; do
     verbose=yes ;;
   --vidpid=*)
     vidpid=$optarg ;;
-  --with-index=*)
-    with_index=$optarg ;;
   *)
     echo "Unrecognized option \`$option'" >&2
     echo "Try \`$0 --help' for more information." >&2

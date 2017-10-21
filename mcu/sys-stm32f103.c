@@ -148,7 +148,7 @@ flash_wait_for_last_operation (uint32_t timeout)
 #define FLASH_ERASE_TIMEOUT   0x01000000
 
 static int
-flash_program_halfword (uint32_t addr, uint16_t data)
+flash_program_halfword (uintptr_t addr, uint16_t data)
 {
   int status;
 
@@ -170,7 +170,7 @@ flash_program_halfword (uint32_t addr, uint16_t data)
 }
 
 static int
-flash_erase_page (uint32_t addr)
+flash_erase_page (uintptr_t addr)
 {
   int status;
 
@@ -210,10 +210,14 @@ flash_check_blank (const uint8_t *p_start, size_t size)
 #define FLASH_SIZE_REG   ((uint16_t *)0x1ffff7e0)
 
 static int
-flash_write (uint32_t dst_addr, const uint8_t *src, size_t len)
+flash_write (uintptr_t dst_addr, const uint8_t *src, size_t len)
 {
   int status;
-  uint32_t flash_end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
+#if defined(STM32F103_OVERRIDE_FLASH_SIZE_KB)
+  uintptr_t flash_end = FLASH_START_ADDR + STM32F103_OVERRIDE_FLASH_SIZE_KB*1024;
+#else
+  uintptr_t flash_end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
+#endif
 
   if (dst_addr < FLASH_START || dst_addr + len > flash_end)
     return 0;
@@ -268,8 +272,12 @@ flash_protect (void)
 static void __attribute__((naked))
 flash_erase_all_and_exec (void (*entry)(void))
 {
-  uint32_t addr = FLASH_START;
-  uint32_t end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
+  uintptr_t addr = FLASH_START;
+#if defined(STM32F103_OVERRIDE_FLASH_SIZE_KB)
+  uintptr_t end = FLASH_START_ADDR + STM32F103_OVERRIDE_FLASH_SIZE_KB*1024;
+#else
+  uintptr_t end = FLASH_START_ADDR + (*FLASH_SIZE_REG)*1024;
+#endif
   uint32_t page_size = 1024;
   int r;
 

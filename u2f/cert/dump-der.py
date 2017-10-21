@@ -34,6 +34,3 @@ with open("attestation.der", "r") as f:
 
 with open("attestation_key.der", "r") as f:
     print pk_to_c_array("attestation_key", f.read())
-
-with open("device_key.der", "r") as f:
-    print pk_to_c_array("device_key", f.read())

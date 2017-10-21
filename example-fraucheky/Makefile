@@ -1,7 +1,7 @@
 # Makefile for NeuG
 
 # Define project name here
-PROJECT = msc
+PROJECT = sample-msc
 
 CHOPSTX = ..
 FRAUCHEKY = ../../fraucheky

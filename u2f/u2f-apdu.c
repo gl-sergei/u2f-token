@@ -32,6 +32,7 @@
 #include "ecc.h"
 #include "hmac.h"
 #include "random.h"
+#include "board.h"
 #include "sys.h"
 #include "pbt.h"
 
@@ -134,15 +135,66 @@ typedef struct {
 #define U2F_SW_WRONG_LENGTH             0x6700 // SW_INS_WRONG_LENGTH
 #define U2F_SW_BAD_CLA                  0x6E00 // SW_BAD_CLA
 
+/* simple RNG interface */
+static uint8_t rng_index = 0;
+
+static int
+rng (uint8_t *buf, size_t size)
+{
+  return random_gen (&rng_index, buf, size);
+}
+
+/* device key */
+
+struct device_key
+{
+  /* ECC private key unique for each device */
+  uint8_t key[U2F_PRIV_K_SIZE];
+  /* SHA256 of private key to verify its integrity */
+  uint8_t key_hash[HASH_RES_SIZE];
+  /* reserved for future use */
+  uint8_t resrved[1024 - U2F_PRIV_K_SIZE - HASH_RES_SIZE];
+};
+
+extern uint32_t _device_key_base;
+static struct device_key *device_key = (struct device_key *) &_device_key_base;
+
+static void
+device_key_gen (void)
+{
+  uint8_t key[U2F_PRIV_K_SIZE];
+  uint8_t key_hash[HASH_RES_SIZE];
+  sha256_context ctx;
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, device_key->key, U2F_PRIV_K_SIZE);
+  sha256_finish (&ctx, key_hash);
+
+  if (memcmp (key_hash, device_key->key_hash, HASH_RES_SIZE) == 0)
+    return;
+
+  /* new device key needs to be generated */
+  rng (key, U2F_PRIV_K_SIZE);
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, key, U2F_PRIV_K_SIZE);
+  sha256_finish (&ctx, key_hash);
+
+  flash_erase_page ((uintptr_t) &device_key);
+  flash_write ((uintptr_t) device_key->key, key, U2F_PRIV_K_SIZE);
+  flash_write ((uintptr_t) device_key->key_hash, key_hash, HASH_RES_SIZE);
+}
+
+
 static void
 new_private_key (uint8_t *app_id, uint8_t *nonce, uint8_t *private_key)
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, nonce, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key, private_key);
+  hmac_sha256_finish (&ctx, device_key->key, private_key);
 }
 
 static void
@@ -151,29 +203,33 @@ make_key_handle (uint8_t *private_key, uint8_t *app_id,
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key, key_handle);
+  hmac_sha256_finish (&ctx, device_key->key, key_handle);
 
   memcpy (key_handle + HASH_RES_SIZE, nonce, U2F_NONCE_SIZE);
 }
 
 static int
-recover_private_key (uint8_t *app_id, uint8_t *key_handle, uint8_t *private_key)
+recover_private_key (uint8_t *app_id, uint8_t *key_handle,
+                     uint8_t key_handle_len, uint8_t *private_key)
 {
   hmac_sha256_context ctx;
   uint8_t control_mac[HASH_RES_SIZE];
 
-  hmac_sha256_init (&ctx, device_key);
+  if (key_handle_len != U2F_KH_SIZE)
+    return -1;
+
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, key_handle + HASH_RES_SIZE, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key, private_key);
+  hmac_sha256_finish (&ctx, device_key->key, private_key);
 
-  hmac_sha256_init (&ctx, device_key);
+  hmac_sha256_init (&ctx, device_key->key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key, control_mac);
+  hmac_sha256_finish (&ctx, device_key->key, control_mac);
 
   return memcmp(control_mac, key_handle, HASH_RES_SIZE);
 }
@@ -230,6 +286,21 @@ der_encode_sig (uint8_t *der, uint8_t *sig)
   return len;
 }
 
+static void
+register_req_hash (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
+                   uint8_t *hash)
+{
+  sha256_context ctx;
+  uint8_t resrved = 0;
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, &resrved, 1);
+  sha256_update (&ctx, req->appId, U2F_APPID_SIZE);
+  sha256_update (&ctx, req->chal, U2F_CHAL_SIZE);
+  sha256_update (&ctx, resp->keyHandle, resp->keyHandleLen);
+  sha256_update (&ctx, (uint8_t *) &resp->pubKey, sizeof (resp->pubKey));
+  sha256_finish (&ctx, hash);
+}
 
 static int
 u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
@@ -239,10 +310,8 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
   uint8_t hash[HASH_RES_SIZE];
   uint8_t sig[64];
   uint8_t sig_len;
-  uint8_t resrved = 0;
-  uint8_t index;
 
-  if (random_gen (&index, nonce, U2F_NONCE_SIZE))
+  if (rng (nonce, U2F_NONCE_SIZE))
     return -1;
 
   new_private_key (req->appId, nonce, private);
@@ -256,15 +325,7 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
   resp->keyHandleLen = U2F_KH_SIZE;
   memcpy (resp->attCert, attestation_der, ATTESTATION_DER_LEN);
 
-  sha256_context ctx;
-
-  sha256_start (&ctx);
-  sha256_update (&ctx, &resrved, 1);
-  sha256_update (&ctx, req->appId, U2F_APPID_SIZE);
-  sha256_update (&ctx, req->chal, U2F_CHAL_SIZE);
-  sha256_update (&ctx, resp->keyHandle, resp->keyHandleLen);
-  sha256_update (&ctx, (uint8_t *) &resp->pubKey, sizeof (resp->pubKey));
-  sha256_finish (&ctx, hash);
+  register_req_hash (req, resp, hash);
 
   if (ecdsa_sign_p256r1 (hash, sig, attestation_key))
     return -1;
@@ -289,7 +350,7 @@ u2f_read_ctr (void)
 
   while (*ctr_addr != 0xffffffff)
     {
-      if (ctr_addr - &_auth_ctr_base == 4 * page_size)
+      if (ctr_addr - &_auth_ctr_base == page_size)
         break;
       ctr_addr++;
     }
@@ -307,19 +368,16 @@ u2f_write_ctr (uint32_t val)
 
   while (*ctr_addr != 0xffffffff)
     {
-      if (ctr_addr - &_auth_ctr_base == 4 * page_size)
+      if (ctr_addr - &_auth_ctr_base == page_size)
         {
-          flash_erase_page ((uint32_t) (&_auth_ctr_base + 0 * page_size));
-          flash_erase_page ((uint32_t) (&_auth_ctr_base + 1 * page_size));
-          flash_erase_page ((uint32_t) (&_auth_ctr_base + 2 * page_size));
-          flash_erase_page ((uint32_t) (&_auth_ctr_base + 3 * page_size));
+          flash_erase_page ((uintptr_t) &_auth_ctr_base);
           ctr_addr = &_auth_ctr_base;
           break;
         }
       ctr_addr++;
     }
 
-  flash_write ((uint32_t) ctr_addr, (uint8_t *) &val, sizeof (val));
+  flash_write ((uintptr_t) ctr_addr, (uint8_t *) &val, sizeof (val));
 }
 
 static void
@@ -330,6 +388,20 @@ u2f_inc_ctr (void)
   ctr = u2f_read_ctr ();
   ctr++;
   u2f_write_ctr (ctr);
+}
+
+static void
+auth_req_hash (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp,
+               uint8_t *hash)
+{
+  sha256_context ctx;
+
+  sha256_start (&ctx);
+  sha256_update (&ctx, req->appId, U2F_APPID_SIZE);
+  sha256_update (&ctx, &resp->flags, 1);
+  sha256_update (&ctx, resp->ctr, 4);
+  sha256_update (&ctx, req->chal, U2F_CHAL_SIZE);
+  sha256_finish (&ctx, hash);
 }
 
 static int
@@ -350,16 +422,10 @@ u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
   resp->ctr[2] = ctr >>  8 & 0xff;
   resp->ctr[3] = ctr       & 0xff;
 
-  sha256_context ctx;
+  auth_req_hash (req, resp, hash);
 
-  sha256_start (&ctx);
-  sha256_update (&ctx, req->appId, U2F_APPID_SIZE);
-  sha256_update (&ctx, &resp->flags, 1);
-  sha256_update (&ctx, resp->ctr, 4);
-  sha256_update (&ctx, req->chal, U2F_CHAL_SIZE);
-  sha256_finish (&ctx, hash);
-
-  if (recover_private_key (req->appId, req->keyHandle, private))
+  if (recover_private_key (req->appId, req->keyHandle,
+                           req->keyHandleLen, private))
     return -1;
 
   if (ecdsa_sign_p256r1 (hash, sig, private))
@@ -393,36 +459,31 @@ u2f_apdu_error (uint8_t *msg, uint32_t *len, uint16_t sw)
   append_sw (msg, len, sw);
 }
 
-static
-union
+void
+u2f_apdu_init (void)
 {
-  U2F_REGISTER_RESP reg;
-  U2F_AUTHENTICATE_RESP auth;
-  uint8_t bytes[2];
-} apdu_resp;
+  /* generate and store device private key on first run */
+  device_key_gen ();
+}
 
 int
 u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
-                     uint8_t **resp, uint32_t *resp_len)
+                     uint8_t *resp, uint32_t *resp_len)
 {
   uint32_t Lc;
   int ret;
 
   Lc = LC (apdu);
 
-  *resp = apdu_resp.bytes;
-
-  memset (apdu_resp.bytes, 0, sizeof (apdu_resp));
-
   if (CLA(apdu) != 0)
     {
-      u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_BAD_CLA);
+      u2f_apdu_error (resp, resp_len, U2F_SW_BAD_CLA);
       return 0;
     }
 
   if (Lc + 7 > len)
     {
-      u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_LENGTH);
+      u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
       return 0;
     }
 
@@ -431,67 +492,71 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
     case U2F_REGISTER:
       if (Lc != sizeof (U2F_REGISTER_REQ))
         {
-          u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_LENGTH);
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
           break;
         }
       if (!user_presence_get ())
         {
-          u2f_apdu_error (apdu_resp.bytes, resp_len,
-                          U2F_SW_CONDITIONS_NOT_SATISFIED);
+          u2f_apdu_error (resp, resp_len, U2F_SW_CONDITIONS_NOT_SATISFIED);
           return 0;
         }
-      ret = u2f_register ((U2F_REGISTER_REQ *) DATA (apdu), &apdu_resp.reg);
+      ret = u2f_register ((U2F_REGISTER_REQ *) DATA (apdu),
+                          (U2F_REGISTER_RESP *) resp);
       if (ret > 0)
         {
           user_presence_reset ();
           *resp_len = ret;
-          append_sw (apdu_resp.bytes, resp_len, U2F_SW_NO_ERROR);
+          append_sw (resp, resp_len, U2F_SW_NO_ERROR);
         }
       else
         {
-          u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_DATA);
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
         }
       break;
     case U2F_AUTHENTICATE:
+      if (Lc != sizeof (U2F_AUTHENTICATE_REQ))
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
+          break;
+        }
       ret = u2f_authenticate ((U2F_AUTHENTICATE_REQ *) DATA (apdu),
-                              &apdu_resp.auth);
+                              (U2F_AUTHENTICATE_RESP *)resp);
       if (ret > 0)
         {
           if (P1 (apdu) != U2F_AUTH_CHECK_ONLY)
             {
             if (!user_presence_get ())
               {
-                u2f_apdu_error (apdu_resp.bytes, resp_len,
+                u2f_apdu_error (resp, resp_len,
                                 U2F_SW_CONDITIONS_NOT_SATISFIED);
                 return 0;
               }
               u2f_inc_ctr ();
               user_presence_reset ();
               *resp_len = ret;
-              append_sw (apdu_resp.bytes, resp_len, U2F_SW_NO_ERROR);
+              append_sw (resp, resp_len, U2F_SW_NO_ERROR);
             }
           else
-            u2f_apdu_error (apdu_resp.bytes, resp_len,
-              U2F_SW_CONDITIONS_NOT_SATISFIED);
+            u2f_apdu_error (resp, resp_len, U2F_SW_CONDITIONS_NOT_SATISFIED);
         }
       else
-        u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_DATA);
+        u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
       break;
     case U2F_VERSION:
       if (Lc > 0)
         {
-          u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_WRONG_LENGTH);
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
           break;
         }
-      ret = u2f_version (apdu_resp.bytes);
+      ret = u2f_version (resp);
       if (ret > 0)
         {
           *resp_len = ret;
-          append_sw (apdu_resp.bytes, resp_len, U2F_SW_NO_ERROR);
+          append_sw (resp, resp_len, U2F_SW_NO_ERROR);
         }
       break;
     default:
-      u2f_apdu_error (apdu_resp.bytes, resp_len, U2F_SW_INS_NOT_SUPPORTED);
+      u2f_apdu_error (resp, resp_len, U2F_SW_INS_NOT_SUPPORTED);
     }
 
   return 0;

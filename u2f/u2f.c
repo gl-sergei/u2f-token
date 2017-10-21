@@ -31,17 +31,24 @@
 #include <string.h>
 #include <chopstx.h>
 
-#include "usb_lld.h"
-
 /* For set_led */
 #include "board.h"
 #include "sys.h"
+
+#include "usb_lld.h"
 
 #include "usb-hid.h"
 #include "u2f-hid.h"
 #include "random.h"
 #include "adc.h"
+
+#if defined(HAVE_PUSH_BUTTON)
 #include "pbt.h"
+#elif defined(HAVE_CAPSENSE)
+#include "csn.h"
+#else
+#include "uvoid.h"
+#endif
 
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
@@ -49,7 +56,6 @@ static chopstx_cond_t cnd1;
 
 uint8_t v;
 uint8_t blink_is_on;
-static uint8_t m;		/* 0..100 */
 
 static void *
 pwm (void *arg)
@@ -63,9 +69,7 @@ pwm (void *arg)
   while (1)
     {
       set_led ((blink_is_on & v) || user_presence_get ());
-      chopstx_usec_wait (m);
-      set_led (0);
-      chopstx_usec_wait (100-m);
+      chopstx_usec_wait (10*1000);
     }
 
   return NULL;
@@ -100,8 +104,8 @@ blk (void *arg)
   return NULL;
 }
 
-#define PRIO_PWM 3
-#define PRIO_BLK 2
+#define PRIO_PWM 7
+#define PRIO_BLK 7
 
 extern uint8_t __process1_stack_base__[], __process1_stack_size__[];
 extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
@@ -116,7 +120,6 @@ extern uint8_t __process2_stack_base__[], __process2_stack_size__[];
 int
 main (int argc, const char *argv[])
 {
-  uint8_t count;
   struct usb_hid *hid;
 
   (void)argc;
@@ -125,8 +128,6 @@ main (int argc, const char *argv[])
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd0);
   chopstx_cond_init (&cnd1);
-
-  m = 10;
 
   chopstx_create (PRIO_PWM, STACK_ADDR_PWM, STACK_SIZE_PWM, pwm, NULL);
   chopstx_create (PRIO_BLK, STACK_ADDR_BLK, STACK_SIZE_BLK, blk, NULL);
@@ -144,19 +145,20 @@ main (int argc, const char *argv[])
 
   random_init ();
 
+#if defined(HAVE_PUSH_BUTTON)
   pbt_init ();
+#elif defined(HAVE_CAPSENSE)
+  capsense_init ();
+#endif
 
   flash_unlock ();
 
   hid = hid_open ();
   u2f_hid_open (hid);
 
-  count = 0;
-  m = 50;
   while (1)
     {
       chopstx_usec_wait (50*1000);
-      count++;
     }
 
   random_fini ();

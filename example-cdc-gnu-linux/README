@@ -1,3 +1,9 @@
+(0) Build and generate initial flash data
+
+$ make
+$ make build/flash.data
+
+
 (1) preparation as root 
 
 Don't run ModemManager

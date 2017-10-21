@@ -4,7 +4,7 @@
  * Copyright (C) 2017 Sergei Glushchenko
  * Author: Sergei Glushchenko <gl.sergei@gmail.com>
  *
- * This file is a part of U2F firmware for STM32
+ * This file is a part of U2F firmware for STM32F103 and EFM32HG boards
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
@@ -31,6 +31,8 @@
 #include <chopstx.h>
 #include <eventflag.h>
 #include <string.h>
+#include "board.h"
+#include "sys.h"
 #include "usb_lld.h"
 
 #include "usb-hid.h"
@@ -177,9 +179,15 @@ static const uint8_t usb_string1[] = {
 static const uint8_t usb_string2[] = {
   17*2+2,                           /* bLength */
   STRING_DESCRIPTOR,                /* bDescriptorType */
+#if defined(MCU_EFM32HG)
+  /* Product name: "U2F-token (EFM32)" */
+  'U', 0, '2', 0, 'F', 0, '-', 0, 't', 0, 'o', 0, 'k', 0, 'e', 0,
+  'n', 0, ' ', 0, '(', 0, 'E', 0, 'F', 0, 'M', 0, '3', 0, '2', 0,
+#else
   /* Product name: "U2F-token (STM32)" */
   'U', 0, '2', 0, 'F', 0, '-', 0, 't', 0, 'o', 0, 'k', 0, 'e', 0,
   'n', 0, ' ', 0, '(', 0, 'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0,
+#endif
   ')', 0,
 };
 
@@ -202,8 +210,12 @@ usb_device_reset (struct usb_dev *dev)
   usb_lld_reset (dev, FEATURE_BUS_POWERED);
 
   /* Initialize Endpoint 0 */
+#if defined(MCU_EFM32HG)
+  usb_lld_setup_endp (dev, ENDP0, EP_CONTROL, 1, 1, HID_RPT_SIZE);
+#else
   usb_lld_setup_endpoint (ENDP0, EP_CONTROL, 0,
             ENDP0_RXADDR, ENDP0_TXADDR, HID_RPT_SIZE);
+#endif
 }
 
 
@@ -238,7 +250,8 @@ usb_setup (struct usb_dev *dev)
         case USB_HID_REQ_GET_IDLE:
           return usb_lld_ctrl_send (dev, &hid_idle_rate, 1);
         case USB_HID_REQ_SET_IDLE:
-          return usb_lld_ctrl_recv (dev, &hid_idle_rate, 1);
+          hid_idle_rate = arg->value >> 8;
+          return usb_lld_ctrl_ack (dev);
 
         case USB_HID_REQ_GET_REPORT:
           /* Reports should go via interrupt endpoint */
@@ -323,13 +336,21 @@ usb_get_descriptor (struct usb_dev *dev)
 }
 
 static void
-hid_setup_endpoints_for_interface (uint16_t interface, int stop)
+hid_setup_endpoints_for_interface (struct usb_dev *dev,
+                                   uint16_t interface, int stop)
 {
+#if !defined(MCU_EFM32HG)
+  (void) dev;
+#endif
   if (interface == HID_INTERFACE)
     {
       if (!stop)
+#if defined(MCU_EFM32HG)
+        usb_lld_setup_endp (dev, ENDP1, EP_INTERRUPT, 1, 1, HID_RPT_SIZE);
+#else
         usb_lld_setup_endpoint (ENDP1, EP_INTERRUPT, 0,
                   ENDP1_RXADDR, ENDP1_TXADDR, HID_RPT_SIZE);
+#endif
       else
         {
           usb_lld_stall_tx (ENDP1);
@@ -352,7 +373,7 @@ usb_set_configuration (struct usb_dev *dev)
 
       usb_lld_set_configuration (dev, 1);
       for (i = 0; i < NUM_INTERFACES; i++)
-        hid_setup_endpoints_for_interface (i, 0);
+        hid_setup_endpoints_for_interface (dev, i, 0);
     }
   else if (current_conf != dev->dev_req.value)
     {
@@ -361,7 +382,7 @@ usb_set_configuration (struct usb_dev *dev)
 
       usb_lld_set_configuration (dev, 0);
       for (i = 0; i < NUM_INTERFACES; i++)
-        hid_setup_endpoints_for_interface (i, 1);
+        hid_setup_endpoints_for_interface (dev, i, 1);
     }
 
   usb_lld_ctrl_ack (dev);
@@ -382,7 +403,7 @@ usb_set_interface (struct usb_dev *dev)
     return -1;
   else
     {
-      hid_setup_endpoints_for_interface (interface, 0);
+      hid_setup_endpoints_for_interface (dev, interface, 0);
       usb_lld_ctrl_ack (dev);
       return 0;
     }
@@ -414,8 +435,12 @@ usb_get_status_interface (struct usb_dev *dev)
 }
 
 struct usb_hid {
+#if defined(MCU_EFM32HG)
+  uint8_t tx_buf[HID_RPT_SIZE] __attribute__((aligned(4)));
+#else
   uint8_t *tx_buf;
-  uint8_t rx_buf[HID_RPT_SIZE];
+#endif
+  uint8_t rx_buf[HID_RPT_SIZE] __attribute__((aligned(4)));
   uint16_t tx_len;
   uint16_t rx_len;
   struct eventflag cmd_ev;
@@ -440,10 +465,14 @@ static void
 ep1_out_received (struct usb_hid *hid, uint16_t len)
 {
   if (len <= HID_RPT_SIZE)
+#if defined(MCU_EFM32HG)
+    hid->rx_len = len;
+#else
     {
       usb_lld_rxcpy (hid->rx_buf, 1 /*ep_num*/, 0 /*offset*/, len);
       hid->rx_len = len;
     }
+#endif
 
   eventflag_signal (&hid->usb_ev, EV_RX_DATA_READY);
 }
@@ -456,8 +485,12 @@ ep1_out_received (struct usb_hid *hid, uint16_t len)
 static void
 ep1_transmit (struct usb_hid *hid)
 {
+#if defined(MCU_EFM32HG)
+  usb_lld_tx_enable_buf (ENDP1, hid->tx_buf, hid->tx_len);
+#else
   usb_lld_txcpy (hid->tx_buf, 1/*ep_num*/, 0 /*offset*/, hid->tx_len);
   usb_lld_tx_enable (1/*ep_num*/, hid->tx_len);
+#endif
 }
 
 static void
@@ -488,8 +521,12 @@ usb_tx (struct usb_hid *hid, uint8_t ep_num)
 }
 
 
+#if defined(MCU_EFM32HG)
+#define INTR_REQ_USB 19
+#else
 #define INTR_REQ_USB 20
-#define PRIO_HID      4
+#endif
+#define PRIO_HID     8
 
 extern uint8_t __process3_stack_base__[], __process3_stack_size__[];
 #define STACK_ADDR_HID ((uint32_t)__process3_stack_base__)
@@ -509,12 +546,12 @@ poll_tx_intr (uint32_t *timeout, struct eventflag *ev, chopstx_intr_t *intr)
   chopstx_poll (timeout, 2, pd_array);
 }
 
+static struct usb_dev dev __attribute__((aligned(4)));
 
 static void *
 hid_main (void *arg)
 {
   uint32_t timeout;
-  struct usb_dev dev;
   int e;
 
   struct usb_hid *usb_hid = (struct usb_hid *) arg;
@@ -638,7 +675,7 @@ hid_main (void *arg)
   return NULL;
 }
 
-static struct usb_hid usb_hid;
+static struct usb_hid usb_hid __attribute__((aligned(4)));
 
 struct usb_hid *
 hid_open (void)
@@ -656,7 +693,11 @@ hid_send (struct usb_hid *usb_hid, uint8_t *buf, uint16_t len)
     return -1;
 
   usb_hid->tx_len = len;
+#if defined(MCU_EFM32HG)
+  memcpy (usb_hid->tx_buf, buf, len);
+#else
   usb_hid->tx_buf = buf;
+#endif
   eventflag_signal (&usb_hid->cmd_ev, EV_TX_NEED);
 
   do
@@ -673,7 +714,11 @@ hid_recv (struct usb_hid *usb_hid, uint8_t *buf, uint16_t len, uint32_t timeout)
 {
   eventmask_t m;
 
+#if defined(MCU_EFM32HG)
+  usb_lld_rx_enable_buf (ENDP1, &usb_hid->rx_buf, HID_RPT_SIZE);
+#else
   usb_lld_rx_enable (ENDP1);
+#endif
 
   do
     {

@@ -289,12 +289,6 @@ static char __process3_stack_base__[4096];
 #define main emulated_main
 #endif
 
-void
-usb_lld_write (uint8_t ep_num, const void *buf, size_t len)
-{
-  usb_lld_tx_enable_buf (ep_num, buf, len);
-}
-
 /*
  * Entry point.
  *

@@ -1,3 +1,52 @@
+2017-09-29  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-stm32f103.c (flash_program_halfword, flash_erase_page)
+	(flash_write, flash_erase_all_and_exec): Use uintptr_t.
+
+2017-09-08  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-gnu-linux.c: Flash emulation implemented.
+
+2017-09-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc: Use stack-def.h.
+	* example-cdc/stack-def.h: New.
+
+2017-09-04  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-stm32f103.h (nvic_system_reset): Add noreturn attribute.
+
+	* sys.h: Add mcu/sys-gnu-linux.h.
+
+	* mcu/sys-gnu-linux.c: New.
+	* mcu/sys-gnu-linux.h: New.
+
+2017-08-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.4.
+	* doc/chopstx.texi (VERSION): 1.4.
+
+2017-08-03  Jeremy Drake <jeremydrake+gnuk@eacceleration.com>
+
+	* mcu/sys-stm32f103.c (flash_write): Allow compile time
+	flash size definition by STM32F103_OVERRIDE_FLASH_SIZE_KB.
+
+2017-08-02  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* contrib/adc-gnu-linux.c: New.
+
+2017-07-07  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (usbip_handle_data_urb): Fix error return value.
+	(notify_hostcontroller): New.
+	(usb_lld_stall_tx, usb_lld_stall_rx): Notify host controller side.
+
+2017-07-06  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (hc_handle_data_urb): Fix the condition of the
+	end of transaction.
+	(read_data_transaction): Allow partial read by host.
+
 2017-07-05  NIIBE Yutaka  <gniibe@fsij.org>
 
 	* example-fraucheky: New.
