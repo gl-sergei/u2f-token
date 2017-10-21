@@ -277,7 +277,13 @@ authentication device, because:
 
 ## License
 
-Great thanks to Niibe Yutaka author of Chopstx and Gnuk.
+Chopstx is a threading library for Cortex-M0 and Cortex-M3 processors written by
+Niibe Yutaka.
+
+ECC is taken from Gnuk project by Niibe Yutaka.
+
+Some constants and memory layout structures were taken from EFM32 platform
+libraries by Silicon Laboratories.
 
 Copyright &copy; 2017 Sergei Glushchenko
 
