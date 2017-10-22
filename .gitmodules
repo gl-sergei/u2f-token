@@ -1,3 +1,4 @@
 [submodule "chopstx"]
 	path = chopstx
 	url = git@github.com:gl-sergei/u2f-token.git
+	branch = multiboard
