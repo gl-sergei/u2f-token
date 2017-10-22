@@ -81,7 +81,7 @@ sudo apt install openocd
 ### Building
 
 ``` sh
-cd u2f-token/u2f
+cd u2f-token/src
 ```
 
 ``` sh

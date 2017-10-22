@@ -2,7 +2,7 @@
 
 PROJECT = u2f
 
-CHOPSTX = ..
+CHOPSTX = ../chopstx
 
 ifeq ($(TARGET),)
 	TARGET=MAPLE_MINI
