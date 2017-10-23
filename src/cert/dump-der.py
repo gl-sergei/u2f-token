@@ -1,3 +1,4 @@
+import sys
 from asn1crypto.keys import ECPrivateKey
 
 def pk_to_c_array(name, pk_der):
@@ -33,4 +34,4 @@ with open("attestation.der", "r") as f:
     print cert_to_c_array("attestation_der", f.read())
 
 with open("attestation_key.der", "r") as f:
-    print pk_to_c_array("attestation_key", f.read())
+    sys.stdout.write(pk_to_c_array("attestation_key", f.read()))

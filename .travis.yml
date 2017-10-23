@@ -4,7 +4,8 @@ dist: xenial
 
 install:
         - sudo apt-get update
-        - sudo apt-get install -yy gcc-arm-none-eabi python-asn1crypto openssl
+        - sudo apt-get install -yy gcc-arm-none-eabi python-pip openssl
+        - pip install asn1crypto --user
 
 script:
         - git submodule init
