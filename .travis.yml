@@ -1,0 +1,12 @@
+language: c
+sudo: required
+dist: xenial
+
+install:
+        - sudo apt-get update
+        - sudo apt-get install -yy gcc-arm-none-eabi python-asn1crypto openssl
+
+script:
+        - git submodule init
+        - git submodule update
+        - 'cd src ; make TARGET=TOMU ; cd ..'
