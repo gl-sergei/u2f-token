@@ -9,3 +9,7 @@ install:
 
 script:
         - 'cd src && make TARGET=TOMU && cd ..'
+        - 'cd src && make clean distclean certclean && cd ..'
+        - 'cd src && make TARGET=MAPLE_MINI && cd ..'
+        - 'cd src && make clean distclean certclean && cd ..'
+        - 'cd src && make TARGET=BLUE_PILL && cd ..'
