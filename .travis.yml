@@ -8,6 +8,4 @@ install:
         - pip install asn1crypto --user
 
 script:
-        - git submodule init
-        - git submodule update
-        - 'cd src ; make TARGET=TOMU ; cd ..'
+        - 'cd src && make TARGET=TOMU && cd ..'

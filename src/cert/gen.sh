@@ -6,7 +6,6 @@ openssl req -x509 -sha256 -days 365 -key attestation_key.pem -in csr.csr -out at
 # convert to der
 openssl x509 -outform der -in attestation.pem -out attestation.der
 openssl ec -in attestation_key.pem -outform der -out attestation_key.der
-openssl ec -in device_key.pem -outform der -out device_key.der
 
 # generate C code
 python dump-der.py > certificates.c
