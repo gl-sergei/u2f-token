@@ -90,6 +90,8 @@ csn (void *arg)
 
   while (1)
     {
+      uint32_t touch = 0;
+
       struct chx_poll_head *pd_array[1] = {
         (struct chx_poll_head *)&timer1_intr
       };
@@ -100,7 +102,6 @@ csn (void *arg)
         {
           uint32_t count;
           uint32_t threshold;
-          uint32_t touch = 0;
 
           count = measure_stop ();
 
@@ -116,13 +117,16 @@ csn (void *arg)
           if (present > 0)
             --present;
 
-          if (touch && since_last_touch > 10)
+          if (touch)
             {
+              if (since_last_touch > 10)
+                {
+                  if (present > 0)
+                    present = 0;   /* clear user presence */
+                  else
+                    present = 500; /* set user presence for 10 seconds */
+                }
               since_last_touch = 0;
-              if (present > 0)
-                present = 0;   /* clear user presence */
-              else
-                present = 500; /* remember user presence for 10 seconds */
             }
           else
             ++since_last_touch;
