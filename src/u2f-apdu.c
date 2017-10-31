@@ -136,12 +136,17 @@ typedef struct {
 #define U2F_SW_BAD_CLA                  0x6E00 // SW_BAD_CLA
 
 /* simple RNG interface */
-static uint8_t rng_index = 0;
 
 static int
 rng (uint8_t *buf, size_t size)
 {
-  return random_gen (&rng_index, buf, size);
+  uint8_t rng_index = 0;
+  int res;
+
+  res = random_gen (&rng_index, buf, size);
+  random_bytes_free (NULL);   /* parameter isn't used. invokes neug_flush. */
+
+  return res;
 }
 
 /* device key */
@@ -158,6 +163,9 @@ struct device_key
 
 extern uint32_t _device_key_base;
 static struct device_key *device_key = (struct device_key *) &_device_key_base;
+
+extern uint32_t _auth_ctr_base;
+static uint32_t *ctr_addr = &_auth_ctr_base;
 
 static void
 device_key_gen (void)
@@ -180,9 +188,13 @@ device_key_gen (void)
   sha256_update (&ctx, key, U2F_PRIV_K_SIZE);
   sha256_finish (&ctx, key_hash);
 
-  flash_erase_page ((uintptr_t) &device_key);
+  /* write device key to flash */
+  flash_erase_page ((uintptr_t) device_key);
   flash_write ((uintptr_t) device_key->key, key, U2F_PRIV_K_SIZE);
   flash_write ((uintptr_t) device_key->key_hash, key_hash, HASH_RES_SIZE);
+
+  /* erase auth counter */
+  flash_erase_page ((uintptr_t) ctr_addr);
 }
 
 
@@ -339,9 +351,6 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
          + ATTESTATION_DER_LEN    // Attestation certificate
          + sig_len;               // Registration signature
 }
-
-extern uint32_t _auth_ctr_base;
-static uint32_t *ctr_addr = &_auth_ctr_base;
 
 static uint32_t
 u2f_read_ctr (void)
