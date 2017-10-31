@@ -89,9 +89,9 @@ blk (void *arg)
   while (1)
     {
       v = 0;
-      chopstx_usec_wait (200*1000);
+      chopstx_usec_wait (50*1000);
       v = 1;
-      chopstx_usec_wait (200*1000);
+      chopstx_usec_wait (50*1000);
       if (blink_is_on)
         nblk++;
       if (nblk == 3)

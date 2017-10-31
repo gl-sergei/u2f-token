@@ -47,7 +47,7 @@ extern uint8_t __process6_stack_base__[], __process6_stack_size__[];
 #define STACK_ADDR_CSN ((uint32_t)__process6_stack_base__)
 #define STACK_SIZE_CSN ((uint32_t)__process6_stack_size__)
 
-static volatile uint32_t present = 500;
+static uint32_t present = 0;
 static uint32_t count_max[2] = {0, 0};
 
 static chopstx_intr_t timer1_intr;
@@ -80,11 +80,9 @@ static void *
 csn (void *arg)
 {
   int ch = 0;
+  int since_last_touch = 0;
 
   (void)arg;
-
-  present = 500; /* indicate user presence for 10 seconds after start
-                  (reset after 10s) */
 
   chopstx_claim_irq (&timer1_intr, INTR_REQ_TIMER1);
 
@@ -118,8 +116,19 @@ csn (void *arg)
           if (present > 0)
             --present;
 
-          if (touch)
-            present = 500;    /* remember user presence for 10 seconds */
+          if (touch && since_last_touch > 10)
+            {
+              since_last_touch = 0;
+              if (present > 0)
+                present = 0;   /* clear user presence */
+              else
+                present = 500; /* remember user presence for 10 seconds */
+            }
+          else
+            ++since_last_touch;
+
+          if (since_last_touch > 1000)
+            since_last_touch = 1000;
 
           ch ^= 1;
 
