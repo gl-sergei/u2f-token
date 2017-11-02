@@ -111,8 +111,8 @@ csn (void *arg)
           else
             touch &= ~(1 << ch);
 
-          if (count_max[ch] < count)
-            count_max[ch] = count;
+          if (count > threshold)
+            count_max[ch] = (count_max[ch] + count) / 2;
 
           if (present > 0)
             --present;
