@@ -132,8 +132,6 @@ main (int argc, const char *argv[])
   chopstx_create (PRIO_PWM, STACK_ADDR_PWM, STACK_SIZE_PWM, pwm, NULL);
   chopstx_create (PRIO_BLK, STACK_ADDR_BLK, STACK_SIZE_BLK, blk, NULL);
 
-  chopstx_usec_wait (200*1000);
-
   chopstx_mutex_lock (&mtx);
   chopstx_cond_signal (&cnd0);
   chopstx_cond_signal (&cnd1);
@@ -153,12 +151,14 @@ main (int argc, const char *argv[])
 
   flash_unlock ();
 
+  chopstx_usec_wait (200*1000);
+
   hid = hid_open ();
   u2f_hid_open (hid);
 
   while (1)
     {
-      chopstx_usec_wait (50*1000);
+      chopstx_usec_wait (500*1000);
     }
 
   random_fini ();
