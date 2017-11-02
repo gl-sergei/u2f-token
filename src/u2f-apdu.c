@@ -161,8 +161,8 @@ struct device_key
   uint8_t resrved[1024 - U2F_PRIV_K_SIZE - HASH_RES_SIZE];
 };
 
-extern uint32_t _device_key_base;
-static struct device_key *device_key = (struct device_key *) &_device_key_base;
+extern struct device_key _device_key_base;
+const struct device_key *device_key = (struct device_key *) &_device_key_base;
 
 extern uint32_t _auth_ctr_base;
 static uint32_t *ctr_addr = &_auth_ctr_base;

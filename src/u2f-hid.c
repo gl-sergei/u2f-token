@@ -191,6 +191,7 @@ u2f_msg_append (struct u2f_hid *u2f, uint8_t *buf, uint16_t len)
 static void
 u2f_send_error (struct u2f_hid *u2f, uint32_t cid, uint8_t error)
 {
+  memset (u2f->frame.init.data, 0, sizeof (u2f->frame.init.data));
   u2f->frame.cid = cid;
   u2f->frame.init.cmd = U2FHID_ERROR;
   u2f->frame.init.data[0] = error;
@@ -210,6 +211,8 @@ u2f_send_init (struct u2f_hid *u2f, uint32_t cid, uint32_t resp_cid,
 
   resp = (U2FHID_INIT_RESP *) &u2f->frame.init.data;
   memcpy (&resp->nonce, nonce, INIT_NONCE_SIZE);
+  memset (u2f->frame.init.data + INIT_NONCE_SIZE, 0,
+          sizeof (u2f->frame.init.data) - INIT_NONCE_SIZE);
   resp->cid = resp_cid;
   resp->versionInterface = U2FHID_IF_VERSION;
   resp->versionMajor = 1;
@@ -239,6 +242,7 @@ u2f_send_msg (struct u2f_hid *u2f, uint32_t cid, uint8_t cmd, uint8_t *msg,
   if (frame_len > sizeof (u2f->frame.init.data))
     frame_len = sizeof (u2f->frame.init.data);
 
+  memset (u2f->frame.init.data, 0, sizeof (u2f->frame.init.data));
   memcpy (u2f->frame.init.data, msg, frame_len);
 
   hid_send (u2f->hid, (uint8_t *) &u2f->frame, sizeof (u2f->frame));
@@ -256,6 +260,7 @@ u2f_send_msg (struct u2f_hid *u2f, uint32_t cid, uint8_t cmd, uint8_t *msg,
       if (frame_len > sizeof (u2f->frame.cont.data))
         frame_len = sizeof (u2f->frame.cont.data);
 
+      memset (u2f->frame.cont.data, 0, sizeof (u2f->frame.cont.data));
       memcpy (u2f->frame.cont.data, msg, frame_len);
 
       hid_send (u2f->hid, (uint8_t *) &u2f->frame, sizeof (u2f->frame));
