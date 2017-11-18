@@ -10,7 +10,8 @@ EOF
 
 # generate key and self-signed certificate
 openssl ecparam -genkey -name prime256v1 -out attestation_key.pem
-openssl req -config opnssl.cnf -x509 -sha256 -nodes -days 3650 -key attestation_key.pem -subj "/CN=U2F Token" -out attestation.pem
+openssl req -new -sha256 -key attestation_key.pem -out csr.csr -subj "/CN=U2F Token"
+openssl req -config opnssl.cnf -x509 -sha256 -days 3650 -key attestation_key.pem -in csr.csr -out attestation.pem
 
 # convert to der
 openssl x509 -outform der -in attestation.pem -out attestation.der
