@@ -73,7 +73,7 @@ struct GPIO {
 static struct GPIO *const GPIO_PBT = (struct GPIO *)GPIO_PBT_BASE;
 #endif
 
-static int touch = 1;
+static int touch = 0;
 
 static int
 pbt_get (void)
@@ -88,7 +88,8 @@ pbt (void *arg)
 {
   (void)arg;
   uint32_t timeout;
-  uint32_t count = 100;      /* indicate user presence 10 seconds after start */
+  uint32_t count = 0;
+  int since_last_touch = 0;
 
   while (1)
     {
@@ -103,9 +104,18 @@ pbt (void *arg)
 
       if (pbt_get ())
         {
-          touch = 1;
-          count = 100;       /* remember user presence for 10 seconds */
+          if (since_last_touch > 5)
+            {
+              touch ^= 1;
+              count = 100;       /* remember user presence for 10 seconds */
+            }
+          since_last_touch = 0;
         }
+        else
+          ++since_last_touch;
+
+        if (since_last_touch > 1000)
+          since_last_touch = 1000;
 
       if (count == 0)
         touch = 0;
