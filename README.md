@@ -1,3 +1,5 @@
+![Build Status](https://api.travis-ci.org/gl-sergei/u2f-token.svg?branch=newlayout)
+
 # U2F-TOKEN firmware for STM32F103 and EFM32HG boards
 
 Turns your cheap STM32F103 or EFM32HG board into U2F token.
