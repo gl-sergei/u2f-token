@@ -14,14 +14,14 @@ ifeq ($(TARGET),MAPLE_MINI)
 	DRIVERS  = pbt.c
 	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DHAVE_PUSH_BUTTON
 	LDSCRIPT = stm32f103.ld
-	BOARD    = $(CHOPSTX)/board/board-blue-pill.h
+	BOARD    = $(CHOPSTX)/board/board-maple-mini.h
 else ifeq ($(TARGET),BLUE_PILL)
 	MCU      = cortex-m3
 	CHIP     = stm32f103
 	DRIVERS  = uvoid.c
 	DEFS     = -DUSE_SYS3 -DFREE_STANDING
 	LDSCRIPT = stm32f103.ld
-	BOARD    = $(CHOPSTX)/board/board-maple-mini.h
+	BOARD    = $(CHOPSTX)/board/board-blue-pill.h
 else ifeq ($(TARGET),TOMU)
 	MCU      = cortex-m0plus
 	CHIP     = efm32hg
