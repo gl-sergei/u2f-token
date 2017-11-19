@@ -1,4 +1,4 @@
-![Build Status](https://api.travis-ci.org/gl-sergei/u2f-token.svg?branch=newlayout)
+![Build Status](https://api.travis-ci.org/gl-sergei/u2f-token.svg?branch=master)
 
 # U2F-TOKEN firmware for STM32F103 and EFM32HG boards
 
