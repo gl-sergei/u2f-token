@@ -340,7 +340,8 @@ u2f_hid_main (void *arg)
           continue;
         }
 
-      if (u2f->cid != 0 && u2f->frame.cid != u2f->cid)
+      if (FRAME_TYPE (u2f->frame) == TYPE_INIT &&
+          u2f->cid != 0 && u2f->frame.cid != u2f->cid)
         {
           u2f_send_error (u2f, u2f->frame.cid, ERR_CHANNEL_BUSY);
           continue;
