@@ -66,8 +66,15 @@ struct GPIO {
 #define GPIOE_BASE  (APB2PERIPH_BASE + 0x1800)
 #define GPIOE   ((struct GPIO *) GPIOE_BASE)
 
+#if defined(TARGET_MAPLE_MINI)
 #define GPIO_PBT_RD    8
 #define GPIO_PBT_BASE  GPIOB_BASE
+#define GPIO_PBT_IS_LO 0
+#elif defined(TARGET_ST_DONGLE)
+#define GPIO_PBT_RD    5
+#define GPIO_PBT_BASE  GPIOA_BASE
+#define GPIO_PBT_IS_LO 1
+#endif
 
 #ifdef GPIO_PBT_BASE
 static struct GPIO *const GPIO_PBT = (struct GPIO *)GPIO_PBT_BASE;
@@ -78,7 +85,7 @@ static int touch = 0;
 static int
 pbt_get (void)
 {
-  return (GPIO_PBT->IDR >> GPIO_PBT_RD) & 1;
+  return ((GPIO_PBT->IDR >> GPIO_PBT_RD) & 1) ^ GPIO_PBT_IS_LO;
 }
 
 static chopstx_intr_t intr;

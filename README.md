@@ -95,8 +95,9 @@ will produce firmware file `build/u2f.bin`.
 Supported targets are:
 
 - TOMU
-- MAPLE_MINI
-- BLUE_PILL
+- MAPLE_MINI (STM32F103 board with push button on PB8)
+- BLUE_PILL (generic STM32F103 board without push button)
+- ST_DONGLE (ST-Link V2 clone, push button pulls down PA5/SWCLK pin)
 
 Use BLUE_PILL for generic STM32F103 board without push button.
 
@@ -118,8 +119,7 @@ telnet localhost 4444
 > reset halt
 > stm32f1x unlock 0
 > reset halt
-> flash write_image erase build/u2f.elf
-> reset halt
+> program build/u2f.elf verify reset
 > shutdown
 ```
 
@@ -136,8 +136,7 @@ On other terminal run:
 ``` sh
 telnet localhost 4444
 > reset halt
-> flash write_image erase build/u2f.elf
-> reset halt
+> program build/u2f.elf verify reset
 > shutdown
 ```
 
