@@ -71,7 +71,7 @@ user_presence_reset (void)
 }
 
 void
-pbt_init (void)
+uvoid_init (void)
 {
   chopstx_create (PRIO_UVOID, STACK_ADDR_UVOID, STACK_SIZE_UVOID, uvoid, NULL);
 }

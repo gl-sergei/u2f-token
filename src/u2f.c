@@ -147,6 +147,8 @@ main (int argc, const char *argv[])
   pbt_init ();
 #elif defined(HAVE_CAPSENSE)
   capsense_init ();
+#else
+  uvoid_init ();
 #endif
 
   flash_unlock ();

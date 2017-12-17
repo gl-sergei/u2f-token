@@ -12,14 +12,21 @@ ifeq ($(TARGET),MAPLE_MINI)
 	MCU      = cortex-m3
 	CHIP     = stm32f103
 	DRIVERS  = pbt.c
-	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DHAVE_PUSH_BUTTON
+	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DHAVE_PUSH_BUTTON -DTARGET_MAPLE_MINI
 	LDSCRIPT = stm32f103.ld
 	BOARD    = $(CHOPSTX)/board/board-maple-mini.h
+else ifeq ($(TARGET),ST_DONGLE)
+	MCU      = cortex-m3
+	CHIP     = stm32f103
+	DRIVERS  = pbt.c
+	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DTARGET_ST_DONGLE -DHAVE_PUSH_BUTTON
+	LDSCRIPT = stm32f103.ld
+	BOARD    = $(CHOPSTX)/board/board-st-dongle.h
 else ifeq ($(TARGET),BLUE_PILL)
 	MCU      = cortex-m3
 	CHIP     = stm32f103
 	DRIVERS  = uvoid.c
-	DEFS     = -DUSE_SYS3 -DFREE_STANDING
+	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DBLUE_PILL
 	LDSCRIPT = stm32f103.ld
 	BOARD    = $(CHOPSTX)/board/board-blue-pill.h
 else ifeq ($(TARGET),TOMU)
@@ -27,7 +34,7 @@ else ifeq ($(TARGET),TOMU)
 	CHIP     = efm32hg
 	DRIVERS  = csn.c
 	DEFS     = -DMAKE_ENTRY_PUBLIC -DUSE_SYS3 -DFREE_STANDING -DMHZ=21 \
-	           -DHAVE_CAPSENSE
+	           -DHAVE_CAPSENSE -DTARGET_TOMU
 	LDSCRIPT = efm32hg.ld
 	BOARD    = $(CHOPSTX)/board/board-tomu.h
 endif
