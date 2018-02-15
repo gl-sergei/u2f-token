@@ -525,7 +525,7 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
     case U2F_AUTHENTICATE:
       if (Lc != sizeof (U2F_AUTHENTICATE_REQ))
         {
-          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
           break;
         }
       ret = u2f_authenticate ((U2F_AUTHENTICATE_REQ *) DATA (apdu),
