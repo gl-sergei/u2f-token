@@ -1,4 +1,4 @@
-import sys
+from __future__ import print_function
 from asn1crypto.keys import ECPrivateKey
 
 def pk_to_c_array(name, pk_der):
@@ -34,5 +34,5 @@ def cert_to_c_array(name, der):
 with open("attestation.der", "rb") as f:
     print(cert_to_c_array("attestation_der", f.read()))
 
-with open("attestation_key.der", "r") as f:
-    sys.stdout.write(pk_to_c_array("attestation_key", f.read()))
+with open("attestation_key.der", "rb") as f:
+    print(pk_to_c_array("attestation_key", f.read()))
