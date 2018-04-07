@@ -12,7 +12,7 @@ __process6_stack_size__  = 0x0200; /* pbt / csn               */
 
 MEMORY
 {
-    flash  : org = 0x00000000, len = 47k
+    flash  : org = 0x00004000, len = 46k
     ram : org = 0x20000000, len = 8k
     flash1 : org = 0x00004000+0xb800, len = 2k
 }
@@ -31,6 +31,8 @@ SECTIONS
     {
     . = ALIGN(16);
         KEEP(*(.first_page.first_words))
+    . = ORIGIN(flash) + 0x90;
+        KEEP(*(.toboot.config))
         KEEP(*(.sys.vectors))
         *(.text.startup.*)
     build/sys-*.o(.text)
@@ -157,9 +159,11 @@ SECTIONS
     {
         . = ALIGN (1024);
         _device_key_base = .;
-        . += 1024;
+        *(.device.key);
+        . = ALIGN (1024);
         _auth_ctr_base = .;
-        . += 1024;
+        *(.auth.ctr);
+        . = ALIGN (1024);
     } > flash1
 
     PROVIDE(end = .);

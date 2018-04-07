@@ -50,6 +50,8 @@
 #include "uvoid.h"
 #endif
 
+#include "platform.h"
+
 static chopstx_mutex_t mtx;
 static chopstx_cond_t cnd0;
 static chopstx_cond_t cnd1;
@@ -124,6 +126,8 @@ main (int argc, const char *argv[])
 
   (void)argc;
   (void)argv;
+
+  platform_init ();
 
   chopstx_mutex_init (&mtx);
   chopstx_cond_init (&cnd0);
