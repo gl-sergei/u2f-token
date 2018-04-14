@@ -1,22 +1,33 @@
 language: c
+sudo: required
 dist: trusty
+
+env:
+  - TARGET=TOMU
+  - TARGET=MAPLE_MINI
+  - TARGET=BLUE_PILL
+  - TARGET=ST_DONGLE
+  - ENFORCE_DEBUG_LOCK=1 TARGET=TOMU
+  - ENFORCE_DEBUG_LOCK=1 TARGET=MAPLE_MINI
+  - ENFORCE_DEBUG_LOCK=1 TARGET=BLUE_PILL
+  - ENFORCE_DEBUG_LOCK=1 TARGET=ST_DONGLE
 
 addons:
   apt:
     packages:
-      - gcc-arm-none-eabi
-      - libnewlib-arm-none-eabi
       - python-pip
       - openssl
 
 install:
   - pip install asn1crypto --user
+  - sudo apt-add-repository -y ppa:team-gcc-arm-embedded/ppa
+  - sudo apt-get update
+  - sudo apt-get install -yy gcc-arm-embedded
 
 script:
-  - 'cd src && make TARGET=TOMU && cd ..'
-  - 'cd src && make clean distclean certclean && cd ..'
-  - 'cd src && make TARGET=MAPLE_MINI && cd ..'
-  - 'cd src && make clean distclean certclean && cd ..'
-  - 'cd src && make TARGET=BLUE_PILL && cd ..'
-  - 'cd src && make clean distclean certclean && cd ..'
-  - 'cd src && make TARGET=ST_DONGLE && cd ..'
+  - 'cd src'
+  - 'make TARGET=${TARGET} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK}'
+  - 'openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der'
+  - './inject_key.py --key key.der --ctr 1001'
+  - 'make clean distclean certclean'
+  - 'cd ..'

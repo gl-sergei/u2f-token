@@ -161,9 +161,11 @@ SECTIONS
     {
         . = ALIGN (1024);
         _device_key_base = .;
-        . += 1024;
+        *(.device.key);
+        . = ALIGN (1024);
         _auth_ctr_base = .;
-        . += 1024;
+        *(.auth.ctr);
+        . = ALIGN (1024);
     } > flash1
 
     PROVIDE(end = .);

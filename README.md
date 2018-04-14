@@ -41,12 +41,14 @@ brew install arm-gcc-bin
 Installing on Debian/Ubuntu:
 
 ``` sh
-sudo apt install gcc-arm-none-eabi
+sudo apt-add-repository ppa:team-gcc-arm-embedded/ppa
+sudo apt update
+sudo apt install gcc-arm-embedded
 ```
 
 #### OpenSSL
 
-MacOS comes with openssl installed out of the box.
+MacOS comes with openssl/libressl installed out of the box.
 
 Installing on Debian/Ubuntu:
 
@@ -83,6 +85,7 @@ sudo apt install openocd
 ### Building
 
 ``` sh
+git clone https://github.com/gl-sergei/u2f-token.git
 cd u2f-token/src
 ```
 
@@ -101,6 +104,42 @@ Supported targets are:
 
 Use BLUE_PILL for generic STM32F103 board without push button.
 
+
+### Readout protection
+
+Make sure to enable readout protection if you are going to use your device as
+2FA for your accounts. Build firmware with `ENFORCE_DEBUG_LOCK=1`:
+
+``` sh
+make clean
+make TARGET=<target> ENFORCE_DEBUG_LOCK=1
+```
+
+### Injecting private key
+
+Firmware generates EC private key on its first boot and erases it when it
+enters the bootloader. You may want to backup your private key and make it
+survive firmware upgrade. To achieve this, generate the key on your host machine
+and inject it into the firmware binary.
+
+Generate your private key:
+
+``` sh
+openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der
+```
+
+You may want to encrypt your `key.der` and back it up.
+
+Check device's authentication counter if you are going to perform the firmware
+upgrade. You can see it in Yubikey demo site output. For the new device, you can
+skip `ctr` parameter all together or set it to 1. Let's say the current counter
+value is 1000.
+
+Use this command to patch firmware binary:
+
+``` sh
+./inject_key.py --key key.der --ctr 1001
+```
 
 ### Flashing
 
@@ -123,21 +162,12 @@ telnet localhost 4444
 > shutdown
 ```
 
-#### To EFM32HG (Tomu) board using ST-LINK/V2 and OpenOCD
+#### To EFM32HG (Tomu) board using DFU
 
-Start OpenOCD:
-
-``` sh
-openocd -f interface/stlink-v2.cfg -f target/tomu.cfg
-```
-
-On other terminal run:
+Providing you have Toboot installed:
 
 ``` sh
-telnet localhost 4444
-> reset halt
-> program build/u2f.elf verify reset
-> shutdown
+dfu-util -v -d 1209:70b1 -D build/u2f.bin
 ```
 
 
@@ -274,7 +304,6 @@ authentication device, because:
 [p1]: http://community.silabs.com/t5/32-bit-MCU/Read-Write-Protection-of-Flash-and-SRAM/td-p/106405 "readout protection"
 [q1]: https://stackoverflow.com/q/32509747 "readout protection"
 [openocd-flash]: http://openocd.org/doc/html/Flash-Commands.html "readout protection"
-
 
 ## License
 

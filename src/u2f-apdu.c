@@ -161,11 +161,10 @@ struct device_key
   uint8_t resrved[1024 - U2F_PRIV_K_SIZE - HASH_RES_SIZE];
 };
 
-extern struct device_key _device_key_base;
-const struct device_key *device_key = (struct device_key *) &_device_key_base;
+struct device_key __attribute__ ((section(".device.key"))) device_key = { 0 };
 
-extern uint32_t _auth_ctr_base;
-static uint32_t *ctr_addr = &_auth_ctr_base;
+uint32_t __attribute__ ((section(".auth.ctr"))) auth_ctr[256] = { 0 };
+static uint32_t *ctr_addr = &(auth_ctr[0]);
 
 static void
 device_key_gen (void)
@@ -175,10 +174,10 @@ device_key_gen (void)
   sha256_context ctx;
 
   sha256_start (&ctx);
-  sha256_update (&ctx, device_key->key, U2F_PRIV_K_SIZE);
+  sha256_update (&ctx, device_key.key, U2F_PRIV_K_SIZE);
   sha256_finish (&ctx, key_hash);
 
-  if (memcmp (key_hash, device_key->key_hash, HASH_RES_SIZE) == 0)
+  if (memcmp (key_hash, device_key.key_hash, HASH_RES_SIZE) == 0)
     return;
 
   /* new device key needs to be generated */
@@ -189,9 +188,9 @@ device_key_gen (void)
   sha256_finish (&ctx, key_hash);
 
   /* write device key to flash */
-  flash_erase_page ((uintptr_t) device_key);
-  flash_write ((uintptr_t) device_key->key, key, U2F_PRIV_K_SIZE);
-  flash_write ((uintptr_t) device_key->key_hash, key_hash, HASH_RES_SIZE);
+  flash_erase_page ((uintptr_t) &device_key);
+  flash_write ((uintptr_t) device_key.key, key, U2F_PRIV_K_SIZE);
+  flash_write ((uintptr_t) device_key.key_hash, key_hash, HASH_RES_SIZE);
 
   /* erase auth counter */
   flash_erase_page ((uintptr_t) ctr_addr);
@@ -203,10 +202,10 @@ new_private_key (uint8_t *app_id, uint8_t *nonce, uint8_t *private_key)
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key->key);
+  hmac_sha256_init (&ctx, device_key.key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, nonce, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key->key, private_key);
+  hmac_sha256_finish (&ctx, device_key.key, private_key);
 }
 
 static void
@@ -215,10 +214,10 @@ make_key_handle (uint8_t *private_key, uint8_t *app_id,
 {
   hmac_sha256_context ctx;
 
-  hmac_sha256_init (&ctx, device_key->key);
+  hmac_sha256_init (&ctx, device_key.key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key->key, key_handle);
+  hmac_sha256_finish (&ctx, device_key.key, key_handle);
 
   memcpy (key_handle + HASH_RES_SIZE, nonce, U2F_NONCE_SIZE);
 }
@@ -233,15 +232,15 @@ recover_private_key (uint8_t *app_id, uint8_t *key_handle,
   if (key_handle_len != U2F_KH_SIZE)
     return -1;
 
-  hmac_sha256_init (&ctx, device_key->key);
+  hmac_sha256_init (&ctx, device_key.key);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
   hmac_sha256_update (&ctx, key_handle + HASH_RES_SIZE, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key->key, private_key);
+  hmac_sha256_finish (&ctx, device_key.key, private_key);
 
-  hmac_sha256_init (&ctx, device_key->key);
+  hmac_sha256_init (&ctx, device_key.key);
   hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
   hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key->key, control_mac);
+  hmac_sha256_finish (&ctx, device_key.key, control_mac);
 
   return memcmp(control_mac, key_handle, HASH_RES_SIZE);
 }
@@ -359,12 +358,12 @@ u2f_read_ctr (void)
 
   while (*ctr_addr != 0xffffffff)
     {
-      if (ctr_addr - &_auth_ctr_base == page_size)
+      if (ctr_addr - &(auth_ctr[0]) == page_size)
         break;
       ctr_addr++;
     }
 
-  if (ctr_addr == &_auth_ctr_base)
+  if (ctr_addr == &(auth_ctr[0]))
     return 0;
 
   return ctr_addr[-1];
@@ -377,10 +376,10 @@ u2f_write_ctr (uint32_t val)
 
   while (*ctr_addr != 0xffffffff)
     {
-      if (ctr_addr - &_auth_ctr_base == page_size)
+      if (ctr_addr - &(auth_ctr[0]) == page_size)
         {
-          flash_erase_page ((uintptr_t) &_auth_ctr_base);
-          ctr_addr = &_auth_ctr_base;
+          flash_erase_page ((uintptr_t) &(auth_ctr[0]));
+          ctr_addr = &(auth_ctr[0]);
           break;
         }
       ctr_addr++;
