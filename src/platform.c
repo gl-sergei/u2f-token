@@ -72,6 +72,7 @@ debug_lock_maybe (void)
 
 #define OPTION_BYTES_ADDR 0x1ffff800
 
+#if defined(ENFORCE_DEBUG_LOCK)
 /* Debug lock STM32F1x device */
 static void
 debug_lock_maybe (void)
@@ -85,6 +86,7 @@ debug_lock_maybe (void)
       nvic_system_reset ();
     }
 }
+#endif /* ENFORCE_DEBUG_LOCK */
 
 #endif /* TARGET_TOMU */
 
