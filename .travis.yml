@@ -6,8 +6,11 @@ env:
   - TARGET=TOMU
   - TARGET=MAPLE_MINI
   - TARGET=BLUE_PILL
-  - ENFORCE_DEBUG_LOCK=0
-  - ENFORCE_DEBUG_LOCK=1
+  - TARGET=ST_DONGLE
+  - ENFORCE_DEBUG_LOCK=1 TARGET=TOMU
+  - ENFORCE_DEBUG_LOCK=1 TARGET=MAPLE_MINI
+  - ENFORCE_DEBUG_LOCK=1 TARGET=BLUE_PILL
+  - ENFORCE_DEBUG_LOCK=1 TARGET=ST_DONGLE
 
 addons:
   apt:
@@ -22,7 +25,7 @@ install:
   - sudo apt-get install -yy gcc-arm-embedded
 
 script:
-  - 'cd u2f'
+  - 'cd src'
   - 'make TARGET=${TARGET} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK}'
   - 'openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der'
   - './inject_key.py --key key.der --ctr 1001'
