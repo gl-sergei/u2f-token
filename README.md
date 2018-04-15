@@ -86,7 +86,9 @@ sudo apt install openocd
 
 ``` sh
 git clone https://github.com/gl-sergei/u2f-token.git
-cd u2f-token/src
+cd u2f-token
+git submodule update --init
+cd src
 ```
 
 ``` sh
