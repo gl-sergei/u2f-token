@@ -18,4 +18,4 @@ openssl x509 -outform der -in attestation.pem -out attestation.der
 openssl ec -in attestation_key.pem -outform der -out attestation_key.der
 
 # generate C code
-python dump-der.py > certificates.c
+python dump-der.py > certificates.c || ( rm certificates.c && exit 1 )
