@@ -106,6 +106,27 @@ Supported targets are:
 
 Use BLUE_PILL for generic STM32F103 board without push button.
 
+If build was unsuccessful for whatever reason and you want to start from scratch
+you may want to run
+
+``` sh
+make clean
+```
+
+to remove all object files, or
+
+``` sh
+make certclean
+```
+
+to remove generated certificates, or
+
+``` sh
+make distclean
+```
+
+to remove `board.h` symlink, or even all of the above.
+
 
 ### Readout protection
 
