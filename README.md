@@ -45,6 +45,11 @@ sudo apt-add-repository ppa:team-gcc-arm-embedded/ppa
 sudo apt update
 sudo apt install gcc-arm-embedded
 ```
+For Kali Linux:
+``` sh
+apt install gcc-arm-none-eabi
+```
+
 
 #### OpenSSL
 
