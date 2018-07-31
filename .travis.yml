@@ -33,3 +33,4 @@ script:
   - './inject_key.py --key key.der --ctr 1001'
   - 'make clean distclean certclean'
   - 'cd ..'
+
