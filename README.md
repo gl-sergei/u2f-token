@@ -11,6 +11,7 @@ U2F-TOKEN is known to work on:
 - [Tomu board](https://tomu.im/) (EFM32HG) is an excellent device to use for U2F
   as it can sit entirely inside of your USB port (and it is opensource)
 - Blue pill (STM32F103) as well as Black pill
+- Black pill clone blue pill
 - Countless ST32F103 based Chinese St-Link V2 clones can be turned into U2F
   devices with U2F-TOKEN
 - Variety of Maple Mini clones which can be found on Aliexpress
@@ -107,7 +108,7 @@ Supported targets are:
 - TOMU
 - MAPLE_MINI (STM32F103 board with push button on PB8)
 - BLUE_PILL (generic STM32F103 board without push button)
-- DARK_PILL (An alternative version of the blue pill with another pinout and black textolite.)
+- BALCK_PILL (An alternative version of the blue pill with another pinout and black textolite.)
 - ST_DONGLE (ST-Link V2 clone, push button pulls down PA5/SWCLK pin)
 
 Use BLUE_PILL for generic STM32F103 board without push button.
