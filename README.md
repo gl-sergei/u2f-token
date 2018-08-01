@@ -104,11 +104,11 @@ will produce firmware file `build/u2f.bin`.
 
 Supported targets are:
 
-- TOMU http://tomu.im/
-- MAPLE_MINI https://wiki.stm32duino.com/index.php?title=Maple_Mini 
-- BLUE_PILL https://wiki.stm32duino.com/index.php?title=Blue_Pill
-- BALCK_PILL https://wiki.stm32duino.com/index.php?title=Black_Pill
-- ST_DONGLE https://wiki.stm32duino.com/index.php?title=ST-LINK_clone
+- [TOMU] (http://tomu.im/)
+- [MAPLE_MINI] (https://wiki.stm32duino.com/index.php?title=Maple_Mini) 
+- [BLUE_PILL] (https://wiki.stm32duino.com/index.php?title=Blue_Pill)
+- [BLACK_PILL] (https://wiki.stm32duino.com/index.php?title=Black_Pill)
+- [ST_DONGLE] (https://wiki.stm32duino.com/index.php?title=ST-LINK_clone)
 
 Use BLUE_PILL or BLACK_PILL for generic STM32F103 board without push button.
 
