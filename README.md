@@ -104,7 +104,7 @@ will produce firmware file `build/u2f.bin`.
 
 Supported targets are:
 
-- TOMU
+- TOMU http://tomu.im/
 - MAPLE_MINI https://wiki.stm32duino.com/index.php?title=Maple_Mini 
 - BLUE_PILL https://wiki.stm32duino.com/index.php?title=Blue_Pill
 - BALCK_PILL https://wiki.stm32duino.com/index.php?title=Black_Pill
