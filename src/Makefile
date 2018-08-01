@@ -30,13 +30,13 @@ else ifeq ($(TARGET),BLUE_PILL)
 	LDSCRIPT = stm32f103.ld
 	BOARD    = $(CHOPSTX)/board/board-blue-pill.h
 
-else ifeq ($(TARGET),DARK_PILL)
+else ifeq ($(TARGET),BLACK_PILL)
 	MCU      = cortex-m3
 	CHIP     = stm32f103
 	DRIVERS  = uvoid.c
-	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DDARK_PILL
+	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DBLACK_PILL
 	LDSCRIPT = stm32f103.ld
-	BOARD    = $(CHOPSTX)/board/board-dark-pill.h
+	BOARD    = $(CHOPSTX)/board/board-black-pill.h
 
 else ifeq ($(TARGET),TOMU)
 	MCU      = cortex-m0plus
