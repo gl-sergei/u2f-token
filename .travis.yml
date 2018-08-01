@@ -25,6 +25,7 @@ install:
   - sudo apt-get install -yy gcc-arm-embedded
 
 script:
+  - git submodule update --init
   - 'cd src'
   - 'make TARGET=${TARGET} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK}'
   - 'openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der'
