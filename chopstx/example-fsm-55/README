@@ -1,0 +1,17 @@
+FSM-55 LED Matrix Display Board is a simple board to play 5x5 LED
+Display.  Please see the product page:
+
+    http://www.seeedstudio.com/depot/FSM55-LED-Matrix-Display-p-2121.html
+
+There are three demonstrations and default is Hacker Emblem and "Happy
+Hacking!".  Please edit CSRC variable in the Makefile to select other
+applications.
+
+
+The file stlink-v2.cfg can be used for ST-Link/V2 with OpenOCD.  You
+can flash by typing:
+
+    $ openocd -f ./stlink-v2.cfg -c "program build/hacker-emblem.elf; reset run; shutdown"
+
+Thanks to Kiwamu Okabe who kindly tested OpenOCD and wrote the
+configuration.

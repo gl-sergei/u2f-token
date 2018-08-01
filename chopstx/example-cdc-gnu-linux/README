@@ -1,0 +1,41 @@
+(0) Build and generate initial flash data
+
+$ make
+$ make build/flash.data
+
+
+(1) preparation as root 
+
+Don't run ModemManager
+
+# systemctl stop ModemManager
+
+Install USBIP host module
+# modprobe vhci_hcd
+
+
+(2) Run sample program of USBIP server
+
+$ ./sample
+
+
+(3) Use the USB device as root
+
+Attach the Chopstx application program (USBIP device) to USBIP host.
+
+# usbip attach -r 127.0.0.1 -b 1-1
+
+
+(4) Connect CDC-ACM device
+
+$ cu -l /dev/ttyACM0
+
+Then, you see the message from Chopstx.  As you type lines, it echos.
+
+Type RET, ~ then . , you can terminate the session.
+
+
+(5) Detach the USBIP device as root
+
+# usbip detach -p 0
+

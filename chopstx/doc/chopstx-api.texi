@@ -1,0 +1,203 @@
+@subheading chx_fatal
+@anchor{chx_fatal}
+@deftypefun {void} {chx_fatal} (uint32_t @var{err_code})
+@var{err_code}: Error code
+
+When it detects a coding error, this function will be called to
+stop further execution of code.  It never returns.
+@end deftypefun
+
+@subheading chopstx_create
+@anchor{chopstx_create}
+@deftypefun {chopstx_t} {chopstx_create} (uint32_t @var{flags_and_prio}, uint32_t @var{stack_addr}, size_t @var{stack_size}, voidfunc @var{thread_entry}, void * @var{arg})
+@var{flags_and_prio}: Flags and priority
+
+@var{stack_addr}: Stack address
+
+@var{stack_size}: Size of stack
+
+@var{thread_entry}: Entry function of new thread
+
+@var{arg}: Argument to the thread entry function
+
+Create a thread.  Returns thread ID.
+@end deftypefun
+
+@subheading chopstx_usec_wait
+@anchor{chopstx_usec_wait}
+@deftypefun {void} {chopstx_usec_wait} (uint32_t @var{usec})
+@var{usec}: number of micro seconds
+
+Sleep for @var{usec}.
+@end deftypefun
+
+@subheading chopstx_mutex_init
+@anchor{chopstx_mutex_init}
+@deftypefun {void} {chopstx_mutex_init} (chopstx_mutex_t * @var{mutex})
+@var{mutex}: Mutex
+
+Initialize @var{mutex}.
+@end deftypefun
+
+@subheading chopstx_mutex_lock
+@anchor{chopstx_mutex_lock}
+@deftypefun {void} {chopstx_mutex_lock} (chopstx_mutex_t * @var{mutex})
+@var{mutex}: Mutex
+
+Lock @var{mutex}.
+@end deftypefun
+
+@subheading chopstx_mutex_unlock
+@anchor{chopstx_mutex_unlock}
+@deftypefun {void} {chopstx_mutex_unlock} (chopstx_mutex_t * @var{mutex})
+@var{mutex}: Mutex
+
+Unlock @var{mutex}.
+@end deftypefun
+
+@subheading chopstx_cond_init
+@anchor{chopstx_cond_init}
+@deftypefun {void} {chopstx_cond_init} (chopstx_cond_t * @var{cond})
+@var{cond}: Condition variable
+
+Initialize @var{cond}.
+@end deftypefun
+
+@subheading chopstx_cond_wait
+@anchor{chopstx_cond_wait}
+@deftypefun {void} {chopstx_cond_wait} (chopstx_cond_t * @var{cond}, chopstx_mutex_t * @var{mutex})
+@var{cond}: Condition variable
+
+@var{mutex}: Associated mutex
+
+Wait for @var{cond} with @var{mutex}.
+@end deftypefun
+
+@subheading chopstx_cond_signal
+@anchor{chopstx_cond_signal}
+@deftypefun {void} {chopstx_cond_signal} (chopstx_cond_t * @var{cond})
+@var{cond}: Condition variable
+
+Wake up a thread waiting on @var{cond}.
+@end deftypefun
+
+@subheading chopstx_cond_broadcast
+@anchor{chopstx_cond_broadcast}
+@deftypefun {void} {chopstx_cond_broadcast} (chopstx_cond_t * @var{cond})
+@var{cond}: Condition Variable
+
+Wake up all threads waiting on @var{cond}.
+@end deftypefun
+
+@subheading chopstx_claim_irq
+@anchor{chopstx_claim_irq}
+@deftypefun {void} {chopstx_claim_irq} (chopstx_intr_t * @var{intr}, uint8_t @var{irq_num})
+@var{intr}: Pointer to INTR structure
+
+@var{irq_num}: IRQ Number (hardware specific)
+
+Claim interrupt @var{intr} with @var{irq_num}
+@end deftypefun
+
+@subheading chopstx_intr_wait
+@anchor{chopstx_intr_wait}
+@deftypefun {void} {chopstx_intr_wait} (chopstx_intr_t * @var{intr})
+@var{intr}: Pointer to INTR structure
+
+Wait for the interrupt @var{intr} to be occured.
+@end deftypefun
+
+@subheading chopstx_cleanup_push
+@anchor{chopstx_cleanup_push}
+@deftypefun {void} {chopstx_cleanup_push} (struct chx_cleanup * @var{clp})
+@var{clp}: Pointer to clean-up structure
+
+Register a clean-up structure.
+@end deftypefun
+
+@subheading chopstx_cleanup_pop
+@anchor{chopstx_cleanup_pop}
+@deftypefun {void} {chopstx_cleanup_pop} (int @var{execute})
+@var{execute}: Execute the clen-up function on release
+
+Unregister a clean-up structure.  When @var{execute} is non-zero, the
+clean-up will be executed.
+@end deftypefun
+
+@subheading chopstx_exit
+@anchor{chopstx_exit}
+@deftypefun {void} {chopstx_exit} (void * @var{retval})
+@var{retval}: Return value (to be caught by a joining thread)
+
+Calling this function terminates the execution of running thread,
+after calling clean up functions.  If the calling thread still
+holds mutexes, they will be released.  This function never
+returns.
+@end deftypefun
+
+@subheading chopstx_join
+@anchor{chopstx_join}
+@deftypefun {int} {chopstx_join} (chopstx_t @var{thd}, void ** @var{ret})
+@var{thd}: Thread to wait
+
+@var{ret}: Pointer to void * to store return value
+
+Waits for the thread of @var{thd} to terminate.
+Returns 0 on success, 1 when waiting is interrupted.
+@end deftypefun
+
+@subheading chopstx_cancel
+@anchor{chopstx_cancel}
+@deftypefun {void} {chopstx_cancel} (chopstx_t @var{thd})
+@var{thd}: Thread to be canceled
+
+This function requests a cancellation of a thread @var{thd}.
+No return value.
+@end deftypefun
+
+@subheading chopstx_testcancel
+@anchor{chopstx_testcancel}
+@deftypefun {void} {chopstx_testcancel} ( @var{void})
+
+Calling chopstx_testcancel creates a cancellation point.
+No return value.  If the thread is canceled, this function
+does not return.
+@end deftypefun
+
+@subheading chopstx_setcancelstate
+@anchor{chopstx_setcancelstate}
+@deftypefun {int} {chopstx_setcancelstate} (int @var{cancel_disable})
+@var{cancel_disable}: 0 to enable cancelation, otherwise disabled.
+
+Calling chopstx_setcancelstate sets cancelability state.
+
+Returns old state which is 0 when it was enabled.
+@end deftypefun
+
+@subheading chopstx_poll
+@anchor{chopstx_poll}
+@deftypefun {int} {chopstx_poll} (uint32_t * @var{usec_p}, int @var{n}, struct chx_poll_head * [] @var{pd_array})
+@var{usec_p}: Pointer to usec for timeout.  Forever if NULL.
+
+@var{n}: Number of poll descriptors
+
+@var{pd_array}: Pointer to an array of poll descriptor pointer which
+should be one of:
+chopstx_poll_cond_t, chopstx_poll_join_t, or chopstx_intr_t.
+
+Returns number of active descriptors.
+@end deftypefun
+
+@subheading chopstx_setpriority
+@anchor{chopstx_setpriority}
+@deftypefun {chopstx_prio_t} {chopstx_setpriority} (chopstx_prio_t @var{prio_new})
+Change the schedule priority with @var{prio}.
+Returns the old priority.
+
+In general, it is not recommended to use this function because
+dynamically changing schedule priorities complicates the system.
+Only a possible valid usage of this function is in the main thread
+which starts its execution with priority of CHX_PRIO_MAIN_INIT, and
+let it change its priority after initialization of other threads.
+@end deftypefun
+

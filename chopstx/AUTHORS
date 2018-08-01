@@ -1,0 +1,58 @@
+Aidan Thornton:
+    Added Maple Mini support.
+	board/board-maple-mini.h
+
+Jeremy Drake:
+    Modified STM32F103 support.
+	mcu/sys-stm32f103.c
+
+Kaz Kojima:
+    Added STM32 Primer2 support.
+	board/board-stm32-primer2.h
+	example-primer2
+
+Kenji Rikitake:
+    Added ST Dongle support.
+	board/board-st-dongle.h
+    Added ST Nucleo F103 support.
+	board/board-st-nucleo-f103.h
+
+Kiwamu Okabe:
+    Wrote an OpenOCD scirpt:
+        example-fsm-55/stlink-v2.cfg
+
+Mateusz Zalega:
+    Added Nitrokey-Start support.
+	board/board-nitrokey-start.h
+
+NIIBE Yutaka:
+    Wrote the library:
+	chopstx.c, entry.c, eventflag.c,
+        chopstx.h, eventflag.h
+    Wrote the drivers mcu/*:
+    	clk_gpio_init-mkl27z.c, clk_gpio_init-stm32.c,
+	sys-stm32f103.c, sys-stm32f030.c, sys-mkl27z.c,
+	adc-stm32f103.c, adc-mkl27z.c
+    Drew the logo:
+	chopstx.svg, chopstx.png
+    Wrote examples:
+        example-led, example-cdc, example-fsm-55, example-fs-bb48
+    Wrote board/*:
+        board-fst-01.h, board-fst-01-00.h,
+	board-olimex-stm32-h103.h, board-stm8s-discovery.h
+	board-cq-starm.h, board-stbee-mini.h, board-stbee.h,
+
+	board-stm32f0-discovery.h, board-fsm-55.h,
+
+	board-fs-bb48.h
+
+    Under contract of g10 Code GmbH, wrote:
+        mcu/usb-usbip.c
+
+Paul Fertser:
+    Added Blue Pill support.
+	board/board-blue-pill.h
+
+Szczepan Zalega:
+    Modified Nitrokey-Start support.
+	board/board-nitrokey-start.h

@@ -1,0 +1,18 @@
+Example for STM32 Primer2 by Kazmoto Kojima
+
+It is taken from:
+
+   http://www.rr.iij4u.or.jp/~kkojima/letschopstx.html
+
+From the original tar archive, chopstx-logo.data is removed because
+it's too big.
+
+You can generate it by ImageMagick.
+
+  $ convert ../chopstx.svg -depth 8 -flip \( +clone -channel B -fx R \) +swap -channel R -fx v.B -resize 128x160 -background white -compress none -flatten chopstx.ppm
+
+  $ tail -n +4 chopstx.ppm | sed -e 's/ /, /g' > chopstx-logo.data
+
+
+Since it was written for Chopstx 0.06, you would need to change a bit,
+perhaps.

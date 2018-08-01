@@ -1,0 +1,297 @@
+NEWS - Noteworthy changes
+
+
+* Major changes in Chopstx 1.4
+
+  Released 2017-08-11
+
+** New port: Emulation on GNU/Linux 
+Now, user can run Chopstx application on GNU/Linux.  Its USB driver is
+by USBIP.  Its ADC driver is dummy with random(3).
+
+
+* Major changes in Chopstx 1.3
+
+  Released 2017-02-02
+
+** New board support: Blue Pill
+It is contributed by Paul Fertser.
+
+
+* Major changes in Chopstx 1.2
+
+  Released 2016-10-13
+
+** Fix: chopstx_join
+chopstx_join is now cancellation point.
+
+
+* Major changes in Chopstx 1.1
+
+  Released 2016-07-01
+
+** API change: chopstx_poll
+In version 1.0, chopstx_poll has variable arguments.  It found that
+it's challenging for ffi or lower level C implementation, if C
+compiler is new for the specific MCU target.  Another example is that
+a program touches FPU registers for varargs, even if no argument is
+float.  So, we decided to avoid use of varargs in Chopstx.
+
+** API change: chopstx_setpriority
+In version 1.0, chopstx_setpriority does not return value.  It is
+changed to return old value of the priority.
+
+
+* Major changes in Chopstx 1.0
+
+  Released 2016-06-16
+
+** New USB API
+Now, USB driver is included in Chopstx.  So, it should be good one.
+It used to be the code which was derived from interrupt driven API
+with callbacks.  It's changed to event driven API, so that a user can
+do as wish, beyond the restriction of callbacks.
+
+** New board support: FST-01G
+FST-01G is a new revision of original FST-01 with fixed pull-up of
+D+ line.
+
+
+* Major changes in Chopstx 0.12
+
+  Released 2016-05-31
+
+** Provide drivers of SYS, USB and ADC
+Those were only offered as examples, but now, Chopstx provides drivers
+of SYS, USB, and ADC.  Please note that the ADC driver is not for
+general use (it's specific to NeuG to get noise).  To use them, enable
+variables in Makefile, like following.
+------------
+CHIP=stm32f103
+USE_ADC = yes
+USE_USB = yes
+USE_SYS = yes
+DEFS  = -DUSE_SYS3 
+------------
+
+** Removal of chopstx_usec_wait_var chopstx_wakeup_usec_wait
+This API was used when we need to wait something with timeout.
+Now, we have better API with chopstx_poll.  Please use chopstx_poll
+and chopstx_cond_signal.
+
+
+* Major changes in Chopstx 0.11
+
+  Released 2016-05-19
+
+** New feature: polling
+New function chopstx_poll is added to watch multiple condition
+variables, threads' exit, or IRQ, simultaneously with timeout.
+
+** Change API of eventflag
+The initialization function eventflag_init only has an argument of EV.
+An eventflag can be waited with timeout or can be waited with no
+timeout, as caller like.  It is not determined at initialization time
+now.  Besides, the eventflag can be waited by any threads.  Functions
+to poll eventflag together with other events (cond, join, and IRQ) are
+provided.
+
+** Removal of the function chopstx_release_irq
+IRQ is enabled only when a thread is blocked in polling.  When it (the
+thread in polling) is canceled, IRQ is disabled.
+
+** Removal of the function chopstx_main_init
+It is removed because it's too special.  Please use
+chopstx_setpriority instead.
+
+** New function: chopstx_setpriority
+This function is not recommended in general.  It is only added to
+support the usage when main thread wants to change the schedule
+priority after creating other threads.
+
+** Function chopstx_intr_wait is deprecated
+Use of chopstx_poll is recommended.
+
+** FS-BB48: Kinetis L MCU
+Support for FS-BB48 board with Kinetis L MCU is added.
+
+** No HardFault at context switch on Cortex-M0
+By its design, Chopstx does context switch holding the scheduler lock.
+This is implemented with the feature of BASEPRI on Cortex-M3.  Because
+Cortex-M0 doesn't have support of BASEPRI, the context switch (before
+version 0.11) always caused HardFault exception.  Since Cortex-M0
+doesn't have complex exception mechism of ICI/IT (which is supported
+on Cortex-M3), it is actually possible to implement the context switch
+in user mode.  This is done.
+
+** New sys.c (3.0)
+Don't touch NVIC in usb_lld_sys_init.
+
+
+* Major changes in Chopstx 0.10
+
+  Released 2015-09-15
+
+** Thread cancellation bug fix
+Thread cancellation didn't work well with 0.09 because
+of initial configuration mistake.  It's fixed.
+
+** Interrupt handler bug fix
+Interrupt handler wasn't unregistered on exit well.
+It's fixed.
+
+
+* Major changes in Chopstx 0.09
+
+  Released 2015-09-10
+
+** New board support: Nitrokey-Start
+It is contributed by Mateusz Zalega.
+
+** Thread cancellation
+Add new API: chopstx_setcancelstate.
+
+
+* Major changes in Chopstx 0.08
+
+  Released 2015-07-31
+
+** New board support: ST Nucleo F103
+It is contributed by Kenji Rikitake.
+
+** New board support: ST Dongle
+It is contributed by Kenji Rikitake.
+It's the ST-Link/V2-1 part of ST Nucleo F103.
+
+
+* Major changes in Chopstx 0.07
+
+  Released 2015-07-15
+
+** New Board macro definitions
+Each board-*.h should have BOARD_ID and BOARD_NAME now.
+FLASH_PAGE_SIZE and NEUG_ADC_SETTING2_* are deprecated.
+
+** New sys.c (2.1)
+Flash memory size is probed at runtime now.  System
+service flash pages now include sys_board_id and sys_board_name.
+
+
+* Major changes in Chopstx 0.06
+
+  Released 2015-07-08
+
+** New file: clk_gpio_init.c
+To avoid duplication of code, clock and GPIO initialization code
+is now in this file.
+
+** New board support: STM32 Primer2
+It is contributed by Kaz Kojima.
+
+** New board support: CQ STARM
+The old board which was "published" by CQ Publishing in 2008 is added.
+
+
+* Major changes in Chopstx 0.05
+
+  Released 2015-04-20, by NIIBE Yutaka
+
+** New function: chopstx_main_init
+chopstx_main_init is the function to change the schedule priority of
+main thread.  This is useful to enter main loop after initialization
+of other threads.
+
+** The use of CHX_PRIO_MAIN
+CHX_PRIO_MAIN is deprecated.  Instead, please use the function
+chopstx_main_init.
+
+** Cortex-M0 support
+Cortex-M0 support has been added.
+
+** New board support: Maple mini
+It is contributed by Aidan Thornton.
+
+** New board support: FSM-55 and STM32F0 Discovery
+Those boards with STM32F0 (Cortex-M0) are now supported.
+
+
+* Major changes in Chopstx 0.04
+
+  Released 2014-12-10, by NIIBE Yutaka
+
+** new board.h macros and sys.c in example
+In board.h, RCC_APB2ENR_IOP_EN was renamed to RCC_ENR_IOP_EN and
+RCC_APB2RSTR_IOP_RST was renamed to RCC_RSTR_IOP_RST.  Example sys.c
+was changed accordingly.
+
+** Bug fix of chopstx_wakeup_usec_wait
+chopstx_usec_wait_var/chopstx_usec_wait won't be woken up
+by chopstx_wakeup_usec_wait.  This is now fixed in 0.04.
+
+** Board support STBee and STBee Mini
+The board STBee and STBee Mini are now supported.
+
+
+* Major changes in Chopstx 0.03
+
+  Released 2013-11-08, by NIIBE Yutaka
+
+** Bug fix of preemption
+In the implementation of preemption, there was a bug which might cause
+not to schedule proper thread.  This is because the routine preepmt
+itself might be interrupted.  This is now fixed in 0.03.
+
+
+* Major changes in Chopstx 0.02
+
+  Released 2013-11-08, by NIIBE Yutaka
+
+** Bug fix of priority
+There was a severe bug about the configuraion of priority setting of
+exceptions.  As we don't use any inter-lock between interrupts hander
+and timer expiration handler, these priorities should be equal.  If
+not, timer expiration handler might interrupt the execution of
+interrupts handers.
+
+
+* Major changes in Chopstx 0.01
+
+  Released 2013-11-03, by NIIBE Yutaka
+
+** Interrupt handling change
+There was a bug in 0.00, which caused spurious interrupts.  Every
+interrupt event caused two events.  Specifically, after valid
+interrupt event (for the caller of chopstx_intr_wait), another
+spurious event was always occurred.  This was fixed.
+
+In the design of Chopstx, interrupt handling is done by a thread.
+Lower level interrupt handler just accepts interrupt, disabling the
+interrupt, and switchs the control to the thread.  It is the thread to
+check the cause of interrupt, to process it, and to clear the cause.
+Next call to chopstx_intr_wait will enable the interrupt again.
+
+The bug was related to pending interrupt flag.  Pending interrupt flag
+for a specific interrupt is set, on return from handler mode if the
+cause is still active.  With traditional interrupt handling, lower
+level interrupt handler processes it and clears the cause.  Thus,
+pending interrupt flag is not set on return.
+
+In Chopstx, pending interrupt flag was always set, because the control
+goes from lower level interrupt handler (in handler mode) to a
+interrupt handling thread which processes the interrupt.  In 0.01, new
+internal routine chx_clr_intr is introduced, and pending interrupt
+flag is cleared within chopstx_intr_wait after waked up.
+
+For detail of interrupt operation, see the section B.3.4, Nested
+Vectored Interrupt Controller (NVIC), in the ARM v7-M Architecture
+Reference Manual.  The subsection, B3.4.1, Theory of operation,
+explains how it works.
+
+
+** gpio_init change
+Now, gpi_init support AFIO mapping and another GPIO (GPIO_OTHER)
+settings.
+
+Local Variables:
+mode: outline
+End:

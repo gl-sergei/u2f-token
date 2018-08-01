@@ -1,0 +1,7 @@
+*/build
+*/.dep
+doc/chopstx.info
+*.pem
+*.der
+*.csr
+u2f/cert/certificates.c

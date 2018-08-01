@@ -1,0 +1,239 @@
+Consideration about SYS and the first pages of flash ROM
+========================================================
+
+Now, I'm developing something like SYS for Kinetis L MCU, so, I write
+this document.
+
+* Compatibility
+
+  SYS 1.0: The first verson
+  SYS 2.0: Added clock_init, gpio_init 
+  SYS 2.1: Added sys_board_id, sys_board_name 
+  SYS 3.0: Don't setup NVIC priority by usb_lld_sys_init
+
+
+* Macro definition by DEFS in Makefile
+
+  - USE_SYS_CLOCK_GPIO_SETTING
+
+    Define this macro to ask chopstx/entry.c (the runtime code before
+    MAIN function) to use function entries in SYS for clock_init and
+    gpio_init.
+
+    If not defined, entry.c includes the code for clock_init and
+    gpio_init which might be different to a board, and use them (entries
+    in SYS will not be used).  This works well with the ROM of SYS
+    1.0.
+
+    Note that SYS entries of clock_init and gpio_init were introduced
+    in SYS 2.0.  So, enable this macro only if the ROM is SYS 2.0 or
+    later.
+
+  - USE_SYS_BOARD_ID
+
+    Define this macro in a driver to get "sys_board_id" in SYS, so
+    that the driver can support various boards at runtime by changing
+    the settings according to the board.
+
+    A simple driver could only support a single board, by the compile
+    time (BOARD_ID in board-*.h) choice of of a settings.
+
+    Note that SYS entries of sys_board_id and sys_board_name were
+    introduced in SYS 2.1.  So, enable this macro only if the ROM is
+    SYS 2.1 or later.
+
+  - USE_SYS3
+
+    By defining this, it will have same effect of defining both of
+    USE_SYS_CLOCK_GPIO_SETTING and USE_SYS_BOARD_ID internally.
+
+
+About SYS on STM32F103
+======================
+
+In the development of Gnuk, we developed:
+
+	SYS: The system predefined routines for STM32F103
+
+It is now maintained as example-cdc/sys.c.
+
+There is another version in example-led/sys.c, which also supports
+STM32F030, as well as STM32F103.  But, it wouldn't be useful for
+STM32F030.  In fact, the file example-fsm-55/sys.c has name sys.c
+but it doesn't include any system routines.
+
+The original issue was:
+
+    (1) When it's protected, STM32F103 can't change the first 4KiB of
+        flash ROM at run time.
+
+    (2) We want to support firmware upgrade through its USB.
+
+Later on, we add another point.
+
+    (3) It is good if the executable of Gnuk could be shared among
+        different boards.
+
+For (1) and (2), we decided put some useful routines and data which are
+not need to be changed.
+
+Now, the first 4KiB of flash ROM consists of:
+
+     1KiB: SYS
+     3KiB: 3/4 of AES forward tables
+
+SYS consists of:
+
+  Internal: reset entry, address of the end of RAM
+  Data: board identification
+  Routines: board specific
+            board independent
+
+and here is the list of all.
+
+* Internal routines
+
+  reset entry
+  address of the end of RAM
+
+* Board identification
+
+  sys_version
+  sys_board_id
+  sys_board_name
+
+* Board specific routines
+
+  * led
+    set_led
+
+  * mcu/board lower level
+    clock_init
+    gpio_init
+
+  * usb
+    usb_lld_sys_init
+    usb_lld_sys_shutdown
+
+* Board independent routines
+
+  * flash ROM access routines
+
+    unlock
+    write halfword
+    erase page
+    brank check
+    write page
+    protect
+    erase_all & exec to ram
+
+  * system reset routine
+
+    nvic_system_reset
+
+The routines of clock_init and gpio_init are here because of some
+historical reasons.  (We could design a system with no such exported
+routines: by defining: those things done internally after reset and
+before calling the application.)
+
+Those are exported as entries of SYS, and it is the responsibility of
+the application which do initialize clock and GPIO, calling those
+routines.
+
+USB routines are needed because of hardware practice of STM32F103.
+With STM32F103, each board has different way for handling the pull up
+of USB D+ and how the device asks re-enumeration to host PC.  In my
+opinion, if it's defined as full speed device and it's OK for us not
+to use high impedance (but asserting to LOW, instead) of D+ to ask
+re-enumeration, we can just pull up D+ always.  And we wouldn't need
+such routines in SYS.
+
+
+
+About SYS on Kinetis L
+======================
+
+For Kinetis L, because it's ROM has the original firmware upgrade
+support by the vendor (though USB HID), all that we needed for
+firmware upgrade would be just erasing to factory settings.
+
+And it has no limitation like STM32F103's first 4KiB flash ROM.
+All pages can be updated at run time.
+
+Nevertheless, the first two pages (2KiB) of KL27Z is still difficult
+to use.
+
+So, I decide to introduce something like SYS for Kinetis L.
+
+
+* Layout
+
+Three pages (3KiB) usage:
+
+  ------------ The first page
+  End of RAM <-- not used but hardware defines this
+  Address of reset entry
+  sys_version
+  sys_board_info (id, name)
+  sys_vector
+
+  other SYS routines and data...
+
+  ------------ The second page
+  FLASH CONFIG: 16-byte
+  Reset entry function
+  flash routines
+  CRC-32 routines
+  CRC-32 table (768-byte of CRC-32 table)
+
+  ------------ The third page
+  MAGIC 256-byte (256-byte of the last part of CRC-32 table)
+  ...
+  vectors (initial MSP, reset, ...) 
+  ...
+
+
+* data: Board identification
+
+  sys_version
+  sys_board_id
+  sys_board_name ; null terminated
+
+* Board specific routines
+
+  * mcu/board lower level
+    clock_init
+    gpio_init
+
+  * led
+    set_led
+
+* data: Board independent routines
+
+  * flash ROM access code to be loaded on to RAM
+
+* system reset routine???
+
+    nvic_system_reset
+
+
+* data: vectors for routines and data
+  sys_version
+  sys_board_id
+  address of sys_board_name
+  address of set_led
+  address of clock_init 
+  address of gpio_init 
+  address of ...
+
+
+
+An Example of No-use of SYS
+===========================
+
+See example-fsm-55 for an example of no use of SYS.
+
+While chopstx/entry.c defines vectors in ROM and RAM, those are simply
+discarded by example-fsm-55/hacker-emblem.ld.
+
+--

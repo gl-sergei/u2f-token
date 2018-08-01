@@ -1,0 +1,1037 @@
+2017-09-29  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-stm32f103.c (flash_program_halfword, flash_erase_page)
+	(flash_write, flash_erase_all_and_exec): Use uintptr_t.
+
+2017-09-08  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-gnu-linux.c: Flash emulation implemented.
+
+2017-09-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc: Use stack-def.h.
+	* example-cdc/stack-def.h: New.
+
+2017-09-04  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/sys-stm32f103.h (nvic_system_reset): Add noreturn attribute.
+
+	* sys.h: Add mcu/sys-gnu-linux.h.
+
+	* mcu/sys-gnu-linux.c: New.
+	* mcu/sys-gnu-linux.h: New.
+
+2017-08-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.4.
+	* doc/chopstx.texi (VERSION): 1.4.
+
+2017-08-03  Jeremy Drake <jeremydrake+gnuk@eacceleration.com>
+
+	* mcu/sys-stm32f103.c (flash_write): Allow compile time
+	flash size definition by STM32F103_OVERRIDE_FLASH_SIZE_KB.
+
+2017-08-02  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* contrib/adc-gnu-linux.c: New.
+
+2017-07-07  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (usbip_handle_data_urb): Fix error return value.
+	(notify_hostcontroller): New.
+	(usb_lld_stall_tx, usb_lld_stall_rx): Notify host controller side.
+
+2017-07-06  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (hc_handle_data_urb): Fix the condition of the
+	end of transaction.
+	(read_data_transaction): Allow partial read by host.
+
+2017-07-05  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fraucheky: New.
+
+2017-06-28  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-usbip.c (struct usbip_msg_cmd, struct usbip_msg_rep):
+	Use different struct for command and reply.
+
+2017-06-27  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc-gnu-linux/README: New.
+
+2017-06-26  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* board/board-gnu-linux.h: New.
+
+	* mcu/usb-usbip.c: New.
+
+	* rules.mk: Support EMULATION.
+
+	* entry.c (main): Support GNU_LINUX_EMULATION.
+
+2017-06-23  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx-gnu-linux.c, chopstx-gnu-linux.h: New.
+
+	* chopstx.c (chx_init): Use chx_init_arch.
+	(chopstx_create): Use chopstx_create_arch.
+	(chx_systick_reset, chx_systick_reload, chx_systick_get)
+	(usec_to_ticks, chx_enable_intr, chx_clr_intr, chx_disable_intr)
+	(chx_set_intr_prio, chx_prio_init, chx_cpu_sched_lock)
+	(chx_cpu_sched_unlock, idle, chx_handle_intr)
+	(chx_request_preemption, chx_sched, preempt, svc): Move to...
+	* chopstx-cortex-m.c: ... here.
+	(chx_init_arch, chopstx_create_arch): New.
+	* chopstx-cortex-m.h: New for tcontext_t.
+
+2017-06-22  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_sched): Use ->V for return value.
+	(svc): Ditto.
+	(chx_wakeup): Set -> for the return value of chx_sched.
+	(chopstx_mutex_lock, chopstx_cancel): Likewise.
+	(chopstx_exit): Remove naked attribute.
+
+2017-06-21  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct chx_pq): Use uintptr_t for V.
+	(struct chx_px): Likewise.
+	(struct chx_thread): Likewise.
+	(chx_sched): Use uintptr_t for the return value.
+	(chx_exit): Use the field V for holding exit value.
+	(chopstx_create): Use uintptr_t for STACK_ADDR.
+	(chopstx_join): Use the field V for exit value.
+
+2017-06-16  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_wakeup): Fix for RUNNING==NULL.
+
+	* mcu/usb-mkl27z.c (std_get_status): Use staic var, not auto.
+
+2017-05-18  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_wakeup): Fix access to REG_R0.
+
+2017-02-02  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.3.
+	* doc/chopstx.texi (VERSION): 1.3.
+
+2017-02-01  Paul Fertser <fercerpav@gmail.com>
+
+	* board/board-blue-pill.h: New.
+
+2016-12-08  Szczepan Zalega <szczepan@nitrokey.com>
+
+	* board/board-nitrokey-start.h (VAL_GPIO_USB_ODR): Switch off red
+	LED for Nitrokey Start.
+
+2016-10-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.2.
+	* doc/chopstx.texi (VERSION): 1.2.
+
+2016-10-12  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_join, chopstx_cancel): chopstx_join is
+	cancellation point.
+
+2016-07-11  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/stm32f103.h: Add more from Gnuk 1.1.9.
+	* example-cdc, example-fs-bb48, example-fsm-55, example-led:
+	Update for stack addr/size.
+
+2016-07-01  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.1.
+	* doc/chopstx.texi (VERSION): 1.1.
+
+	* chopstx.c (chopstx_setpriority): Change the API.
+
+2016-06-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c (tty_recv, tty_main): Follow the change of
+	chopstx_poll.
+
+2016-06-29  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48: Update.
+	* example-fs-bb48/touch.c: New.
+
+	* chopstx.c (chopstx_setpriority): Fix sched_lock/unlock.
+
+2016-06-28  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (struct chx_poll_head): Declare here.
+
+	* chopstx.c (chopstx_poll): Don't use varargs, but use
+	an array of pointer.
+	(chopstx_intr_wait): Follow the change of chopstx_poll.
+	* eventflag.c (eventflag_wait_timeout): Likewise.
+	* contrib/adc-stm32f103.c (adc_wait_completion): Likewise.
+	* contrib/adc-mkl27z.c (adc_wait_completion): Likewise.
+
+2016-06-16  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 1.0.
+	* doc/chopstx.texi (VERSION): 1.0.
+
+	* board/board-fst-01g.h: New.
+
+2016-06-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_exit): Add "naked" attribute.
+
+2016-06-14  Niibe Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c (usb_lld_ctrl_recv): Fix the state and make
+	the endpoint 0 RX_VALID.
+
+2016-06-10  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* usb_lld.h (USB_EVENT_OK): Rename.
+	* mcu/usb-stm32f103.c: Update.
+	* mcu/usb-mkl27z.c: Likewise.
+
+	* example-cdc/usb-cdc.c: Follow the change of API.
+	* example-fs-bb48/usb-cdc.c: Likewise.
+
+2016-06-09  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c (usb_lld_ctrl_recv): Rename.
+	(usb_lld_ctrl_send): Rename.
+	(usb_lld_ctrl_ack): Rename and let have return value.
+	* mcu/usb-mkl27z.c: Likewise.
+
+	* example-cdc/usb-cdc.c: Follow the change of API.
+	* example-fs-bb48/usb-cdc.c: Likewise.
+
+2016-06-08  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c: Rewrite to be event driven API.
+	* mcu/usb-mkl27z.c: Likewise.
+
+	* example-cdc/usb-cdc.c: Update to new USB API.
+	* example-fs-bb48/usb-cdc.c: Likewise.
+
+	* example-cdc/tty.h: Change tty API to be C string (char*)
+	friendly.
+	* example-fs-bb48/tty.h: Ditto.
+
+2016-06-02  Niibe Yutaka  <gniibe@fsij.org>
+
+	* contrib/adc-mkl27z.c: Move from mcu.
+	* contrib/adc-stm32f103.c: Move from mcu.
+
+	* example-led/Makefile (CHIP): Define as stm32f0.
+
+	* mcu/sys-stm32f0.h: Rename from sys-stm32f030.h,
+	as we share it among STM32F030 and STM32F050.
+	* mcu/sys-stm32f0.c: Likewise.
+
+	* board/board-stm32f0-discovery.h (MCU_STM32F0): Define.
+
+	* sys.h: Support STM32F0.
+
+2016-06-01  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (chx_fatal): Remove weak attribute from declaration.
+	* chopstx.c (chx_fatal): Add weak attribute to implementation.
+
+2016-05-31  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.12.
+	* doc/chopstx.texi (VERSION): 0.12.
+
+	* sys.h: New.
+
+	* example-cdc, example-fs-bb48: Update.
+	* example-fsm-55, example-led: Update.
+
+2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/usb-stm32f103.c (usb_lld_setup_endpoint): Start with
+	EP_RX_NAK.
+
+	* mcu/usb-mkl27z.c (handle_transaction): Handle NAK case.
+	(usb_lld_setup_endp): Rename from usb_lld_setup_endpoint.
+	(usb_lld_rx_enable_buf): Rename from usb_lld_rx_enable.
+	(usb_lld_tx_enable_buf): Rename from usb_lld_tx_enable.
+
+	* mcu/adc-stm32f103.c: New from NeuG.
+	* mcu/stm32f103.h: New from NeuG.
+
+	* example-cdc: Update.
+
+2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* mcu/adc-mkl27z.c, mcu/sys-mkl27z.c, mcu/usb-mkl27z.c: Moved from
+	example-fs-bb48.
+
+	* mcu/adc-stm32f103.c, mcu/sys-stm32f103.c, mcu/usb-stm32f103.c:
+	Moved from example-cdc.
+
+2016-05-30  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/sys.c (flash_do_internal, flash_do)
+	(flash_erase_page, flash_program_word): New.
+	* example-fs-bb48/command.c (cmd_fes, cmd_fww): New.
+
+2016-05-27  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/command.c (cmd_sysinfo): New.
+	* example-fs-bb48/sample.ld: Update.
+	* example-fs-bb48/sys.h: New.
+	Move crc32 functions declarations here.
+	* example-fs-bb48/sys.c: Rename from first-pages.c.
+	Include mcu/clk_gpio_init-kl.c to define clock_init and
+	gpio_init.
+	(set_led): New.
+	(reset): Initialize MSP.
+	(flash_config): Include comparison key.
+	(crc32_init, crc32_u8, crc32_u32): Change the API.
+	Write them in assembler so that the size of functions
+	keep unchanged.
+	(sys_version, sys_board_id, sys_board_name, sys_vector): New.
+
+2016-05-26  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* entry.c: Follow the move of clk_gpio_init*.c
+	* example-cdc/sys.c: Likewise.
+	* example-led/sys.c: Likewise.  Update to 3.0.
+	* example-primer2/sys.c: Update.
+
+	* mcu/clk_gpio_init-stm32.c: Moved.
+	* mcu/clk_gpio_init-kl.c: Moved.
+	* mcu/kl_sim.h: New (was in example-fs-bb48).
+
+	* example-fs-bb48/adc_kl27z.c: Use DMA0 and DMA1.
+	* example-fs-bb48/adc_kl27z.c (adc_wait_completion): Use only
+	least significant 8-bit (most significant for randomness).
+	* example-fs-bb48/command.c (cmd_adc): Rename from
+	cmd_temperature.
+
+2016-05-24  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/command.c: New.
+	* example-fs-bb48: Update example CDC device.
+
+2016-05-23  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopst.x (chx_sched) [__ARM_ARCH_6M__]: Maintain PSR.
+
+2016-05-23  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_poll): Fix a race.  Check COUNTER.
+
+	* example-cdc/usb-cdc.c (tty_input_char): Include newline.
+	* example-cdc/sample.c: Handle newline.
+
+	* example-fs-bb48/usb-cdc.c: Update from example-cdc.
+	* example-fs-bb48/tty.h: Likewise.
+	* example-fs-bb48/sample.c: Follow the change.
+
+2016-05-20  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): internal function.
+	(chopstx_wakeup_usec_wait): Remove.
+
+2016-05-19  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.11.
+	* doc/chopstx.texi (VERSION): 0.11.
+
+2016-05-18  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* eventflag.c: Update using chopstx_poll and offer API for poll.
+
+	* chopstx.c (requeue): New.
+	(chopstx_mutex_lock, chopstx_join): Fix by requeue.
+	(chopstx_main_init): Remove.
+	(chopstx_setpriority): New.
+
+	* example-cdc/usb-cdc.c: Prepare for multiple TTYs.
+
+2016-05-17  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c: Update as TTY input/output with line
+	editing support.
+	* example-cdc/sample.c: Likewise.
+	* example-cdc/tty.h: Rename from stream.h.
+
+	* chopstx.c (chopstx_poll): Set ->ready = 0.
+	Add spinlock for ll_dequeue.
+
+2016-05-16  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sys.c (nvic_enable_vector): Remove.
+	(usb_lld_sys_init): Don't setup NVIC priority.
+	(sys_version): sys version 3.0.
+
+2016-05-16  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (CHOPSTX_EXIT_SUCCESS, CHOPSTX_EXIT_CANCELED)
+	(CHOPSTX_EXIT_CANCELED_IN_SYNC): Remove.
+	(CHOPSTX_CANCELED): New.
+
+	* chopstx.c (chopstx_testcancel): Use CHOPSTX_CANCELED.
+	(chx_sched, chx_snooze): Re-define return values cleanly.
+	(chopstx_cancel): Use return value of chx_sched to cancel.
+	(chopstx_cond_wait, chopstx_join, chopstx_poll): Implement
+	cancellation rather easier way with return value of chx_sched.
+
+2016-05-15  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_claim_irq): Don't register clean up function.
+	(chx_release_irq): Remove.
+	(chopstx_cancel): Disable IRQ when canceled at POLL.
+	(chopstx_poll): Fix IRQ handling.
+
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_handle_intr): Call chx_request_preemption.
+	(chx_wakeup, chopstx_cond_signal, chopstx_cond_broadcast)
+	(chx_intr_hook, chopstx_poll): Cleanup.
+
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_exit): Don't call chx_release_irq_thread.
+	(chx_release_irq_thread): Remove.
+	(q_intr): New variable.
+	(intr_top): Remove.
+	(chx_handle_intr, chx_init, chopstx_claim_irq)
+	(chopstx_intr_wait): Use Q_INTR.
+	(chx_intr_hook): New.
+	(chopstx_poll): Support CHOPSTX_POLL_INTR.
+	(chopstx_release_irq): Remove.
+	(chx_release_irq): New internal function.
+	(THREAD_WAIT_INT): Remove.
+	(chopstx_intr_wait): Rewrite by chopstx_poll.
+
+2016-05-13  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_sched) [__ARM_ARCH_6M__]: Fix asm.
+	(chx_handle_intr, chx_wakeup, chopstx_cancel): Fix for polling
+	with no timeout.
+
+	* example-cdc/sample.c (main): Update chopstx_poll example.
+	* example-fs-bb48/sample.c (main): Ditto.
+
+	* chopstx.c (struct chx_px): Add READY_P and LOCK.
+	(chx_proxy_init): Add initialization of new members.
+	(chx_wakeup): Spinlock PX.
+	(chopstx_mutex_lock): Add protection by splinlock.
+	(chx_cond_hook, chx_join_hook): Change arguments.
+	(chx_cond_unhook, chx_join_unhook): Remove.
+	(chopstx_claim_irq): Compatible to chx_poll.
+	(chopstx_join): Fix spinlocking.
+	(chopstx_cancel): Fix spinlocking.
+
+2016-05-12  NIIBE Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sample.c: Update using chopstx_poll.
+	* example-cdc/sample.ld: Likewise.
+	* example-cdc/stream.h: Likewise.
+	* example-cdc/usb-cdc.c: Likewise.
+
+	* chopstx.c (chopstx_mutex_init): Initialize OWNER, too.
+	(preempt) [__ARM_ARCH_7M__]: Bug fix for register 0 to inhibit
+	scheduling.
+	(chx_sched) [__ARM_ARCH_6M__]: Return YIELD normally.
+	(MAX_USEC_FOR_TIMER): Guarantee 24-bit tick.
+	(chx_snooze): Revert the change of 2016-04-24 and modify
+	chopstx_poll instead.
+	(chopstx_poll): Support waiting forever.
+
+2016-04-24  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_snooze): Wait forever when it's POLL and usec==0.
+
+2016-04-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/first-pages.c: Rename from reset.c and merge
+	crc32.c.
+	* example-fs-bb48/sample.ld: Define section for first two pages.
+	* example-fs-bb48/usb_kl27z.c (__usb_buf__): Remove.
+
+	* chopstx.c (chx_cond_hook): Rename from chopstx_cond_hook and make
+	it internal.
+	(chx_cond_unhook): Likewise.
+	(chx_join_hook, chx_join_unhook): New.
+	(chopstx_poll): Change API, not exposing internals of hook/unhook.
+
+	* example-fs-bb48/sample.c (main): Follow the API change of
+	chopstx_poll.
+
+2016-04-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_snooze, chx_wakeup): New.
+	(chopstx_cond_hook, chopstx_cond_unhook): New.
+	(chopstx_cond_signal, chopstx_cond_broadcast): Fix for poll.
+	(chx_proxy_init): Initialize with RUNNING.
+	(chopstx_poll): Fix with chx_snooze.
+	(chx_exit): Use chx_wakeup.
+
+	* example-fs-bb48/sample.c (main): Update with chopstx_poll.
+	* example-fs-bb48/usb-cdc.c (stream_recv): Fix the loop clear
+	FLAG_RECV_AVAIL only after we process it.
+
+2016-04-20  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb_stm32f103.c (usb_lld_reset): Supply FEATURE
+	argument.  Call usb_lld_set_configuration internally and set
+	FEATURE.
+	(usb_lld_set_feature): Remove.
+	* example-cdc/usb-cdc.c (usb_cb_device_reset): Update with new
+	API.
+
+	* example-cdc/sys.c: Include clk_gpio_init-stm32.c.
+	* example-led/sys.c, example-primer2/sys.c: Ditto.
+
+2016-04-19  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48/sample.c (main): Change the example to display
+	CRC32 value from input line.
+
+2016-04-18  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fs-bb48: New directory for FS-BB48.
+
+	* clk_gpio_init-kl.c: New.
+	* clk_gpio_init-stm32.c: Rename from clk_gpio_init.c.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/sys.c: Update for non-SVC Chopstx.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c: Update.
+
+	* example-cdc/usb_stm32f103.c (usb_handle_transfer): Don't use
+	weak symbols for callbacks, but use explicit callbacks of
+	usb_cb_tx_done and usb_cb_rx_ready.
+
+	* example-cdc/usb_lld.h (usb_cb_tx_done, usb_cb_rx_ready): New
+	callbacks.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_cpu_sched_lock, chx_cpu_sched_unlock): Use SVC
+	for Cortex-M3, because of ICI/IT of ESPR.
+	(chx_sched): Invoke svc for Cortex-M3.
+	(preempt, svc): Change back for Cortex-M3.
+
+2016-04-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* entry.c (vector_table): Since IDLE thread runs with PSP now, use
+	different value for MSP.
+
+	* chopstx.c (chx_sched): Push LR value to PC slot on stack, so
+	that it returns directly to caller.
+
+2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct chx_pq): New struct for priority queue.
+	(struct chx_px): New struct for proxy.
+	(struct chx_thread): New member FLAG_IS_PROXY.
+	(ll_dequeue, ll_insert, ll_pop, ll_prio_push, ll_prio_enqueue)
+	Change API.
+	(THREAD_WAIT_POLL): New thread status.
+	(chx_ready_pop, chx_ready_push, chx_ready_enqueue): Type coercion.
+	(chx_timer_insert, chx_timer_dequeue, chx_timer_expired): Use
+	chx_pq.
+	(chx_handle_intr, chopstx_cancel): Handle THREAD_WAIT_POLL.
+	(chx_init): Type coercion.
+	(chx_exit): Handle proxy for join.
+	(chopstx_create): Initialize the member FLAG_IS_PROXY.
+	(chopstx_cond_signal) Handle proxy.
+	(chx_proxy_init, chopstx_poll): New.
+
+2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (struct chx_qh): New struct.
+
+	* chopstx.c (struct chx_queue): Use chx_qh.
+	(struct chx_thread): New member PARENT.
+	(ll_empty): Use chx_qh.
+	(ll_prio_push, ll_prio_enqueue): Set the member PARENT.
+	(chx_ready_pop, chx_ready_push, chx_ready_enqueue): Use the
+	member Q.
+	(chx_timer_insert): Return TP.
+	(chx_timer_dequeue, chx_timer_expired): Use the member Q.
+	(chx_init): Initialize change for Q_READY, Q_TIMER, Q_JOIN.
+	(chx_sched, preempt): Handle return value of chx_timer_insert.
+	(chx_exit, chopstx_mutex_init, chopstx_cond_init): Use the member Q.
+	(chx_mutex_unlock): Type coercion to CHX_THREAD.
+	(chopstx_create): Initialize PARENT field.
+	(chopstx_mutex_lock): Use the PARENT field.
+	(chopstx_join): Use ll_prio_enqueue, instead of ll_insert.
+	(chopstx_wakeup_usec_wait): Set REG_R0 on the stack.
+
+2016-04-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct chx_thread): Move tcontext field.
+	(chx_cpu_sched_lock, chx_cpu_sched_unlock): Use CPSID/CPSIE.
+	(chx_sched): Don't use SVC.  Return integer value.
+	(chopstx_usec_wait_var): Don't use R8.
+	(preempt): Modify so that we don't use SVC.
+
+2016-04-05  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (struct NVIC): Add volatile qualifier to members.
+	(chx_spin_init): New.
+	(chopstx_mutex_init, chopstx_cond_init): Call chx_spin_init.
+	(chx_init): Initialize the spinlocks for INTR_LOCK, Q_READY,
+	Q_TIMER, and Q_JOIN.
+
+2016-03-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (CHOPSTX_THREAD_SIZE): Align by 8.
+	* chopstx.c (struct chx_thread): Add W field to align.  This is to
+	comply AAPCS (ARM Architecture Procedure Call Standard).
+	(chx_init): Initialize W.
+
+	* example-cdc/usb_stm32f103.c, usb_lld.h: Update from Gnuk.
+	* example-cdc/usb-cdc.c: Update.
+
+2015-11-05  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sample.c: Enhanced to be echo service.
+
+2015-09-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.10.
+	* doc/chopstx.texi (VERSION): 0.10.
+
+	* example-cdc/usb_stm32f103.c: Update from Gnuk.
+
+2015-09-14  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (q_exit): Remove.
+	(chx_init, chx_exit): Remove access to Q_EXIT.
+	(chx_release_irq_thread): Fix removing from the list.
+
+2015-09-11  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_init, chopstx_create): Fix the initial value
+	of flag_cancelable.
+
+2015-09-10  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.09.
+	* doc/chopstx.texi (VERSION): 0.09.
+
+	* chopstx.c (chx_release_irq_thread): Rename.
+
+2015-09-09  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb-cdc.c (usb_cb_ctrl_write_finish): Distinguish
+	DTR signal.
+	(usb_cb_device_reset): Fix USB reset handling.
+
+	* chopstx.c (chopstx_usec_wait_var, chopstx_cond_wait)
+	(chopstx_intr_wait): Call chopstx_testcancel.
+	(chopstx_setcancelstate): New.
+
+	* chopstx.c (chx_systick_reset, chx_systick_reload)
+	(chx_systick_get): Factor out systick functions.
+	(chx_prio_init): Factor out.
+
+2015-09-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_request_preemption): Add PRIO argument and check
+	the condition inside.
+	(chx_timer_expired, chx_handle_intr): Call unconditionally.
+	(intr_lock): New variable.
+	(chx_handle_intr, chopstx_claim_irq, chopstx_release_irq)
+	(chopstx_release_irq_thread): Add spin lock with intr_lock.
+
+	* chopstx.h (chx_intr): Remove member LOCK.
+
+2015-09-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-primer2: New from Kazumoto Kojima.
+
+	* board/board-nitrokey-start.h (VAL_GPIO_USB_ODR)
+	(VAL_GPIO_USB_CRL): Fix the values for NeuG settings.
+
+2015-09-04  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/sys.h (BOARD_ID_NITROKEY_START): New.
+	* board/board-nitrokey-start.h (BOARD_ID): Fix the value.
+	* clk_gpio_init.c (AFIO_MAPR_SWJ_CFG_JTAGDISABLE): New.
+
+2015-08-07  Mateusz Zalega <mateusz@nitrokey.com>
+
+	* board/board-nitrokey-start.h: New.
+
+2015-08-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/README: Updated.
+
+2015-07-31  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.08.
+	* doc/chopstx.texi (VERSION): 0.08.
+
+	* example-fsm-55/Makefile (DEFS): Remove HAVE_SYS_H.
+	Add MAKE_ENTRY_PUBLIC.
+	* example-fsm-55/hacker-emblem.ld: Put vectors on ROM.
+	* example-fsm-55/sys.c: No system services.
+	* entry.c (entry): Can be public.
+	* clk_gpio_init.c (clock_init) [MCU_STM32F0]: Don't change CFGR1.
+
+2015-07-30  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-st-nucleo-f103.h: New.  Contributed by Kenji
+	Rikitake.
+
+2015-07-29  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-st-dongle.h: New.  Contributed by Kenji Rikitake.
+
+	* board/board-*.h (FLASH_PAGE_SIZE): Remove.
+
+2015-07-28  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb_stm32f103.c: Update from Gnuk.
+	* example-cdc/usb_lld.h: Ditto.
+	* example-cdc/usb-cdc.c: Follow the change.
+
+2015-07-15  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.07.
+	* doc/chopstx.texi (VERSION): 0.07.
+
+2015-07-14  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-*.h (BOARD_ID): New.
+	* example-cdc/sys.c (sys_board_id): New.
+	* example-cdc/sample.ld (.sys.board_id): New.
+	(__flash_start__, __flash_end__): Remove.
+	* entry.c (vector_table) [HAVE_SYS_H]: By undefining STM32F10X_MD,
+	prepare for high density device even compiled for MD device.
+
+2015-07-13  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
+
+	* board/board-stm32-primer2.h: Update.
+	* entry.c (vector_table): Less or more.
+
+2015-07-13  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-*.h (BOARD_NAME): New.
+	(STM32F10X_MD): Define for medium-density devices.
+	* example-led/sys.c, sample.ld: Update.
+	* example-fsm-55/sys.c, hacker-emblem.ld: Update.
+	* example-cdc/sys.c (sys_board_name): New.
+	* example-cdc/sample.ld: Update.
+
+2015-07-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.06.
+	* doc/chopstx.texi (VERSION): 0.06.
+
+2015-07-07  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-fsm-55/sys.c: Include clk_gpio_init.c.
+	* board/board-stm32f0-discovery.h, board/board-fsm-55.h: Update.
+	* clk_gpio_init.c (gpio_init): Use VAL_GPIO_LED_*.
+
+2015-06-29  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-cq-starm.h: New for CQ STARM.
+
+	* clk_gpio_init.c (gpio_init): LED is mandatory, but USB enabler
+	is optional.
+	* board/*.h: Update.
+
+2015-06-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* clk_gpio_init.c: New, adding ports E/F/G.
+	* entry.c: Include clk_gpio.init.c if not HAVE_SYS_H.
+	* example-led/sys.c: Include clk_gpio_init.c.
+	* example-cdc/sys.c: Ditto.
+
+	* board/board-stm32-primer2.h: New from Kaz Kojima.
+
+2015-04-20  Niibe Yutaka  <gniibe@fsij.org>
+
+	Merge cortex-m0-support branch.
+
+	* VERSION: 0.05.
+
+	* example-led/sys.c (gpio_init): Support MCU_STM32F0.
+	(reset): Support __ARM_ARCH_6M__.
+	* example-led/sample.ld: Change for Cortex-M0.
+
+	* example-fsm-55/*: New example for FSM-55.
+
+	* entry.c (STM32_PPRE1, STM32_PLLSRC, STM32_FLASHBITS)
+	(STM32_PLLCLKIN): Support MCU_STM32F0.
+	(struct RCC, RCC_*): Support MCU_STM32F0.
+	(struct SYSCFG) [MCU_STM32F0]: New.
+	(struct GPIO, GPIO*): Support MCU_STM32F0.
+	(clock_init, gpio_init): Support MCU_STM32F0.
+	(hard_fault, vectors_in_ram, entry): Support Cortex-M0.
+
+	* chopstx.c (chx_cpu_sched_lock, chx_cpu_sched_unlock)
+	(sched, preempt, svc): Support Cortex-M0.
+
+	* board/board-fsm-55.h: New.
+	* board/board-stm32f0-discovery.h: New.
+
+2015-04-17  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (CHX_PRIO_MAIN_INIT): New, removing CHX_PRIO_MAIN.
+	(chopstx_main_init): New.
+	(chx_init): Use CHX_PRIO_MAIN_INIT.
+
+2015-04-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-maple-mini.h: New from Aidan Thornton.
+
+2015-03-17  Niibe Yutaka  <gniibe@fsij.org>
+
+	* VERSION: 0.04a.
+
+2014-12-10  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.04.
+	* doc/chopstx.texi (VERSION): 0.04.
+
+	* board/*.h: Updated.
+
+	* example-cdc/sys.c: Copied from example-led.
+
+	* example-led/sys.c (clock_init, GPIO_USB): Follow the change of
+	entry.c.
+	(gpio_init): Use RCC_ENR_IOP_EN and RCC_RSTR_IOP_RST.
+	(reset): Use ldr instead of mov.w and movt.
+
+	* entry.c (GPIO_USB) [GPIO_USB_BASE]: Conditionally defined.
+
+	* chopstx.c (preempt): Add ! for stm.
+	(chx_exit): Make sure RETVAL is saved onto r8.
+	(chopstx_usec_wait_var): Make sure USEC_P is saved onto r8.
+
+2013-11-27  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-stbee-mini.h: New.
+
+	* entry.c (AFIO_MAPR_SWJ_CFG_DISABLE): New.
+
+2013-11-26  Niibe Yutaka  <gniibe@fsij.org>
+
+	* board/board-stbee.h: New.
+
+	* rules.mk (OUTFILES) [ENABLE_OUTPUT_HEX]: Add hex generation.
+
+2013-11-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb_stm32f103.c, example-cdc/usb_lld.h: Update from
+	Gnuk.
+
+2013-11-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.03.
+	* doc/chopstx.texi (VERSION): 0.03.
+
+	* chopstx.c (preempt): Disable interrupt.
+
+2013-11-08  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.02.
+	* doc/chopstx.texi (VERSION): 0.02.
+
+	* example-cdc/usb_stm32f103.c: Updated from NeuG.
+
+	* chopstx.c (CPU_EXCEPTION_PRIORITY_SYSTICK): Equals to
+	CPU_EXCEPTION_PRIORITY_INTERRUPT.
+
+2013-11-03  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.01.
+	* doc/chopstx.texi (VERSION): 0.01.
+
+	* chopstx.c (chx_clr_intr): New.
+	(chopstx_intr_wait): Call chopstx.c.
+	(chx_enable_intr): Let chx_clr_intr clear pending-bit.
+
+2013-11-02  Niibe Yutaka  <gniibe@fsij.org>
+
+	* example-cdc/usb_lld.h, example-cdc/usb_stm32f103.c: Update from
+	Gnuk.
+	* example-cdc/usb-cdc.c (usb_cb_get_descriptor): Follow the
+	change.
+
+	* example-cdc/sys.c, example-led/sys.c: Update from Gnuk.
+
+	* chopstx.c (CPU_EXCEPTION_PRIORITY_INTERRUPT)
+	(CPU_EXCEPTION_PRIORITY_PENDSV): Change the value, so that
+	interrupt priority matches USB interrupt priority of old SYS 1.0
+	implementation.
+	(chx_enable_intr, chx_disable_intr): Clear pending bit at
+	chx_enable_intr.
+	(chopstx_intr_wait): Call chx_enable_intr only when it's going to
+	sleep.
+	* entry.c (RCC_APB2RSTR_AFIORST, define RCC_APB2ENR_AFIOEN): New.
+	(AFIO, GPIO_OTHER): New.
+	(gpio_init): Handle AFIO and GPIO_OTHER.
+	* board/board-fst-01.h, board/board-stm8s-discovery.h: Add pin-cir
+	usage.
+
+2013-08-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Version 0.00.
+
+	* doc: Documentation.
+	* example-led/sys.c: Update from NeuG.
+	* example-cdc/sys.c: Likewise.
+	* example-cdc/usb_stm32f103.c: Likewise.
+	* example-cdc/usb_lld.h: Likewise.
+	* example-cdc/usb-cdc.c: Likewise.
+
+2013-08-19  Niibe Yutaka  <gniibe@fsij.org>
+
+	* rules.mk (%.elf): Support OBJS_ADD.
+
+2013-08-16  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): Check usec_p at the beginning
+	of the loop, bug fix of sched-unlocking from sched-unlocked state.
+
+2013-06-19  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.h (CHOPSTX_THREAD_SIZE): New.
+
+	* rules.mk (CSRC): Add eventflag.c.
+	* eventflag.h, eventflag.c: New.
+
+	* chopstx.c (chopstx_main): New.
+	(chx_init): Initialize chopstx_main.
+
+	* example-cdc/sample.c (usb_intr): No disable/enable interrupt,
+	but call the handler.
+
+2013-06-13  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_usec_wait_var): Rename (was:
+	chopstx_usec_wait_internal), as it's user visible.
+
+2013-06-12  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_init): Inhibit preemption for main thread.
+
+2013-06-11  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_timer_expired): Use uint16_t here.
+	(chx_cpu_sched_lock, chx_cpu_sched_unlock): Change only when
+	its priority is lower than CHOPSTX_PRIO_INHIBIT_PREEMPTION.
+
+2013-06-06  Niibe Yutaka  <gniibe@fsij.org>
+
+	* entry.c: Include sys.h for clock_init and gpio_init.
+
+	* chopstx.c (PREEMPTION_USEC): Fix the value.
+	(sched): Check tp != NULL to see flag_sched_rr.
+
+2013-06-05  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (sched, preempt, svc, chx_timer_expired, chx_exit)
+	(chopstx_usec_wait, chopstx_mutex_lock, chopstx_cond_wait)
+	(chopstx_intr_wait, chopstx_join): Implement SCHED_RR.
+	(chopstx_create): Change API.
+	(chopstx_wakeup_usec_wait): New.
+	(chopstx_usec_wait): Accept wakeup to break.
+	(chopstx_usec_wait_internal): New.
+	(CHX_FLAGS_MAIN): New.
+	(chx_systick_init): Add chx_timer_insert for main.
+	(chx_set_timer): Don't set thread state.
+	(chopstx_usec_wait_internal): Set thread state to THREAD_WAIT_TIME.
+
+2013-06-04  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (AIRCR): New.
+	(chx_init): Setting for PRIGROUP 2-bit:2-bit.
+	(sched): Unlock cpu_sched_lock on return to thread.
+	(preempt, chx_timer_expired, chx_handle_intr): Those can be
+	considered holding cpu_sched_lock (by its equal exception
+	priorities), thus no acquiring lock required.
+	(CHX_PRIO_MAIN): New macro.
+	(chopstx_create): Change API.
+	(chopstx_attr_init, chopstx_attr_setschedparam)
+	(chopstx_attr_setstack): Remove.
+	(chopstx_intr_wait, chopstx_join): Call chx_cpu_sched_unlock.
+	(chopstx_cleanup_push, chopstx_cleanup_pop): New.
+	(chopstx_exit): Call cleanup routines.
+
+2013-06-03  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_spin_lock, chx_spin_unlock): Rename.
+	(chx_cpu_sched_lock, chx_cpu_sched_unlock): New.
+
+	* chopstx.c (chx_exit): Use R8.
+
+2013-05-29  Niibe Yutaka  <gniibe@fsij.org>
+
+	* entry.c (entry): Initialize data section.
+
+	* chopstx.c (svc): Implement race avoidance between
+	chx_handle_intr.
+	(chx_handle_intr): Increment ->ready.  Put to ready queue
+	only when it's not running.
+	(chx_sched): Add an argument for race avoidance.
+	(chopstx_intr_wait): Fix race condition.
+	(chopstx_cond_broadcast): Fix initial value.
+	(chopstx_join): Check RET.
+	(chx_init): Initialize q_exit and q_join.
+	(chopstx_release_irq, chopstx_release_irq_thread): Enable IRQ on
+	release (as system reset default).
+
+	* board/board-olimex-stm32-h103.h (NEUG_ADC_SETTING2_*): Add.
+
+	* chopstx.c (chx_mutex_unlock, chopstx_exit): New.
+	(chopstx_mutex_unlock): Use chx_mutex_unlock.
+	(chopstx_cond_wait): Fix race condition.
+
+2013-05-28  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chopstx_intr_wait): Rename from chopstx_wait_intr.
+	(chopstx_usec_wait): Rename from chosptx_usleep.
+	(chopstx_cancel, chopstx_testcancel): New.
+	(idle): Moved from entry.c and use WFI if USE_WFI_FOR_IDLE.
+
+2013-05-27  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_fatal, chopstx_exit, chopstx_join): New.
+	(struct chx_thread): Independent member of state.  Use bit fields.
+	(chx_timer_expired, chx_handle_intr): Check priority before
+	calling chx_request_preemption.
+	(chx_disable_intr): Clear pending interrupt too.
+	(chopstx_claim_irq): Rename from chopstx_intr_register.
+	(chopstx_release_irq): New.
+	(chopstx_join): Promote priority of thread to be joined.
+
+2013-05-24  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_request_preemption): Rename from chx_preempt.
+
+	* entry.c: "sys.h" is only for to new sys 2.0, keeping
+	compatibility to 1.0, it is if-def out now.
+
+2013-05-22  Niibe Yutaka  <gniibe@fsij.org>
+
+	* chopstx.c (chx_enable_intr, chx_disable_intr): Implement.
+	(chx_set_intr_prio): New.
+	(chx_handle_intr): Use list to register interrupt threads.
+	(chx_init): Set PendSV priority (as minimum: bigger).
+
+	* entry.c (vector_table): set chx_handle_intr for all interrupts.
+
+2013-05-21  Niibe Yutaka  <gniibe@fsij.org>
+
+	* Initial commit.
+

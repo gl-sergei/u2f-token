@@ -1,0 +1,137 @@
+#! /bin/bash
+
+# This is bash which supports ANSI-C Quoting
+nl=$'\n'
+
+# Default settings
+help=no
+vidpid=none
+verbose=no
+debug=no
+with_fraucheky=yes
+with_index=./INDEX.HTM
+
+if test -d ../.git; then
+  REVISION=`git describe --dirty="-modified"`
+  REVISION_CHOPSTX=`cd .. && git describe --dirty="-modified"`
+  REVISION_FRAUCHEKY=`cd ../../fraucheky &&git describe --dirty="-modified"`
+else
+  REVISION=`cat ../VERSION`
+  REVISION_CHOPSTX=`cat ../VERSION`
+  REVISION_FRAUCHEKY=`cat ../../fraucheky/VERSION`
+fi
+
+# Process each option
+for option; do
+  case $option in
+  *=*)	optarg=`expr "X$option" : '[^=]*=\(.*\)'` ;;
+  *)	optarg=yes ;;
+  esac
+
+  case $option in
+  -h | --help)
+    help=yes ;;
+  -v | --verbose)
+    verbose=yes ;;
+  --vidpid=*)
+    vidpid=$optarg ;;
+  *)
+    echo "Unrecognized option \`$option'" >&2
+    echo "Try \`$0 --help' for more information." >&2
+    exit 1
+    ;;
+  esac
+done
+
+if test "$help" = "yes"; then
+  cat <<EOF
+Usage: $0 [OPTION]...
+
+Defaults for the options are specified in brackets.
+
+Configuration:
+  -h, --help		display this help and exit	[no]
+  --vidpid=VID:PID	specify vendor/product ID	[<NONE>]
+  --with-index=INDEX	specify INDEX file		[none]
+EOF
+  exit 0
+fi
+
+if test "$vidpid" = "none"; then
+  echo "Please specify Vendor ID and Product ID by --vidpid option." >&2
+  exit 1
+fi
+
+VIDPID="$vidpid"
+VERSION="0100"
+PRODUCT="Fraucheky"
+VENDOR="Free Software Initiative of Japan"
+SERIALNO="FSIJ-`cat ../VERSION | sed -e 's%^[^/]*/%%'`-"
+
+
+../../fraucheky/configure "$vidpid" $with_index $REVISION $REVISION_CHOPSTX $REVISION_FRAUCHEKY
+
+ENABLE_FRAUCHEKY=""
+FRAUCHEKY_DEFINE="#define FRAUCHEKY_SUPPORT 1"
+FRAUCHEKY_MSC_DEFINE="#define MSC_INTERFACE_NO    2"
+if ! test -f ../../fraucheky/build.mk; then
+  echo "'fraucheky' not found" >&2
+  exit 1
+fi
+
+output_vid_pid_version () {
+  echo $VIDPID | sed -n -e "s%^\([0-9a-f][0-9a-f]\)\([0-9a-f][0-9a-f]\):\([0-9a-f][0-9a-f]\)\([0-9a-f][0-9a-f]\)$%  0x\2, 0x\1, /* idVendor  */\\${nl}  0x\4, 0x\3, /* idProduct */%p"
+  echo $VERSION | sed -n -e "s%^\([0-9a-f][0-9a-f]\)\([0-9a-f][0-9a-f]\)$%  0x\2, 0x\1, /* bcdDevice */%p"
+}
+
+output_vendor_product_serial_strings () {
+  prefix=$1
+
+  echo "static const uint8_t ${prefix}string_vendor[] = {"
+  echo "  ${#VENDOR}*2+2,			/* bLength */"
+  echo "  STRING_DESCRIPTOR,		/* bDescriptorType */"
+  echo "  /* Manufacturer: \"$VENDOR\" */"
+  echo $VENDOR | sed -e "s/\(........\)/\1\\${nl}/g" | sed -n -e "s/\(.\)/'\1', 0, /g" -e "s/^/  /" -e "/^  ./s/ $//p"
+  echo '};'
+  echo
+  echo "static const uint8_t ${prefix}string_product[] = {"
+  echo "  ${#PRODUCT}*2+2,			/* bLength */"
+  echo "  STRING_DESCRIPTOR,		/* bDescriptorType */"
+  echo "  /* Product name: \"$PRODUCT\" */"
+  echo $PRODUCT | sed -e "s/\(........\)/\1\\${nl}/g" | sed -n -e "s/\(.\)/'\1', 0, /g" -e "s/^/  /" -e "/^  ./s/ $//p"
+  echo '};'
+
+  if test -n "$prefix"; then
+  echo
+  echo "static uint8_t ${prefix}string_serial[] = {"
+  echo "  ${#SERIALNO}*2+2+16,			/* bLength */"
+  echo "  STRING_DESCRIPTOR,    	/* bDescriptorType */"
+  echo "  /* Serial number: \"$SERIALNO\" */"
+  echo $SERIALNO | sed -e "s/\(........\)/\1\\${nl}/g" | sed -n -e "s/\(.\)/'\1', 0, /g" -e "s/^/  /" -e "/^  ./s/ $//p"
+  echo "  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,"
+  echo "  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,"
+  echo '};'
+  echo
+  echo "static const uint8_t ${prefix}revision_detail[] = {"
+  echo "  ${#REVISION}*2+2,			/* bLength */"
+  echo "  STRING_DESCRIPTOR,    	/* bDescriptorType */"
+  echo "  /* revision detail: \"$REVISION\" */"
+  echo $REVISION | sed -e "s/\(........\)/\1\\${nl}/g" | sed -n -e "s/\(.\)/'\1', 0, /g" -e "s/^/  /" -e "/^  ./s/ $//p"
+  echo '};'
+  echo
+  echo "static const uint8_t ${prefix}config_options[] = {"
+  echo "  ${#CONFIG}*2+2,			/* bLength */"
+  echo "  STRING_DESCRIPTOR,    	/* bDescriptorType */"
+  echo "  /* configure options: \"$CONFIG\" */"
+  echo $CONFIG | sed -e "s/\(........\)/\1\\${nl}/g" | sed -n -e "s/\(.\)/'\1', 0, /g" -e "s/^/  /" -e "/^  ./s/ $//p"
+  echo '};'
+  fi
+}
+
+output_vid_pid_version > fraucheky-vid-pid-ver.c.inc
+output_vendor_product_serial_strings >fraucheky-usb-strings.c.inc
+
+sed -e "s/@FRAUCHEKY_DEFINE@/$FRAUCHEKY_DEFINE/" \
+    -e "s/@FRAUCHEKY_MSC_DEFINE@/$FRAUCHEKY_MSC_DEFINE/" \
+	< config.h.in > config.h
+exit 0
