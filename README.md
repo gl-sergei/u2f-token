@@ -45,6 +45,11 @@ sudo apt-add-repository ppa:team-gcc-arm-embedded/ppa
 sudo apt update
 sudo apt install gcc-arm-embedded
 ```
+For Kali Linux:
+``` sh
+apt install gcc-arm-none-eabi
+```
+
 
 #### OpenSSL
 
@@ -99,12 +104,13 @@ will produce firmware file `build/u2f.bin`.
 
 Supported targets are:
 
-- TOMU
-- MAPLE_MINI (STM32F103 board with push button on PB8)
-- BLUE_PILL (generic STM32F103 board without push button)
-- ST_DONGLE (ST-Link V2 clone, push button pulls down PA5/SWCLK pin)
+- [TOMU](http://tomu.im/)
+- [MAPLE_MINI](https://wiki.stm32duino.com/index.php?title=Maple_Mini) 
+- [BLUE_PILL](https://wiki.stm32duino.com/index.php?title=Blue_Pill)
+- [BLACK_PILL](https://wiki.stm32duino.com/index.php?title=Black_Pill)
+- [ST_DONGLE](https://wiki.stm32duino.com/index.php?title=ST-LINK_clone)
 
-Use BLUE_PILL for generic STM32F103 board without push button.
+Use BLUE_PILL or BLACK_PILL for generic STM32F103 board without push button.
 
 If build was unsuccessful for whatever reason and you want to start from scratch
 you may want to run
