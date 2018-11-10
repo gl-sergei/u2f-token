@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "sha256.h"
+#include "aes.h"
 #include "ecc.h"
 #include "hmac.h"
 #include "random.h"
@@ -55,6 +56,7 @@
 #define U2F_KH_SIZE             (HASH_RES_SIZE + U2F_NONCE_SIZE) // size of key handle
 #define U2F_PRIV_K_SIZE         32      // size of private key
 #define U2F_PUB_K_SIZE          64      // size of public key
+#define U2F_AES128_KEY_SIZE     16      // size of wrapping key (AES128)
 #define U2F_MAX_EC_SIG_SIZE     72      // Max size of DER coded EC signature
 #define U2F_CTR_SIZE            4       // Size of counter field
 #define U2F_APPID_SIZE          32      // Size of application id
@@ -155,10 +157,12 @@ struct device_key
 {
   /* ECC private key unique for each device */
   uint8_t key[U2F_PRIV_K_SIZE];
+  /* AES private key unique for each device used to wrap key handle */
+  uint8_t wrapping_key[U2F_AES128_KEY_SIZE];
   /* SHA256 of private key to verify its integrity */
   uint8_t key_hash[HASH_RES_SIZE];
   /* reserved for future use */
-  uint8_t resrved[1024 - U2F_PRIV_K_SIZE - HASH_RES_SIZE];
+  uint8_t resrved[1024 - U2F_PRIV_K_SIZE - U2F_AES128_KEY_SIZE - HASH_RES_SIZE];
 };
 
 struct device_key __attribute__ ((section(".device.key"))) device_key = { 0 };
@@ -170,11 +174,13 @@ static void
 device_key_gen (void)
 {
   uint8_t key[U2F_PRIV_K_SIZE];
+  uint8_t wrapping_key[U2F_AES128_KEY_SIZE];
   uint8_t key_hash[HASH_RES_SIZE];
   sha256_context ctx;
 
   sha256_start (&ctx);
   sha256_update (&ctx, device_key.key, U2F_PRIV_K_SIZE);
+  sha256_update (&ctx, device_key.wrapping_key, U2F_AES128_KEY_SIZE);
   sha256_finish (&ctx, key_hash);
 
   if (memcmp (key_hash, device_key.key_hash, HASH_RES_SIZE) == 0)
@@ -182,14 +188,18 @@ device_key_gen (void)
 
   /* new device key needs to be generated */
   rng (key, U2F_PRIV_K_SIZE);
+  rng (wrapping_key, U2F_AES128_KEY_SIZE);
 
   sha256_start (&ctx);
   sha256_update (&ctx, key, U2F_PRIV_K_SIZE);
+  sha256_update (&ctx, wrapping_key, U2F_AES128_KEY_SIZE);
   sha256_finish (&ctx, key_hash);
 
   /* write device key to flash */
   flash_erase_page ((uintptr_t) &device_key);
   flash_write ((uintptr_t) device_key.key, key, U2F_PRIV_K_SIZE);
+  flash_write ((uintptr_t) device_key.wrapping_key, wrapping_key,
+               U2F_AES128_KEY_SIZE);
   flash_write ((uintptr_t) device_key.key_hash, key_hash, HASH_RES_SIZE);
 
   /* erase auth counter */
@@ -200,49 +210,63 @@ device_key_gen (void)
 static void
 new_private_key (uint8_t *app_id, uint8_t *nonce, uint8_t *private_key)
 {
-  hmac_sha256_context ctx;
-
-  hmac_sha256_init (&ctx, device_key.key);
-  hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_update (&ctx, nonce, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key.key, private_key);
+  (void) app_id;
+  memcpy(private_key, nonce, U2F_PRIV_K_SIZE);
 }
 
 static void
-make_key_handle (uint8_t *private_key, uint8_t *app_id,
-                 uint8_t *nonce, uint8_t *key_handle)
+interleave (uint8_t *r, const uint8_t *a, const uint8_t *b, uint8_t len)
 {
-  hmac_sha256_context ctx;
+  uint8_t i;
 
-  hmac_sha256_init (&ctx, device_key.key);
-  hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
-  hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key.key, key_handle);
+  for (i = 0; i < len; i++)
+    {
+      r[2 * i] = (a[i] & 0xf0) | (b[i] >> 4);
+      r[2 * i + 1] = ((a[i] & 0x0f) << 4) | (b[i] & 0x0f);
+    }
+}
 
-  memcpy (key_handle + HASH_RES_SIZE, nonce, U2F_NONCE_SIZE);
+static void
+deinterleave (const uint8_t *r, uint8_t *a, uint8_t *b, uint8_t len)
+{
+  uint8_t i;
+
+  for (i = 0; i < len; i++)
+    {
+      a[i] = (r[2 * i] & 0xf0) | (r[2 * i + 1] >> 4);
+      b[i] = ((r[2 * i] & 0x0f) << 4) | (r[2 * i + 1] & 0x0f);
+    }
+}
+
+static const uint8_t iv0[U2F_AES128_KEY_SIZE] = { 0 };
+
+static void
+make_key_handle (uint8_t *private_key, uint8_t *app_id, uint8_t *key_handle)
+{
+  /* key_handle is not aligned, but alignment is required for AES */
+  uint8_t buf[U2F_KH_SIZE];
+
+  interleave (buf, app_id, private_key, U2F_APPID_SIZE);
+  aes_cbc128_encrypt (buf, buf, U2F_KH_SIZE, device_key.wrapping_key, iv0);
+
+  memcpy (key_handle, buf, U2F_KH_SIZE);
 }
 
 static int
 recover_private_key (uint8_t *app_id, uint8_t *key_handle,
                      uint8_t key_handle_len, uint8_t *private_key)
 {
-  hmac_sha256_context ctx;
-  uint8_t control_mac[HASH_RES_SIZE];
+  uint8_t buf[U2F_KH_SIZE];
+  uint8_t tmp_app_id[U2F_APPID_SIZE];
 
   if (key_handle_len != U2F_KH_SIZE)
     return -1;
 
-  hmac_sha256_init (&ctx, device_key.key);
-  hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_update (&ctx, key_handle + HASH_RES_SIZE, U2F_NONCE_SIZE);
-  hmac_sha256_finish (&ctx, device_key.key, private_key);
+  memcpy (buf, key_handle, U2F_KH_SIZE);
+  aes_cbc128_decrypt (buf, buf, U2F_KH_SIZE, device_key.wrapping_key, iv0);
+  deinterleave (buf, tmp_app_id, private_key, U2F_APPID_SIZE);
 
-  hmac_sha256_init (&ctx, device_key.key);
-  hmac_sha256_update (&ctx, private_key, U2F_PRIV_K_SIZE);
-  hmac_sha256_update (&ctx, app_id, U2F_APPID_SIZE);
-  hmac_sha256_finish (&ctx, device_key.key, control_mac);
-
-  return memcmp(control_mac, key_handle, HASH_RES_SIZE);
+  return memcmp (app_id, tmp_app_id, U2F_APPID_SIZE);
 }
 
 static uint8_t
@@ -326,7 +350,7 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
     return -1;
 
   new_private_key (req->appId, nonce, private);
-  make_key_handle (private, req->appId, nonce, resp->keyHandle);
+  make_key_handle (private, req->appId, resp->keyHandle);
 
   if (ecc_compute_public_p256r1 (private, resp->pubKey.x))
     return -1;

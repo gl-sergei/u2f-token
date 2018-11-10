@@ -155,9 +155,10 @@ Generate your private key:
 
 ``` sh
 openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der
+openssl rand 16 > aes_key.dat
 ```
 
-You may want to encrypt your `key.der` and back it up.
+You may want to encrypt your `key.der` and `aes_key.dat` and back them up.
 
 Check device's authentication counter if you are going to perform the firmware
 upgrade. You can see it in Yubikey demo site output. For the new device, you can
@@ -167,7 +168,7 @@ value is 1000.
 Use this command to patch firmware binary:
 
 ``` sh
-./inject_key.py --key key.der --ctr 1001
+./inject_key.py --key key.der --wrapping-key aes_key.dat --ctr 1001
 ```
 
 ### Flashing

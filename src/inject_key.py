@@ -28,6 +28,7 @@ parser.add_argument("--elf", default="build/u2f.elf",
                     help=".elf file to inject keys into")
 parser.add_argument("--key", help="EC private key in DER format")
 parser.add_argument("--ctr", default=1, type=int, help="value of auth counter")
+parser.add_argument("--wrapping-key", help="ASE128 wrapping key in DER format")
 args = parser.parse_args()
 
 # load and parse private key
@@ -35,12 +36,20 @@ if args.key:
     with open(args.key, "rb") as f:
         der = f.read()
 else:
-    stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
-    der = stdin.read()
+    raise Exception("--key is required")
 key = ECPrivateKey.load(der)
+
+if args.wrapping_key:
+    with open(args.wrapping_key, "rb") as f:
+        wrapping_key_bytes = f.read()
+    if len(wrapping_key_bytes) != 16:
+        raise Exception("--wrapping-key length has to be 16 bytes")
+else:
+    raise Exception("--wrapping-key is required")
 
 # convert key into raw bytes and calculate it's sha256
 key_bytes = bytearray.fromhex(format(key["private_key"].native, '064x'))
+key_bytes = key_bytes + wrapping_key_bytes
 key_hash = hashlib.sha256(key_bytes).digest()
 
 # fill authentication counter

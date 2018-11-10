@@ -57,6 +57,7 @@ CSRC = u2f.c usb-hid.c dbug.c u2f-hid.c u2f-apdu.c \
 USE_SYS = yes
 USE_USB = yes
 USE_ADC = yes
+USE_AES = yes
 USE_EVENTFLAG = yes
 
 ###################################

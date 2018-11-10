@@ -436,11 +436,11 @@ usb_get_status_interface (struct usb_dev *dev)
 
 struct usb_hid {
 #if defined(MCU_EFM32HG)
-  uint8_t tx_buf[HID_RPT_SIZE] __attribute__((aligned(4)));
+  uint8_t tx_buf[HID_RPT_SIZE];
 #else
   uint8_t *tx_buf;
 #endif
-  uint8_t rx_buf[HID_RPT_SIZE] __attribute__((aligned(4)));
+  uint8_t rx_buf[HID_RPT_SIZE];
   uint16_t tx_len;
   uint16_t rx_len;
   struct eventflag cmd_ev;
@@ -546,7 +546,7 @@ poll_tx_intr (uint32_t *timeout, struct eventflag *ev, chopstx_intr_t *intr)
   chopstx_poll (timeout, 2, pd_array);
 }
 
-static struct usb_dev dev __attribute__((aligned(4)));
+static struct usb_dev dev;
 
 static void *
 hid_main (void *arg)
@@ -675,7 +675,7 @@ hid_main (void *arg)
   return NULL;
 }
 
-static struct usb_hid usb_hid __attribute__((aligned(4)));
+static struct usb_hid usb_hid;
 
 struct usb_hid *
 hid_open (void)
