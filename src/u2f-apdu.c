@@ -1,7 +1,7 @@
 /*
  * u2f-apdu.c - U2F apdu commands
  *
- * Copyright (C) 2017 Sergei Glushchenko
+ * Copyright (C) 2017-2019 Sergei Glushchenko
  * Author: Sergei Glushchenko <gl.sergei@gmail.com>
  *
  * This file is a part of U2F firmware for STM32
@@ -81,29 +81,30 @@ typedef struct {
 #define U2F_VENDOR_FIRST        0x40    // First vendor defined command
 #define U2F_VENDOR_LAST         0xbf    // Last vendor defined command
 
-// U2F_CMD_REGISTER command defines
+#define U2F_ATTESTATION_CERT    0x40    // Set attestation certificate and key
+
+// U2F_REGISTER command defines
 
 #define U2F_REGISTER_ID         0x05    // Version 2 registration identifier
 #define U2F_REGISTER_HASH_ID    0x00    // Version 2 hash identintifier
-
-#include "cert/certificates.c"
 
 typedef struct {
     uint8_t chal[U2F_CHAL_SIZE];        // Challenge
     uint8_t appId[U2F_APPID_SIZE];      // Application id
 } __attribute__ ((packed)) U2F_REGISTER_REQ;
 
+#define ATTESTATION_DER_MAX_LEN 512
+
 typedef struct {
-    uint8_t registerId;                 // Registration identifier (U2F_REGISTER_ID_V2)
-    U2F_EC_POINT pubKey;                // Generated public key
-    uint8_t keyHandleLen;               // Length of key handle
-    uint8_t keyHandle[U2F_KH_SIZE];     // Key handle
-    uint8_t attCert[ATTESTATION_DER_LEN]; // Attestation certificate
-    uint8_t sig[U2F_MAX_EC_SIG_SIZE];   // Registration signature
-    uint8_t pad[2];                     // For SW1 and SW2
+    uint8_t registerId;                       // Registration identifier (U2F_REGISTER_ID_V2)
+    U2F_EC_POINT pubKey;                      // Generated public key
+    uint8_t keyHandleLen;                     // Length of key handle
+    uint8_t keyHandle[U2F_KH_SIZE];           // Key handle
+    uint8_t attCert[ATTESTATION_DER_MAX_LEN]; // Attestation certificate
+    uint8_t pad[2 + U2F_MAX_EC_SIG_SIZE];     // For SW1 and SW2
 } __attribute__ ((packed)) U2F_REGISTER_RESP;
 
-// U2F_CMD_AUTHENTICATE command defines
+// U2F_AUTHENTICATE command defines
 
 // Authentication control byte
 
@@ -124,6 +125,13 @@ typedef struct {
     uint8_t sig[U2F_MAX_EC_SIG_SIZE];   // Signature
     uint8_t pad[2];                     // For SW1 and SW2
 } __attribute__ ((packed)) U2F_AUTHENTICATE_RESP;
+
+// U2F_ATTESTATION_CERT command defines
+
+typedef struct {
+    uint8_t key[U2F_EC_KEY_SIZE];
+    uint8_t der[ATTESTATION_DER_MAX_LEN];
+} __attribute__ ((packed)) U2F_ATTESTATION_CERT_REQ;
 
 // Command status responses
 
@@ -165,6 +173,15 @@ struct device_key __attribute__ ((section(".device.key"))) device_key = { 0 };
 
 uint32_t __attribute__ ((section(".auth.ctr"))) auth_ctr[256] = { 0 };
 static uint32_t *ctr_addr = &(auth_ctr[0]);
+
+struct attestation_cert
+{
+  uint32_t der_len;
+  const uint8_t *der;
+  const uint8_t *key;
+};
+
+#include "cert/certificates.c"
 
 static void
 device_key_gen (void)
@@ -334,21 +351,21 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
   resp->registerId = U2F_REGISTER_ID;
   resp->pubKey.pointFormat = U2F_POINT_UNCOMPRESSED;
   resp->keyHandleLen = U2F_KH_SIZE;
-  memcpy (resp->attCert, attestation_der, ATTESTATION_DER_LEN);
+  memcpy (resp->attCert, attestation_cert.der, attestation_cert.der_len);
 
   register_req_hash (req, resp, hash);
 
-  if (ecdsa_sign_p256r1 (hash, sig, attestation_key))
+  if (ecdsa_sign_p256r1 (hash, sig, attestation_cert.key))
     return -1;
 
-  sig_len = der_encode_sig (resp->sig, sig);
+  sig_len = der_encode_sig (resp->attCert + attestation_cert.der_len, sig);
 
-  return 1                        // Registration identifier (U2F_REGISTER_ID_V2)
-         + sizeof (U2F_EC_POINT)  // Generated public key
-         + 1                      // Length of key handle
-         + U2F_KH_SIZE            // Key handle
-         + ATTESTATION_DER_LEN    // Attestation certificate
-         + sig_len;               // Registration signature
+  return 1                          // Registration identifier (U2F_REGISTER_ID_V2)
+         + sizeof (U2F_EC_POINT)    // Generated public key
+         + 1                        // Length of key handle
+         + U2F_KH_SIZE              // Key handle
+         + attestation_cert.der_len // Attestation certificate
+         + sig_len;                 // Registration signature
 }
 
 static uint32_t
@@ -447,6 +464,41 @@ u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
 }
 
 static int
+u2f_attestation_cert_initialized (void)
+{
+  return attestation_cert.der_len != (uint32_t) -1;
+}
+
+static int
+u2f_attestation_cert_initialize (uint32_t len, U2F_ATTESTATION_CERT_REQ *req)
+{
+  flash_erase_page ((uintptr_t) &attestation_cert);
+
+  struct attestation_cert tmp;
+  tmp.der_len = len - U2F_EC_KEY_SIZE;
+  tmp.key = ((uint8_t *) &attestation_cert) + 16;
+  tmp.der = tmp.key + U2F_EC_KEY_SIZE;
+  flash_write ((uintptr_t) &attestation_cert, (uint8_t *) &tmp, sizeof (tmp));
+
+  /* req->key and req->der are unaligned, we'll use temporary buffer */
+  uint8_t buf[16];
+
+  for (uint32_t i = 0; i < U2F_EC_KEY_SIZE; i += 16)
+    {
+      memcpy (buf, req->key + i, 16);
+      flash_write ((uintptr_t) tmp.key + i, buf, 16);
+    }
+
+  for (uint32_t i = 0; i < tmp.der_len; i += 16)
+    {
+      memcpy (buf, req->der + i, 16);
+      flash_write ((uintptr_t) tmp.der + i, buf, 16);
+    }
+
+  return 0;
+}
+
+static int
 u2f_version (uint8_t *resp)
 {
   memcpy (resp, "U2F_V2", 6);
@@ -475,7 +527,7 @@ u2f_apdu_init (void)
 }
 
 int
-u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
+u2f_apdu_command_do (uint8_t *apdu, uint32_t len,
                      uint8_t *resp, uint32_t *resp_len)
 {
   uint32_t Lc;
@@ -483,7 +535,7 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
 
   Lc = LC (apdu);
 
-  if (CLA(apdu) != 0)
+  if (CLA (apdu) != 0)
     {
       u2f_apdu_error (resp, resp_len, U2F_SW_BAD_CLA);
       return 0;
@@ -498,6 +550,11 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
   switch (INS (apdu))
     {
     case U2F_REGISTER:
+      if (!u2f_attestation_cert_initialized ())
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_COMMAND_NOT_ALLOWED);
+          break;
+        }
       if (Lc != sizeof (U2F_REGISTER_REQ))
         {
           u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
@@ -522,6 +579,11 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
         }
       break;
     case U2F_AUTHENTICATE:
+      if (!u2f_attestation_cert_initialized ())
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_COMMAND_NOT_ALLOWED);
+          break;
+        }
       if (Lc != sizeof (U2F_AUTHENTICATE_REQ))
         {
           u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
@@ -562,6 +624,27 @@ u2f_apdu_command_do (uint8_t *apdu, uint8_t len,
           *resp_len = ret;
           append_sw (resp, resp_len, U2F_SW_NO_ERROR);
         }
+      break;
+    case U2F_ATTESTATION_CERT:
+      if (Lc <= U2F_EC_KEY_SIZE)
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_LENGTH);
+          break;
+        }
+      if (u2f_attestation_cert_initialized ())
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_COMMAND_NOT_ALLOWED);
+          break;
+        }
+      ret = u2f_attestation_cert_initialize (
+              Lc, (U2F_ATTESTATION_CERT_REQ*) DATA(apdu));
+      if (ret < 0)
+        {
+          u2f_apdu_error (resp, resp_len, U2F_SW_WRONG_DATA);
+          break;
+        }
+      *resp_len = 0;
+      append_sw (resp, resp_len, U2F_SW_NO_ERROR);
       break;
     default:
       u2f_apdu_error (resp, resp_len, U2F_SW_INS_NOT_SUPPORTED);

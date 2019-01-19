@@ -1,7 +1,7 @@
 /*
  * u2f-hid.c - U2F HID protocol
  *
- * Copyright (C) 2017 Sergei Glushchenko
+ * Copyright (C) 2017-2019 Sergei Glushchenko
  * Author: Sergei Glushchenko <gl.sergei@gmail.com>
  *
  * This file is a part of U2F firmware for STM32
@@ -36,7 +36,7 @@
 #include "u2f-hid.h"
 #include "u2f-apdu.h"
 
-// Size of HID reports 
+// Size of HID reports
 
 #define HID_RPT_SIZE            64      // Default size of raw HID report
 
@@ -44,7 +44,7 @@
 
 #define CID_BROADCAST           0xffffffff // Broadcast channel id
 
-#define TYPE_MASK               0x80    // Frame type mask 
+#define TYPE_MASK               0x80    // Frame type mask
 #define TYPE_INIT               0x80    // Initial frame identifier
 #define TYPE_CONT               0x00    // Continuation frame identifier
 
@@ -81,8 +81,8 @@ typedef struct {
 #define FIDO_USAGE_U2FHID       0x01    // U2FHID usage for top-level collection
 #define FIDO_USAGE_DATA_IN      0x20    // Raw IN data report
 #define FIDO_USAGE_DATA_OUT     0x21    // Raw OUT data report
-        
-// General constants    
+
+// General constants
 
 #define U2FHID_IF_VERSION       2       // Current interface implementation version
 #define U2FHID_TRANS_TIMEOUT    3000    // Default message timeout in ms
@@ -99,7 +99,7 @@ typedef struct {
 
 #define U2FHID_VENDOR_FIRST (TYPE_INIT | 0x40)  // First vendor defined command
 #define U2FHID_VENDOR_LAST  (TYPE_INIT | 0x7f)  // Last vendor defined command
-    
+
 // U2FHID_INIT command defines
 
 #define INIT_NONCE_SIZE         8       // Size of channel initialization challenge
@@ -112,12 +112,12 @@ typedef struct {
 
 typedef struct {
   uint8_t nonce[INIT_NONCE_SIZE];       // Client application nonce
-  uint32_t cid;                         // Channel identifier  
+  uint32_t cid;                         // Channel identifier
   uint8_t versionInterface;             // Interface version
   uint8_t versionMajor;                 // Major version number
   uint8_t versionMinor;                 // Minor version number
   uint8_t versionBuild;                 // Build version number
-  uint8_t capFlags;                     // Capabilities flags  
+  uint8_t capFlags;                     // Capabilities flags
 } __attribute__ ((packed)) U2FHID_INIT_RESP;
 
 // U2FHID_SYNC command defines
@@ -152,7 +152,7 @@ extern uint8_t __process4_stack_base__[], __process4_stack_size__[];
 #define STACK_SIZE_U2F_HID ((uint32_t)__process4_stack_size__)
 
 #define MAX_MSGLEN 1024
-#define MAX_APDU_CMDLEN 160
+#define MAX_APDU_CMDLEN 416
 
 struct u2f_hid {
   uint32_t next_cid;

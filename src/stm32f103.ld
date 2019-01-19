@@ -14,7 +14,7 @@ MEMORY
 {
     flash0 : org = 0x08000000, len = 4k
     flash  : org = 0x08000000+0x1000, len = 58k
-    flash1 : org = 0x08000000+0xf800, len = 2k
+    flash1 : org = 0x08000000+0xf400, len = 3k
     ram : org = 0x20000000, len = 20k
 }
 
@@ -159,6 +159,9 @@ SECTIONS
 
     .flash_storage :
     {
+        . = ALIGN (1024);
+        _attestation_cert_base = .;
+        *(.attestation.cert);
         . = ALIGN (1024);
         _device_key_base = .;
         *(.device.key);
