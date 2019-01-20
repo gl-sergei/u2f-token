@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# certtool - Initialize U2F-token with attestation certificate
+#
+# Copyright (C) 2019 Sergei Glushchenko
+# Author: Sergei Glushchenko <gl.sergei@gmail.com>
+#
+# This file is a part of U2F firmware for STM32 and EFM32HG
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# As additional permission under GNU GPL version 3 section 7, you may
+# distribute non-source form of the Program without the copy of the
+# GNU GPL normally required by section 4, provided you inform the
+# recipients of GNU GPL by a written offer.
+
+import easyhid
+import struct
+import secrets
+import argparse
+
+from asn1crypto.keys import ECPrivateKey
+
+FIDO_USAGE_PAGE = 0xF1D0
+U2F_USAGE = 1
+HID_RPT_SIZE = 64
+
+CMD_INIT = 0x06
+CMD_MSG = 0x03
+CMD_ERROR = 0x3f
+
+BROADCAST_CID = 0xffffffff
+
+def sendCommand(dev, channel, cmd, data):
+    msg = struct.pack('>IBH', channel, cmd | 0x80, len(data))
+    msg += data[:HID_RPT_SIZE - 7]
+    data = data[HID_RPT_SIZE - 7:]
+    dev.write(msg)
+    seq = 0
+    while data:
+        msg = struct.pack('>IB', channel, seq)
+        msg += data[:HID_RPT_SIZE - 5]
+        data = data[HID_RPT_SIZE - 5:]
+        dev.write(msg)
+        seq += 1
+
+def recvResponse(dev, channel):
+    data = dev.read()
+    ret_channel, cmd, len = struct.unpack(">IBH", data[:7])
+    if ret_channel != channel:
+        raise Exception("Wrong channel")
+    if cmd == CMD_ERROR | 0x80:
+        raise Exception("HID Error: {:d}".format(data[6]))
+    return data[7:7+len]
+
+def init(dev):
+    dev.open()
+    nonce = secrets.token_bytes(8)
+    sendCommand(dev, BROADCAST_CID, CMD_INIT, nonce)
+    data = recvResponse(dev, BROADCAST_CID)
+    if data[:8] != nonce:
+        raise Exception("Invalid nonce")
+    channel, = struct.unpack(">I", data[8:8+4])
+    return channel
+
+def put_cert(dev, cert, key):
+    channel = init(dev)
+    cla, ins, p1, p2 = 0, 0x40, 0, 0
+    Lc = len(cert) + len(key)
+    data = struct.pack('>BBBBBH', cla, ins, p1, p2, 0, Lc)
+    data += key + cert
+    sendCommand(dev, channel, CMD_MSG, data)
+    data = recvResponse(dev, channel)
+    if data != b'\x90\x00':
+        raise Exception("APDU Error: " + data.hex())
+
+def load_key(pk_der):
+    pk = ECPrivateKey.load(pk_der)
+    pk_hex = format(pk['private_key'].native, '064x')
+    return bytes.fromhex(pk_hex)
+
+def command_list(args):
+    e = easyhid.Enumeration()
+    devices = [ dev for dev in e.find() if dev.usage_page == FIDO_USAGE_PAGE ]
+
+    for dev in devices:
+        print(dev.description())
+
+def command_init(args):
+    e = easyhid.Enumeration()
+    devices = [ dev for dev in e.find() if dev.usage_page == FIDO_USAGE_PAGE ]
+
+    if len(devices) < 1:
+        raise Exception("No U2F devices found")
+
+    with open(args.certificate, "rb") as f:
+        cert = f.read()
+
+    with open(args.key, "rb") as f:
+        key = load_key(f.read())
+
+    for dev in devices:
+        print("Trying to initialize device {}".format(dev.description()))
+        try:
+            put_cert(dev, cert, key)
+            print('Success')
+        except Exception as e:
+            print(e)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Initialize U2F-token with attestation certificate")
+    subparsers = parser.add_subparsers(help='available commands')
+    parser_list = subparsers.add_parser('list', help='list U2F devices')
+    parser_list.set_defaults(func=command_list)
+    parser_init = subparsers.add_parser('init', help='init U2F devices')
+    parser_init.add_argument("--certificate", default="attestation.der",
+                             help="attestation certificate in DER format")
+    parser_init.add_argument("--key", default="attestation_key.der",
+                             help="attestation certificate key in DER format")
+    parser_init.set_defaults(func=command_init)
+    args = parser.parse_args()
+
+    args.func(args)
+
+if __name__ == "__main__":
+    main()

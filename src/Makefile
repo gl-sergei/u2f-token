@@ -50,6 +50,12 @@ ifeq ($(ENFORCE_DEBUG_LOCK),1)
 DEFS += -DENFORCE_DEBUG_LOCK
 endif
 
+ifeq ($(EMPTY_ATTESTATION_CERT),1)
+	GENCERT_CMD = cp empty-attestation-cert.c cert/certificates.c
+else
+	GENCERT_CMD = cd cert && ./gen.sh && cd ..
+endif
+
 CSRC = u2f.c usb-hid.c dbug.c u2f-hid.c u2f-apdu.c \
 	sha256.c neug.c random.c ec_p256r1.c bn.c jpc_p256r1.c \
 	call-ec_p256r1.c modp256r1.c mod.c hmac.c platform.c $(DRIVERS)
@@ -76,7 +82,7 @@ board.h:
 	ln -s $(BOARD) board.h
 
 cert/certificates.c:
-	cd cert && ./gen.sh && cd ..
+	$(GENCERT_CMD)
 
 sys.c: board.h
 u2f.c: board.h

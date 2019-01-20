@@ -1,7 +1,7 @@
 /*
  * usb-hid.c - HID device descriptors and communication
  *
- * Copyright (C) 2017 Sergei Glushchenko
+ * Copyright (C) 2017-2019 Sergei Glushchenko
  * Author: Sergei Glushchenko <gl.sergei@gmail.com>
  *
  * This file is a part of U2F firmware for STM32F103 and EFM32HG boards
@@ -55,7 +55,7 @@
 #define USB_DT_HID                      0x21
 #define USB_DT_REPORT                   0x22
 
-// Size of HID reports 
+// Size of HID reports
 
 #define HID_RPT_SIZE            64      // Default size of raw HID report
 
@@ -91,20 +91,20 @@ static const uint8_t hid_report_desc[] = {
 
 /* USB Device Descriptor */
 static const uint8_t u2f_device_desc[18] = {
-  18,   /* bLength */
-  DEVICE_DESCRIPTOR,                /* bDescriptorType */
-  0x10, 0x01,                        /* bcdUSB = 1.1 */
-  0x00,                                /* bDeviceClass (Unknown).          */
-  0x00,                                /* bDeviceSubClass.                 */
-  0x00,                                /* bDeviceProtocol.                 */
-  0x40,                                /* bMaxPacketSize.                  */
-  0x83, 0x04, /* idVendor  */
-  0xab, 0xcd, /* idProduct */
-  0x00, 0x01, /* bcdDevice  */
-  1,                                /* iManufacturer.                   */
-  2,                                /* iProduct.                        */
-  3,                                /* iSerialNumber.                   */
-  1                                /* bNumConfigurations.              */
+  18,                /* bLength */
+  DEVICE_DESCRIPTOR, /* bDescriptorType */
+  0x10, 0x01,        /* bcdUSB = 1.1 */
+  0x00,              /* bDeviceClass (Unknown). */
+  0x00,              /* bDeviceSubClass. */
+  0x00,              /* bDeviceProtocol. */
+  0x40,              /* bMaxPacketSize. */
+  0xd0, 0x16,        /* idVendor */
+  0x90, 0x0e,        /* idProduct */
+  0x00, 0x01,        /* bcdDevice */
+  1,                 /* iManufacturer. */
+  2,                 /* iProduct. */
+  3,                 /* iSerialNumber. */
+  1                  /* bNumConfigurations. */
 };
 
 #define FEATURE_BUS_POWERED        0x80
@@ -112,50 +112,50 @@ static const uint8_t u2f_device_desc[18] = {
 /* Configuration Descriptor tree for a HID.*/
 static const uint8_t u2f_config_desc[41] = {
   9,
-  CONFIG_DESCRIPTOR,                /* bDescriptorType: Configuration */
+  CONFIG_DESCRIPTOR,   /* bDescriptorType: Configuration */
   /* Configuration Descriptor.*/
-  41, 0x00,                        /* wTotalLength.                    */
-  0x01,                                /* bNumInterfaces.                  */
-  0x01,                                /* bConfigurationValue.             */
-  0,                                /* iConfiguration.                  */
-  FEATURE_BUS_POWERED,        /* bmAttributes.                    */
-  50,                                /* bMaxPower (100mA).               */
+  41, 0x00,            /* wTotalLength. */
+  0x01,                /* bNumInterfaces. */
+  0x01,                /* bConfigurationValue. */
+  0,                   /* iConfiguration. */
+  FEATURE_BUS_POWERED, /* bmAttributes. */
+  50,                  /* bMaxPower (100mA). */
 
   /* Interface Descriptor.*/
-  9,               /* bLength: Interface Descriptor size */
+  9,                    /* bLength: Interface Descriptor size */
   INTERFACE_DESCRIPTOR, /* bDescriptorType: Interface */
-  HID_INTERFACE,     /* bInterfaceNumber: Number of Interface */
-  0x00,     /* bAlternateSetting: Alternate setting */
-  0x02,     /* bNumEndpoints: Two endpoints used */
-  0x03,     /* bInterfaceClass: HID */
-  0x00,     /* bInterfaceSubClass: no boot */
-  0x00,     /* bInterfaceProtocol: 0=none */
-  0x04,     /* iInterface */
+  HID_INTERFACE,        /* bInterfaceNumber: Number of Interface */
+  0x00,                 /* bAlternateSetting: Alternate setting */
+  0x02,                 /* bNumEndpoints: Two endpoints used */
+  0x03,                 /* bInterfaceClass: HID */
+  0x00,                 /* bInterfaceSubClass: no boot */
+  0x00,                 /* bInterfaceProtocol: 0=none */
+  0x04,                 /* iInterface */
 
   /* HID Descriptor.*/
-  9,          /* bLength: HID Descriptor size */
-  0x21,         /* bDescriptorType: HID */
-  0x10, 0x01,   /* bcdHID: HID Class Spec release number */
-  0x00,         /* bCountryCode: Hardware target country */
-  0x01,         /* bNumDescriptors: Number of HID class descriptors to follow */
-  0x22,         /* bDescriptorType */
+  9,                       /* bLength: HID Descriptor size */
+  0x21,                    /* bDescriptorType: HID */
+  0x10, 0x01,              /* bcdHID: HID Class Spec release number */
+  0x00,                    /* bCountryCode: Hardware target country */
+  0x01,                    /* bNumDescriptors: Number of HID class descriptors to follow */
+  0x22,                    /* bDescriptorType */
   HID_REPORT_DESC_SIZE, 0, /* wItemLength: Total length of Report descriptor */
 
   /*Endpoint IN1 Descriptor*/
-  7,                            /* bLength: Endpoint Descriptor size */
+  7,                      /* bLength: Endpoint Descriptor size */
   ENDPOINT_DESCRIPTOR,    /* bDescriptorType: Endpoint */
-  0x81,       /* bEndpointAddress: (IN1) */
-  0x03,       /* bmAttributes: Interrupt */
-  0x40, 0x00,     /* wMaxPacketSize: 64 */
-  0x05,       /* bInterval (5ms) */
+  0x81,                   /* bEndpointAddress: (IN1) */
+  0x03,                   /* bmAttributes: Interrupt */
+  0x40, 0x00,             /* wMaxPacketSize: 64 */
+  0x05,                   /* bInterval (5ms) */
 
   /*Endpoint OUT1 Descriptor*/
-  7,                            /* bLength: Endpoint Descriptor size */
+  7,                      /* bLength: Endpoint Descriptor size */
   ENDPOINT_DESCRIPTOR,    /* bDescriptorType: Endpoint */
-  0x01,       /* bEndpointAddress: (OUT1) */
-  0x03,       /* bmAttributes: Interrupt */
-  0x40, 0x00,     /* wMaxPacketSize: 64 */
-  0x05,       /* bInterval (5ms) */
+  0x01,                   /* bEndpointAddress: (OUT1) */
+  0x03,                   /* bmAttributes: Interrupt */
+  0x40, 0x00,             /* wMaxPacketSize: 64 */
+  0x05,                   /* bInterval (5ms) */
 };
 
 
@@ -169,11 +169,10 @@ static const uint8_t usb_string0[4] = {
 };
 
 static const uint8_t usb_string1[] = {
-  9*2+2,                            /* bLength */
+  7*2+2,                            /* bLength */
   STRING_DESCRIPTOR,                /* bDescriptorType */
-  /* Manufacturer: "Gl.Sergei" */
-  'G', 0, 'l', 0, '.', 0, 'S', 0, 'e', 0, 'r', 0, 'g', 0, 'e', 0,
-  'i', 0,
+  /* Manufacturer: "unknown" */
+  'u', 0, 'n', 0, 'k', 0, 'n', 0, 'o', 0, 'w', 0, 'n', 0,
 };
 
 static const uint8_t usb_string2[] = {
@@ -195,9 +194,9 @@ static const uint8_t usb_string2[] = {
  * Serial Number string.
  */
 static const uint8_t usb_string3[28] = {
-  28,                                    /* bLength */
-  STRING_DESCRIPTOR,                    /* bDescriptorType */
-  '0', 0,  '.', 0,  '0', 0, '0', 0, /* Version number */
+  28,                               /* bLength */
+  STRING_DESCRIPTOR,                /* bDescriptorType */
+  '1', 0,  '.', 0,  '0', 0, '0', 0, /* Version number */
 };
 
 

@@ -8,13 +8,13 @@ __process2_stack_size__  = 0x0100; /* blk                     */
 __process3_stack_size__  = 0x0200; /* usb-hid                 */
 __process4_stack_size__  = 0x0800; /* u2f-hid                 */
 __process5_stack_size__  = 0x0200; /* rng                     */
-__process6_stack_size__  = 0x0200; /* pbt / csn               */
+__process6_stack_size__  = 0x0100; /* pbt / csn               */
 
 MEMORY
 {
     flash  : org = 0x00004000, len = 46k
     ram : org = 0x20000000, len = 8k
-    flash1 : org = 0x00004000+0xb800, len = 2k
+    flash1 : org = 0x00004000+0xb400, len = 3k
 }
 
 __ram_start__           = ORIGIN(ram);
@@ -157,6 +157,9 @@ SECTIONS
 
     .flash_storage :
     {
+        . = ALIGN (1024);
+        _attestation_cert_base = .;
+        *(.attestation.cert);
         . = ALIGN (1024);
         _device_key_base = .;
         *(.device.key);

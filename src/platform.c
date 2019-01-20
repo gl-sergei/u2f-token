@@ -48,7 +48,7 @@ toboot_config = {
   .config = TOBOOT_CONFIG_FLAG_AUTORUN,
   .lock_entry = 0,
   .erase_mask_lo = 0x00000000,
-  .erase_mask_hi = 0xc0000000,
+  .erase_mask_hi = 0xe0000000,
   .reserved_hash = 0
 };
 
