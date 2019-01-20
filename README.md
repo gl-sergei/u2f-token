@@ -1,4 +1,8 @@
 ![Build Status](https://api.travis-ci.org/gl-sergei/u2f-token.svg?branch=master)
+[![Latest Release](https://img.shields.io/github/release/gl-sergei/u2f-token.svg)](https://github.com/gl-sergei/u2f-token/releases/latest)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+
 
 # U2F-TOKEN firmware for STM32F103 and EFM32HG boards
 
@@ -14,6 +18,64 @@ U2F-TOKEN is known to work on:
 - Countless ST32F103 based Chinese St-Link V2 clones can be turned into U2F
   devices with U2F-TOKEN
 - Variety of Maple Mini clones which can be found on Aliexpress
+
+## Prebuilt release binaries
+
+Download binary suitable for your board at [releases page][releases].
+
+[releases]: https://github.com/gl-sergei/u2f-token/releases
+
+Binaries for Tomu are built with bootloader support, use following command to
+flash the firmware:
+
+``` sh
+dfu-util -d 1209:70b1 -D u2f-TOMU.bin
+```
+
+Binaries for STM32 boards are built without bootloader support, you need to
+flash the firmware using SWD or JTAG interface. Example using OpenOCD and
+STLINK-V2:
+
+``` sh
+openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c 'init' -c 'halt' -c 'flash write_image erase unlock u2f-BLUE_PILL.bin  0x08000000' -c 'exit'
+```
+
+(replace BLUE_PILL with appropriate board name)
+
+Release binaries come with readout protection enabled and without attestation
+certificate. You need to generate your own. Clone this repository and run
+(python3 is required):
+
+``` sh
+pip install -r requirements.txt --user
+cd src/cert
+./gen.sh
+./certtool init
+```
+
+You will see something similar to:
+
+``` text
+Trying to initialize device HIDDevice:
+    USB_16d0_0e90_14100000 | 16d0:e90 | unknown | U2F-token (STM32) | 1.00
+    release_number: 256
+    usage_page: 61904
+    usage: 1
+    interface_number: -1
+Success
+```
+
+Test your key with latest Chrome or Firefox browser using [this page][yubico-test].
+
+[yubico-test]: https://demo.yubico.com/webauthn/
+
+## Udev rules
+
+On Linux add following rule to be able to use your device as non root user:
+
+``` text
+ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
+```
 
 ## Building and flashing
 
