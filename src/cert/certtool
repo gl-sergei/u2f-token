@@ -41,6 +41,9 @@ CMD_INIT = 0x06
 CMD_MSG = 0x03
 CMD_ERROR = 0x3f
 
+VID = 0x16d0
+PID = 0x0e90
+
 BROADCAST_CID = 0xffffffff
 
 def sendCommand(dev, channel, cmd, data):
@@ -93,14 +96,14 @@ def load_key(pk_der):
 
 def command_list(args):
     e = easyhid.Enumeration()
-    devices = [ dev for dev in e.find() if dev.usage_page == FIDO_USAGE_PAGE ]
+    devices = [ dev for dev in e.find() if dev.vendor_id == VID and dev.product_id == PID ]
 
     for dev in devices:
         print(dev.description())
 
 def command_init(args):
     e = easyhid.Enumeration()
-    devices = [ dev for dev in e.find() if dev.usage_page == FIDO_USAGE_PAGE ]
+    devices = [ dev for dev in e.find() if dev.vendor_id == VID and dev.product_id == PID ]
 
     if len(devices) < 1:
         raise Exception("No U2F devices found")
