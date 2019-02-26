@@ -67,7 +67,7 @@ Success
 
 Test your key with latest Chrome or Firefox browser using [this page][yubico-test].
 
-[yubico-test]: https://demo.yubico.com/webauthn/
+[yubico-test]: https://demo.yubico.com/webauthn-technical/
 
 ## Udev rules
 
