@@ -50,10 +50,10 @@ ifeq ($(ENFORCE_DEBUG_LOCK),1)
 DEFS += -DENFORCE_DEBUG_LOCK
 endif
 
-ifeq ($(EMPTY_ATTESTATION_CERT),1)
-	GENCERT_CMD = cp empty-attestation-cert.c cert/certificates.c
+ifeq ($(CUSTOM_ATTESTATION_CERT),1)
+	GENCERT_CMD = cd cert && ./gen.sh && ( python dump-der.py > certificates.c || ( rm certificates.c && exit 1 ) )  && cd ..
 else
-	GENCERT_CMD = cd cert && ./gen.sh && cd ..
+	GENCERT_CMD = cp empty-attestation-cert.c cert/certificates.c
 endif
 
 CSRC = u2f.c usb-hid.c dbug.c u2f-hid.c u2f-apdu.c \

@@ -43,13 +43,12 @@ openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c 'init' -c 'halt' -c
 (replace BLUE_PILL with appropriate board name)
 
 Release binaries come with readout protection enabled and without attestation
-certificate. You need to generate your own. Clone this repository and run
+certificate provisioned. To intialize device, clone this repository and run
 (python3 is required):
 
 ``` sh
 pip install -r requirements.txt --user
 cd src/cert
-./gen.sh
 ./certtool init
 ```
 
@@ -65,6 +64,8 @@ Trying to initialize device HIDDevice:
 Success
 ```
 
+Above command will upload pre-generated `attestaion.der` from this repository to the device. If for whatever reason you want to use your own certificate, tweak and run `./gen.sh` to generate it.
+
 Test your key with latest Chrome or Firefox browser using [this page][yubico-test].
 
 [yubico-test]: https://demo.yubico.com/webauthn-technical/
@@ -75,6 +76,7 @@ On Linux add following rule to be able to use your device as non root user:
 
 ``` text
 ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
 ```
 
 ## Building and flashing

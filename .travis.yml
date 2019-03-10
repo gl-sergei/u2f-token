@@ -20,10 +20,10 @@ script:
     mkdir artefacts
     cd src
     for ENFORCE_DEBUG_LOCK in 1 0 ; do
-      for EMPTY_ATTESTATION_CERT in 1 0 ; do
+      for CUSTOM_ATTESTATION_CERT in 1 0 ; do
         for TARGET in TOMU MAPLE_MINI BLUE_PILL BLACK_PILL ST_DONGLE ; do
-          make TARGET=${TARGET} EMPTY_ATTESTATION_CERT=${EMPTY_ATTESTATION_CERT} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK} -j4
-          if [ "${EMPTY_ATTESTATION_CERT}" = 1 ] && [ "${ENFORCE_DEBUG_LOCK}" = 1 ] ; then
+          make TARGET=${TARGET} CUSTOM_ATTESTATION_CERT=${CUSTOM_ATTESTATION_CERT} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK} -j4
+          if [ "${CUSTOM_ATTESTATION_CERT}" = 0 ] && [ "${ENFORCE_DEBUG_LOCK}" = 1 ] ; then
             cp build/u2f.bin ../artefacts/u2f-${TARGET}.bin
           fi
           openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der
