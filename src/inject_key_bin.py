@@ -27,8 +27,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--bin", default="build/u2f.bin",
                     help='.bin file to inject keys into. Or "stdin"')
 parser.add_argument("--key", help="EC private key in DER format")
-parser.add_argument("--ctr", default=0, type=int, help="Value of auth counter")
-parser.add_argument("--offset", default=0xB400, type=int, help="Offset within file to patch")
+parser.add_argument("--ctr", default=0, type=lambda x: int(x,0), help="Value of auth counter")
+parser.add_argument("--offset", default=0xB800, type=lambda x: int(x,0), help="Offset within file to patch")
 args = parser.parse_args()
 
 fname, fext = os.path.splitext(args.bin)
