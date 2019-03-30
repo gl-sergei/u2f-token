@@ -19,14 +19,37 @@ U2F-TOKEN is known to work on:
   devices with U2F-TOKEN
 - Variety of Maple Mini clones which can be found on Aliexpress
 
-## Prebuilt release binaries
+## Udev rules
 
-Download binary suitable for your board at [releases page][releases].
+On Linux you need to add the following rules to be able to use your device as
+non root user. Create the file `/etc/udev/rules.d/10-u2f-token.rules` (as root)
+and paste in the following lines:
+
+``` text
+ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
+```
+
+## Installing using prebuilt release binaries
+
+### Requirements
+Python 3.6 or later and pip are needed. You will also need the `hidapi` library
+which is available as a package in most Linux distributions and as a brew
+formula on OS X. To install `hidapi` on Ubuntu run
+``` sh
+sudo apt install libhidapi-hidraw0
+```
+If you are on Linux, you will also need to install the aforementioned Udev
+rules.
+
+### Flash binary
+
+Download the binary suitable for your board at [releases page][releases].
 
 [releases]: https://github.com/gl-sergei/u2f-token/releases
 
-Binaries for Tomu are built with bootloader support, use following command to
-flash the firmware:
+Binaries for Tomu are built with bootloader support, use the following command
+to flash the firmware:
 
 ``` sh
 dfu-util -d 1209:70b1 -D u2f-TOMU.bin
@@ -42,14 +65,16 @@ openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c 'init' -c 'halt' -c
 
 (replace BLUE_PILL with appropriate board name)
 
+### Initialize device
+
 Release binaries come with readout protection enabled and without attestation
-certificate provisioned. To intialize device, clone this repository and run
-(python3 is required):
+certificate provisioned. To intialize the device, clone this repository and run
+(Python 3.6+ and the hidapi library are required):
 
 ``` sh
-pip install -r requirements.txt --user
+pip3 install -r requirements.txt --user
 cd src/cert
-./certtool init
+python3 certtool init
 ```
 
 You will see something similar to:
@@ -64,20 +89,13 @@ Trying to initialize device HIDDevice:
 Success
 ```
 
-Above command will upload pre-generated `attestaion.der` from this repository to the device. If for whatever reason you want to use your own certificate, tweak and run `./gen.sh` to generate it.
+The above command will upload pre-generated `attestaion.der` from this
+repository to the device. If for whatever reason you want to use your own
+certificate, tweak and run `./gen.sh` to generate it.
 
 Test your key with latest Chrome or Firefox browser using [this page][yubico-test].
 
 [yubico-test]: https://demo.yubico.com/webauthn-technical/
-
-## Udev rules
-
-On Linux add following rule to be able to use your device as non root user:
-
-``` text
-ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
-ACTION=="add|change", SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
-```
 
 ## Building and flashing
 
