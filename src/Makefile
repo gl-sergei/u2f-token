@@ -58,7 +58,7 @@ DEFS += -DENFORCE_DEBUG_LOCK
 endif
 
 ifeq ($(CUSTOM_ATTESTATION_CERT),1)
-	GENCERT_CMD = cd cert && ./gen.sh && ( python3 dump-der.py > certificates.c || ( rm certificates.c && exit 1 ) )  && cd ..
+	GENCERT_CMD = cd cert && ./gen.sh && ( python dump-der.py > certificates.c || ( rm certificates.c && exit 1 ) )  && cd ..
 else
 	GENCERT_CMD = cp empty-attestation-cert.c cert/certificates.c
 endif
