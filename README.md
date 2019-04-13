@@ -191,6 +191,7 @@ Supported targets are:
 - [BLUE_PILL](https://wiki.stm32duino.com/index.php?title=Blue_Pill)
 - [BLACK_PILL](https://wiki.stm32duino.com/index.php?title=Black_Pill)
 - [ST_DONGLE](https://wiki.stm32duino.com/index.php?title=ST-LINK_clone)
+- [ST_DONGLE_NO_PUSH](https://wiki.stm32duino.com/index.php?title=ST-LINK_clone)
 
 Use BLUE_PILL or BLACK_PILL for generic STM32F103 board without push button.
 
