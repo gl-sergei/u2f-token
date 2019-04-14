@@ -22,6 +22,13 @@ else ifeq ($(TARGET),ST_DONGLE)
 	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DTARGET_ST_DONGLE -DHAVE_PUSH_BUTTON
 	LDSCRIPT = stm32f103.ld
 	BOARD    = $(CHOPSTX)/board/board-st-dongle.h
+else ifeq ($(TARGET),ST_DONGLE_NO_PUSH)
+	MCU      = cortex-m3
+	CHIP     = stm32f103
+	DRIVERS  = uvoid.c
+	DEFS     = -DUSE_SYS3 -DFREE_STANDING -DTARGET_ST_DONGLE
+	LDSCRIPT = stm32f103.ld
+	BOARD    = $(CHOPSTX)/board/board-st-dongle.h
 else ifeq ($(TARGET),BLUE_PILL)
 	MCU      = cortex-m3
 	CHIP     = stm32f103
