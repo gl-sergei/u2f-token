@@ -21,7 +21,7 @@ script:
     cd src
     for ENFORCE_DEBUG_LOCK in 1 0 ; do
       for CUSTOM_ATTESTATION_CERT in 1 0 ; do
-        for TARGET in TOMU MAPLE_MINI BLUE_PILL BLACK_PILL ST_DONGLE ; do
+        for TARGET in TOMU MAPLE_MINI BLUE_PILL BLACK_PILL ST_DONGLE ST_DONGLE_NO_PUSH ; do
           make TARGET=${TARGET} CUSTOM_ATTESTATION_CERT=${CUSTOM_ATTESTATION_CERT} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK} -j4
           if [ "${CUSTOM_ATTESTATION_CERT}" = 0 ] && [ "${ENFORCE_DEBUG_LOCK}" = 1 ] ; then
             cp build/u2f.bin ../artefacts/u2f-${TARGET}.bin
