@@ -45,7 +45,7 @@ if not args.key:
     print("Key not modified")
 else:
     key_offset = args.offset
-    print("Injecting key from %s at 0x%0X", (args.key, key_offset)
+    print("Injecting key from %s at 0x%0X" % (args.key, key_offset))
     if args.key == "stdin":
         stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
         der = stdin.read()
@@ -69,7 +69,7 @@ if not args.ctr:
     print("Counter not modified")
 else:
     ctr_offset = args.offset + 0x400
-    print("Injecting counter %d at 0x%0X", (args.ctr, ctr_offset)
+    print("Injecting counter %d at 0x%0X" % (args.ctr, ctr_offset))
     # fill authentication counter
     ctr_blob = struct.pack("<I", args.ctr) * 256
 
