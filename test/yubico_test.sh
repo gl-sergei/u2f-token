@@ -1,5 +1,5 @@
 # Basic test
-# Requires dfu-utils to be installed.
+# Requires u2f-host to be installed.
 # This runs through the steps described in https://github.com/Yubico/libu2f-host documentation
 # If run with -k argument, the json files are retainsd.
 set -x
