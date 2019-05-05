@@ -23,28 +23,31 @@ import sys
 import struct
 import os
 
-# TODO: detect correct offset from .bin file.
-stm32f103_offset = 0xB800  # See stm32f103.ld
-#efm32hg_offset = ????
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--bin", default="build/u2f.bin",
                     help='.bin file to inject keys into. Or "stdin"')
 parser.add_argument("--key", help="EC private key in DER format")
 parser.add_argument("--ctr", default=0, type=lambda x: int(x,0), help="Value of auth counter")
-parser.add_argument("--offset", default=stm32f103_offset, type=lambda x: int(x,0), help="Offset within file to patch")
+parser.add_argument("--offset", default=0, type=lambda x: int(x,0), help="Offset within file to patch")
 args = parser.parse_args()
 
 fname, fext = os.path.splitext(args.bin)
 assert fext == ".bin"
 
-print("Target binary file:", args.bin)
+fsize = os.path.getsize(args.bin)
+
+print("Target binary file %s, size 0x%X" % (args.bin, fsize))
+
+if args.offset:
+    offset = args.offset
+else:
+    offset = fsize - 0x800
 
 # load and parse private key
 if not args.key:
     print("Key not modified")
 else:
-    key_offset = args.offset
+    key_offset = offset
     print("Injecting key from %s at 0x%0X" % (args.key, key_offset))
     if args.key == "stdin":
         stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
@@ -68,7 +71,7 @@ else:
 if not args.ctr:
     print("Counter not modified")
 else:
-    ctr_offset = args.offset + 0x400
+    ctr_offset = offset + 0x400
     print("Injecting counter %d at 0x%0X" % (args.ctr, ctr_offset))
     # fill authentication counter
     ctr_blob = struct.pack("<I", args.ctr) * 256
