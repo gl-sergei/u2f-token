@@ -2,4 +2,4 @@
 */.dep
 doc/chopstx.info
 .vs/
-*.json
+test/*.json
