@@ -37,7 +37,7 @@ Python 3.6 or later and pip are needed. You will also need the `hidapi` library
 which is available as a package in most Linux distributions and as a brew
 formula on OS X. To install `hidapi` on Ubuntu run
 ``` sh
-sudo apt install libhidapi-hidraw0
+sudo apt install libhidapi-hidraw0 python3-hid
 ```
 If you are on Linux, you will also need to install the aforementioned Udev
 rules.
@@ -67,8 +67,9 @@ openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c 'init' -c 'halt' -c
 
 ### Initialize device
 
-Release binaries come with readout protection enabled and without attestation
-certificate provisioned. To intialize the device, clone this repository and run
+After flashing device with binary it requires to be initialized.
+Release binaries come with readout protection enabled and without attestation certificate provisioned.
+To initialize the device, clone this repository and run
 (Python 3.6+ and the hidapi library are required):
 
 ``` sh
@@ -282,6 +283,7 @@ Providing you have Toboot installed:
 dfu-util -v -d 1209:70b1 -D build/u2f.bin
 ```
 
+After flashing device you still need to initialize device as described in [Initialize device](#initialize-device)
 
 ## Security considerations
 
