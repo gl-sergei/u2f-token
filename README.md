@@ -33,12 +33,12 @@ ACTION=="add|change", SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct
 ## Installing using prebuilt release binaries
 
 ### Requirements
-Python 3.6 or later and pip are needed. You will also need the `hidapi` library
-which is available as a package in most Linux distributions and as a brew
-formula on OS X. To install `hidapi` on Ubuntu run
-``` sh
-sudo apt install libhidapi-hidraw0 python3-hid
-```
+Python 3.6 or later and pip are needed. You will also need the `hidapi` library:
+
+* To install on OS X run `brew install hidapi`
+* To install on Ubuntu run `sudo apt install libhidapi-hidraw0 python3-hid`
+* To install on Archlinux, run `pacman -Sy hidapi`
+
 If you are on Linux, you will also need to install the aforementioned Udev
 rules.
 
