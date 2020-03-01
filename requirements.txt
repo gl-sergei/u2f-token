@@ -1,3 +1,2 @@
 asn1crypto
 easyhid
-pyu2f
