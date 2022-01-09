@@ -30,6 +30,16 @@ ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="
 ACTION=="add|change", SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess"
 ```
 
+### Using webauthn from snap packages
+
+Snap has additional security measures so that you will need to add a tag to the hidraw rule
+for each snap app that you want to have access to the token.
+
+For Chromium and Firefox (snap since ubuntu 21.10) this then reads:
+``` text
+ACTION=="add|change", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0e90", TAG+="uaccess", TAG+="snap_firefox_firefox", TAG+="snap_chromium_chromedriver"
+```
+
 ## Installing using prebuilt release binaries
 
 ### Requirements
