@@ -1,0 +1,41 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: instal deps
+      run: |
+        pip install -r requirements.txt --user
+        sudo apt-get update
+        sudo apt-get -yy install python-pip openssl gcc-arm-none-eabi binutils-arm-none-eabi
+    - name: make
+      run: |
+        set -e
+        mkdir artifacts
+        cd src
+        for ENFORCE_DEBUG_LOCK in 1 0 ; do
+          for CUSTOM_ATTESTATION_CERT in 1 0 ; do
+            for TARGET in TOMU MAPLE_MINI BLUE_PILL BLACK_PILL ST_DONGLE ST_DONGLE_NO_PUSH ; do
+              make TARGET=${TARGET} CUSTOM_ATTESTATION_CERT=${CUSTOM_ATTESTATION_CERT} ENFORCE_DEBUG_LOCK=${ENFORCE_DEBUG_LOCK} -j4
+              if [ "${CUSTOM_ATTESTATION_CERT}" = 0 ] && [ "${ENFORCE_DEBUG_LOCK}" = 1 ] ; then
+                cp build/u2f.bin ../artifacts/u2f-${TARGET}.bin
+              fi
+              openssl ecparam -name prime256v1 -genkey -noout -outform der -out key.der
+              ./inject_key.py --key key.der --ctr 1001
+              make clean distclean certclean
+            done
+          done
+        done
+        cd ..
