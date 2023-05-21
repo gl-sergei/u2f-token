@@ -179,7 +179,10 @@ struct attestation_cert
   uint32_t der_len;
   const uint8_t *der;
   const uint8_t *key;
+  uint8_t pad[1024 - sizeof(uint32_t) - sizeof(uint8_t *) - sizeof(uint8_t *)];
 };
+
+_Static_assert(sizeof(struct attestation_cert) == 1024, "Wrong struct attestation_cert size");
 
 #include "cert/certificates.c"
 

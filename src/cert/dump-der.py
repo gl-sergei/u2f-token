@@ -29,13 +29,15 @@
 from __future__ import print_function
 from asn1crypto.keys import ECPrivateKey
 
-attestation_cert_def = '''const struct attestation_cert  __attribute__ ((section(".attestation.cert"))) attestation_cert = {
+attestation_cert_def = '''
+struct attestation_cert  __attribute__ ((section(".attestation.cert"))) attestation_cert = {{
   .der_len = ATTESTATION_DER_LEN,
-  .der = attestation_der,
-  .key = attestation_key
-};'''
+  .der = attestation_cert.pad,
+  .key = attestation_cert.pad + ATTESTATION_DER_LEN,
+  .pad = {{{}}}
+}};'''
 
-def pk_to_c_array(name, pk_der):
+def pk_to_hex_bytes(name, pk_der):
     # parse der format
     pk = ECPrivateKey.load(pk_der)
 
@@ -48,25 +50,22 @@ def pk_to_c_array(name, pk_der):
     # split by pairs of characters
     hex_bytes = ["0x" + pk_hex[i:i + 2] for i in range(0, len(pk_hex), 2)]
 
-    # make string C array declaration
-    return "const uint8_t " + name + "[32] = {" + ", ".join(hex_bytes) + "};"
+    return hex_bytes
 
-def cert_to_c_array(name, der):
-    defname = name.upper() + "_LEN"
+def cert_to_hex_bytes(name, der):
     if hasattr(der, 'hex'):
         hex_str = der.hex()
     else:
         hex_str = der.encode('hex')
     hex_bytes = ["0x" + hex_str[i:i + 2] for i in range(0, len(hex_str), 2)]
 
-    define = "#define " + defname + " " + str(len(der))
-    array = "const uint8_t " + name + "[" + defname + "] = {" + ", ".join(hex_bytes) + "};"
-    return define + "\n" + array
+    return hex_bytes
 
 with open("attestation.der", "rb") as f:
-    print(cert_to_c_array("attestation_der", f.read()))
-
+    cert_bytes = cert_to_hex_bytes("attestation_der", f.read())
 with open("attestation_key.der", "rb") as f:
-    print(pk_to_c_array("attestation_key", f.read()))
+    key_bytes = pk_to_hex_bytes("attestation_key", f.read())
 
-print(attestation_cert_def)
+print("#define ATTESTATION_DER_LEN {}".format(len(cert_bytes)))
+print(attestation_cert_def.format(", ".join(cert_bytes + key_bytes + ['0x0'] * (1024 - 12 - len(cert_bytes) - len(key_bytes)))))
+
