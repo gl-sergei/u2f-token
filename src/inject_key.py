@@ -10,8 +10,10 @@
 # > openssl ecparam -name prime256v1 -genkey -noout -outform der > key.der
 #
 # Inject generated key into u2f.bin and set auth counter to 100:
-# > python3 inject_key.py --key key.der --ctr 100
+# > python3 inject_key_bin.py --key key.der --ctr 100 --bin build/u2f.bin
 #
+# key will not be modified if --key parameter is not present
+# counter will not be modified if --ctr parameter is not present
 
 from __future__ import print_function
 from asn1crypto.keys import ECPrivateKey
@@ -20,49 +22,60 @@ import argparse
 import sys
 import struct
 import os
-import tempfile
-import subprocess
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--elf", default="build/u2f.elf",
-                    help=".elf file to inject keys into")
+parser.add_argument("--bin", default="build/u2f.bin",
+                    help='.bin file to inject keys into. Or "stdin"')
 parser.add_argument("--key", help="EC private key in DER format")
-parser.add_argument("--ctr", default=1, type=int, help="value of auth counter")
+parser.add_argument("--ctr", default=0, type=lambda x: int(x,0), help="Value of auth counter")
+parser.add_argument("--offset", default=0, type=lambda x: int(x,0), help="Offset within file to patch")
 args = parser.parse_args()
 
-# load and parse private key
-if args.key:
-    with open(args.key, "rb") as f:
-        der = f.read()
+fname, fext = os.path.splitext(args.bin)
+assert fext == ".bin"
+
+fsize = os.path.getsize(args.bin)
+
+print("Target binary file %s, size 0x%X" % (args.bin, fsize))
+
+if args.offset:
+    offset = args.offset
 else:
-    stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
-    der = stdin.read()
-key = ECPrivateKey.load(der)
+    offset = fsize - 0x800
 
-# convert key into raw bytes and calculate it's sha256
-key_bytes = bytearray.fromhex(format(key["private_key"].native, '064x'))
-key_hash = hashlib.sha256(key_bytes).digest()
+# load and parse private key
+if not args.key:
+    print("Key not modified")
+else:
+    key_offset = offset
+    print("Injecting key from %s at 0x%0X" % (args.key, key_offset))
+    if args.key == "stdin":
+        stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
+        der = stdin.read()
+    else:
+        with open(args.key, "rb") as f:
+            der = f.read()
+    key = ECPrivateKey.load(der)
 
-# fill authentication counter
-ctr_bytes = struct.pack("<I", args.ctr) * 256
+    # convert key into raw bytes and calculate it's sha256
+    key_bytes = bytearray.fromhex(format(key["private_key"].native, '064x'))
+    key_hash = hashlib.sha256(key_bytes).digest()
+    # pad key to 1KiB
+    key_blob = (key_bytes + key_hash).ljust(1024, b"\x00")
+    assert len(key_blob) == 1024
 
-# pad key and append ctr to produce 2k output blob
-blob = (key_bytes + key_hash).ljust(1024, b"\x00") + ctr_bytes
+    with open(args.bin, 'r+b') as f:
+        f.seek(key_offset)
+        f.write(key_blob)
 
-assert len(blob) == 2048
-fname, fext = os.path.splitext(args.elf)
-assert fext == ".elf"
+if not args.ctr:
+    print("Counter not modified")
+else:
+    ctr_offset = offset + 0x400
+    print("Injecting counter %d at 0x%0X" % (args.ctr, ctr_offset))
+    # fill authentication counter
+    ctr_blob = struct.pack("<I", args.ctr) * 256
 
-with tempfile.NamedTemporaryFile(delete=True) as f:
-    f.write(blob)
-    f.flush()
-    # replace contents of .flash_storage section with desired key and counter
-    ret = subprocess.call(["arm-none-eabi-objcopy", "--update-section",
-                           ".flash_storage=" + f.name, args.elf])
-    if ret != 0:
-        raise Exception("Failed to patch .elf file!")
-    # generate binary for bootloader
-    ret = subprocess.call(["arm-none-eabi-objcopy", "-O", "binary",
-                           args.elf, fname + ".bin"])
-    if ret != 0:
-        raise Exception("Failed to create .bin file!")
+    with open(args.bin, 'r+b') as f:
+        f.seek(ctr_offset)
+        f.write(ctr_blob)
