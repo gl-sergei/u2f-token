@@ -53,10 +53,16 @@ assert len(blob) == 2048
 fname, fext = os.path.splitext(args.elf)
 assert fext == ".elf"
 
-with tempfile.NamedTemporaryFile(delete=True) as f:
+with tempfile.NamedTemporaryFile(mode='w+b', buffering=0, delete=True) as f:
+    # dump contents of .flash_storage section
+    ret = subprocess.call(["arm-none-eabi-objcopy", "--dump-section",
+                           ".flash_storage=" + f.name, args.elf])
+    if ret != 0:
+        raise Exception("Failed to dump flash storage section of .elf file!")
+    # patch contents of .flash_storage section with desired key and counter
+    f.seek(-0x800, 2)
     f.write(blob)
     f.flush()
-    # replace contents of .flash_storage section with desired key and counter
     ret = subprocess.call(["arm-none-eabi-objcopy", "--update-section",
                            ".flash_storage=" + f.name, args.elf])
     if ret != 0:
