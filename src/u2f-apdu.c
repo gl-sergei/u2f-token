@@ -174,12 +174,17 @@ struct device_key __attribute__ ((section(".device.key"))) device_key = { 0 };
 uint32_t __attribute__ ((section(".auth.ctr"))) auth_ctr[256] = { 0 };
 static uint32_t *ctr_addr = &(auth_ctr[0]);
 
-struct attestation_cert
+struct attestation_cert_header
 {
   uint32_t der_len;
   const uint8_t *der;
   const uint8_t *key;
-  uint8_t pad[1024 - sizeof(uint32_t) - sizeof(uint8_t *) - sizeof(uint8_t *)];
+};
+
+struct attestation_cert
+{
+  struct attestation_cert_header hdr;
+  uint8_t data[1024 - sizeof(struct attestation_cert_header)];
 };
 
 _Static_assert(sizeof(struct attestation_cert) == 1024, "Wrong struct attestation_cert size");
@@ -354,21 +359,21 @@ u2f_register (U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp)
   resp->registerId = U2F_REGISTER_ID;
   resp->pubKey.pointFormat = U2F_POINT_UNCOMPRESSED;
   resp->keyHandleLen = U2F_KH_SIZE;
-  memcpy (resp->attCert, attestation_cert.der, attestation_cert.der_len);
+  memcpy (resp->attCert, attestation_cert.hdr.der, attestation_cert.hdr.der_len);
 
   register_req_hash (req, resp, hash);
 
-  if (ecdsa_sign_p256r1 (hash, sig, attestation_cert.key))
+  if (ecdsa_sign_p256r1 (hash, sig, attestation_cert.hdr.key))
     return -1;
 
-  sig_len = der_encode_sig (resp->attCert + attestation_cert.der_len, sig);
+  sig_len = der_encode_sig (resp->attCert + attestation_cert.hdr.der_len, sig);
 
-  return 1                          // Registration identifier (U2F_REGISTER_ID_V2)
-         + sizeof (U2F_EC_POINT)    // Generated public key
-         + 1                        // Length of key handle
-         + U2F_KH_SIZE              // Key handle
-         + attestation_cert.der_len // Attestation certificate
-         + sig_len;                 // Registration signature
+  return 1                              // Registration identifier (U2F_REGISTER_ID_V2)
+         + sizeof (U2F_EC_POINT)        // Generated public key
+         + 1                            // Length of key handle
+         + U2F_KH_SIZE                  // Key handle
+         + attestation_cert.hdr.der_len // Attestation certificate
+         + sig_len;                     // Registration signature
 }
 
 static uint32_t
@@ -469,7 +474,7 @@ u2f_authenticate (U2F_AUTHENTICATE_REQ *req, U2F_AUTHENTICATE_RESP *resp)
 static int
 u2f_attestation_cert_initialized (void)
 {
-  return attestation_cert.der_len != (uint32_t) -1;
+  return attestation_cert.hdr.der_len != (uint32_t) -1;
 }
 
 static int
@@ -477,7 +482,7 @@ u2f_attestation_cert_initialize (uint32_t len, U2F_ATTESTATION_CERT_REQ *req)
 {
   flash_erase_page ((uintptr_t) &attestation_cert);
 
-  struct attestation_cert tmp;
+  struct attestation_cert_header tmp;
   tmp.der_len = len - U2F_EC_KEY_SIZE;
   tmp.key = ((uint8_t *) &attestation_cert) + 16;
   tmp.der = tmp.key + U2F_EC_KEY_SIZE;

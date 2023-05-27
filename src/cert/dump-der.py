@@ -31,10 +31,12 @@ from asn1crypto.keys import ECPrivateKey
 
 attestation_cert_def = '''
 struct attestation_cert  __attribute__ ((section(".attestation.cert"))) attestation_cert = {{
-  .der_len = ATTESTATION_DER_LEN,
-  .der = attestation_cert.pad,
-  .key = attestation_cert.pad + ATTESTATION_DER_LEN,
-  .pad = {{{}}}
+  .hdr = {{
+    .der_len = ATTESTATION_DER_LEN,
+    .der = attestation_cert.data,
+    .key = attestation_cert.data + ATTESTATION_DER_LEN,
+  }},
+  .data = {{{}}}
 }};'''
 
 def pk_to_hex_bytes(name, pk_der):
