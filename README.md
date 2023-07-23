@@ -1,4 +1,5 @@
-![Build Status](https://api.travis-ci.org/gl-sergei/u2f-token.svg?branch=master)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/gl-sergei/u2f-token/.github%2Fworkflows%2Fc-cpp.yml)
+![GitHub all releases](https://img.shields.io/github/downloads/gl-sergei/u2f-token/total)
 [![Latest Release](https://img.shields.io/github/release/gl-sergei/u2f-token.svg)](https://github.com/gl-sergei/u2f-token/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
